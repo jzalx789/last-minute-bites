@@ -323,6 +323,27 @@ class IntegrationTests(unittest.TestCase):
         self.assertIsNone(self.editor.state()['user'])
         self.editor.post('food/create', dict(name='Denied',date_source='unknown'), 401)
 
+    def test_add_retry_is_idempotent_and_scoped(self):
+        import uuid
+        key=str(uuid.uuid4())
+        food=dict(name='Retry-safe tomato', date_source='unknown',request_id=key)
+        first=self.owner.post('food/create',food)
+        self.assertEqual(self.owner.post('food/create',food),first)
+        self.assertEqual(len(self.owner.state()['foods']),1)
+        self.owner.post('food/create',dict(food,name='changed payload'),409)
+        self.assertNotEqual(self.other.post('food/create',food)['id'],first['id'])
+        self.owner.post('food/delete',dict(first,confirmed=True))
+        self.owner.post('food/create',food,409)
+
+    def test_mobile_shell_and_health_are_available(self):
+        for path,expected in [('/healthz',b'0.2'),('/manifest.webmanifest',b'standalone'),('/sw.js',b'/api/'),('/mobile.js',b'getUserMedia'),('/icons/icon-192.png',b'PNG')]:
+            with urllib.request.urlopen(self.base+path) as response:
+                self.assertEqual(response.status,200)
+                self.assertIn(expected,response.read())
+        with urllib.request.urlopen(self.base+'/') as response:
+            self.assertIn('camera=(self)',response.headers['Permissions-Policy'])
+
+
 
 class DateTests(unittest.TestCase):
     def test_calendar_edges(self):

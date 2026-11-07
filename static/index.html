@@ -4,8 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#173E2C" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Last Minute Bites</title>
     <link rel="stylesheet" href="/style.css" />
+    <script src="/vendor/jsQR.js" defer></script>
+    <script src="/vendor/qrcode.js" defer></script>
+    <script src="/mobile.js" defer></script>
     <script src="/app.js" defer></script>
   </head>
   <body>
@@ -27,6 +34,15 @@
           ><button class="primary" value="yes" id="confirm-yes"></button>
         </div>
       </form>
+    </dialog>
+    <dialog id="scanner" aria-labelledby="scanner-title">
+      <h2 id="scanner-title">Scan invitation / 掃描邀請</h2>
+      <p id="scanner-status" role="status"></p>
+      <video id="qr-video" autoplay playsinline muted></video>
+      <div class="actions">
+        <button id="scanner-close" type="button">Close / 關閉</button
+        ><button id="scanner-retry" type="button">Retry / 重試</button>
+      </div>
     </dialog>
     <noscript
       >This application requires JavaScript and the Python backend.</noscript

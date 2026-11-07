@@ -1,40 +1,34 @@
-# 驗證紀錄 — Prototype 0.1
+# Prototype 0.2 驗證
 
-日期：2026-11-07（Asia/Hong_Kong）。目前雲端執行個體：Python 3.12.14、SQLite 3.53.1、Node.js 24.22.1、Playwright 1.62.0，實際 Chromium 瀏覽器。
+2026-11-07（Asia/Hong_Kong）。此紀錄只針對可運作的 Prototype 0.2。
 
-## 已執行結果
-
-| 檢查 | 結果 |
+| 檢查 | 實際結果 |
 | --- | --- |
-| `python3 -m unittest discover -s tests -v` | **20 項通過**，0 失敗、0 跳過（約 15 秒） |
-| `python3 tests/browser_smoke.py` | **通過**；真實桌面及手機 viewport、3 個隔離帳戶 context，0 未捕捉 JS 錯誤 |
-| `node --check static/app.js` | 通過 |
-| Python compile 與 `git diff --check` | 通過 |
+| Python 後端／WSGI／部署保護／Demo suite | 48 項通過，0 跳過；包含 21 本機 API、21 WSGI 合約、1 日期、1 Demo、4 部署／教師帳戶流程 |
+| Chromium browser_smoke | 通過；登入、共享、日期、多選、食譜、雙語／大字、斷線保留輸入、衝突／重新載入、撤權與清空；無未捕捉 JS 錯誤 |
+| mobile_acceptance | 通過；真實 getUserMedia 管線接收模擬 QR 攝影機影像、成功後 camera tracks 結束、權限拒絕備援、manifest、Service worker、離線及不快取私人 API |
+| WebKit mobile engine | 通過；登入、庫存、選取、配對、窄屏；不是實體 iPhone 驗證 |
+| 實際 Gunicorn | 通過；啟動、登入、寫入、重啟持久化、配對及登出 |
+| SQLite 備份 | 開著 WAL 連線時產生一致 snapshot，檢查 integrity 與獨立還原讀取通過 |
+| 靜態語法 | Python compile、app.js／mobile.js／sw.js 檢查通過 |
 
-測試只使用臨時資料庫及合成 `example.test` 帳戶，不需真實憑證，並在結束後清除。
+測試只使用暫存資料庫與合成帳戶。相機輸入由固定 QR 的 Y4M 模擬裝置提供，未捏造實體拍攝。截圖在忽略的 `artifacts/mobile-evidence/`，不包含私人使用者資料。
 
-## 與規格驗證項目的對照
+```sh
+python3 -m unittest discover -s tests -v
+python3 tests/browser_smoke.py
+python3 tests/mobile_acceptance.py
+LMB_TEST_GUNICORN=.venv/bin/gunicorn python3 tests/deployment_smoke.py
+```
 
-| 規格項目 | 實際驗證與界線 |
-| --- | --- |
-| 1. 帳戶 | API 註冊驗證、登入錯誤／成功、session 輪換、登出、到期、重啟持久化；瀏覽器註冊、顯示登入表單、重載及登出 |
-| 2. 冰箱／邀請 | UI 建立、預覽及確認加入；API 舊碼替換、到期、未確認及一人一冰箱拒絕 |
-| 3. 共享／隔離 | 獨立 HTTP session 及瀏覽器 context；Editor 可讀寫同一庫存，第三帳戶看不到資料及不能跨冰箱更新／刪除 |
-| 4. 角色 | Editor 直接呼叫邀請、移除及 clear API 被拒絕；Owner 不能被移除或自行離開 |
-| 5. 撤權／離開 | API 立即拒絕下一次讀寫、保留食物、可重新加入；瀏覽器輪詢清除食物與選取 |
-| 6. 清空 | UI 取消及輸入冰箱名稱確認；API 錯名／未確認拒絕，只清目前冰箱食物，保留帳戶、成員及偏好 |
-| 7. Food | API CRUD、版本、用完後紀錄保留、重啟持久化；UI 新增／衝突／用完／取消刪除；注入文字往返且未插入 img/script DOM |
-| 8. 日期 | UI 包裝日／推算日及確認；API unknown 清除舊欄位、零／負／非整數／無效日期拒絕；月尾、跨年及閏年 |
-| 9. 日期限制 | API 過 Use by、used、刪除／其他冰箱 ID 不計入可用材料，過 Best before 仍保留品質標示；UI 關閉提醒不改變庫存或排序，未知日期不產生有效日期 |
-| 10. 多選 | UI 跨分類、食譜返回及重載保留；另一帳戶為零；資料用完／移除後更新；清除選取不抹去正在編輯的表單 |
-| 11. 食譜 | API 四個固定食譜、全／部分／無匹配、缺料及 Check at home、讀取不改庫存；UI 匹配列表及詳情 |
-| 12. 衝突／失敗 | 真正並行 HTTP 更新得到一個 200、一個 409；UI 保留輸入，確認後才載入新版；瀏覽器攔截中斷網絡保留輸入；SQLite trigger 模擬儲存失敗驗證回滾、503 及恢復後重試 |
-| 13. 個人設定 | UI 繁中、20px 放大文字、預設 Use first、日/月/年格式、提醒關閉／7 天；API 設定型別驗證及另一帳戶不受影響 |
-| 14. 配置／鍵盤 | 桌面 1280px、手機 390px、繁中放大文字 360px；表單／設定／食譜等頁面沒有水平溢出，鍵盤可聚焦，有 CSS focus-visible；實際截圖人工檢視。未做螢幕閱讀器或完整 WCAG 認證 |
-| 15. 照片 | **未實作、未測試**，UI 不提供假辨識入口 |
+此雲端的額外 WebKit 引擎來自官方 Playwright 下載。缺少的 Debian 庫從簽章驗證的套件索引下載並解壓於使用者目錄，未修改系統／關閉 TLS／變更檢查碼。當次命令：
 
-截圖：忽略的 `artifacts/kitchen-desktop.png`、`kitchen-mobile.png`、`use-first-zh-mobile.png`。是本次真實瀏覽器截圖，不是生成 mockup。
+```sh
+PLAYWRIGHT_BROWSERS_PATH=/tmp/lmb-browsers \
+LMB_TEST_WEBKIT=1 LMB_TEST_WEBKIT_EXECUTABLE=/tmp/lmb-webkit-run \
+python3 tests/mobile_acceptance.py
+```
 
-## 尚未驗證／不聲稱完成
+其他主機可使用 Playwright 官方安裝與系統依賴；本機額外路徑不保證在新任務／新機器存在。GitHub Actions 已提供相同測試設定；推送後才會觸發，未宣稱遠端 CI 已通過。
 
-沒有正式部署、公網 HTTPS 或實體手機測試，沒有真人試煮／團隊食譜審核、完整可及性稽核、正式滲透測試、多機負載測試、課程進階功能認可或正式營運準備。網絡中斷在成功寫入但尚未收到回應的時刻仍有不確定性；新增重試前應先查看清單，未提供通用冪等鍵。原 proposal 與團隊其他文件不在本次變更之列。
+仍待外部條件：使用者主機帳號 Jzalx 的安全授權、實際公開 HTTPS 部署、Android／iOS 真機與安裝驗收、老師平台核准及食譜團隊審核。網站上傳／reload 成功不自動等於這些項目通過。沒有食物照片辨識、可及性認證或正式多機營運承諾。

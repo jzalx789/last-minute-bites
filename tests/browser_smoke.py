@@ -118,7 +118,7 @@ def run():
                 editor.on('pageerror',lambda e:errors.append(str(e)))
                 register(editor,base,'editor@example.test')
                 editor.locator('[name=code]').fill(code)
-                editor.locator('[data-form=preview-invite] button').click()
+                editor.locator('[data-form=preview-invite] button:not([type=button])').click()
                 expect(editor.locator('.invitation-preview')).to_contain_text('Little green kitchen')
                 click(editor,'accept-invite')
                 expect(editor.locator('h1')).to_have_text('What’s in your kitchen?')

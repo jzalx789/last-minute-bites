@@ -1,0 +1,21 @@
+# Optional paid persistent-disk deployment template. No resource is created by this file.
+# Do not use an ephemeral filesystem for submitted accounts and kitchen records.
+services:
+  - type: web
+    name: last-minute-bites
+    runtime: python
+    plan: starter
+    buildCommand: pip install --require-hashes -r requirements-deploy.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 30 wsgi:application
+    healthCheckPath: /healthz
+    envVars:
+      - key: LMB_DB
+        value: /var/data/kitchen.sqlite3
+      - key: LMB_SECURE_COOKIE
+        value: "1"
+      - key: LMB_ORIGIN
+        sync: false
+    disk:
+      name: kitchen-data
+      mountPath: /var/data
+      sizeGB: 1

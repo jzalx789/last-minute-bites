@@ -1,88 +1,69 @@
-# Last Minute Bites
+# Last Minute Bites — Prototype 0.2
 
-IS2023 S01G10 — 可運行的共享冰箱 Prototype 0.1。HTML/CSS/JavaScript 前端、Python 標準函式庫後端、SQLite 持久化；無第三方執行依賴。介面預設英文，支援繁體中文。
+可運行的 mobile-first 共享冰箱 App。HTML/CSS/JavaScript、Python 3.12+、SQLite。英文／繁中；本機 Python 不需第三方框架，QR 程式庫已本地打包。
 
-## 啟動
+## 在 Mac 開啟
 
-需要 **Python 3.12+**，包含 `sqlite3`、`ssl`、`zoneinfo` 及系統時區資料。從專案根目錄執行：
+1. 下載並解壓最新 `S01G10.zip`。
+2. 雙擊 **Open on Mac.command**；它會自動啟動服務並開瀏覽器，請保留終端機視窗。
+3. 需要測試帳戶／資料，改用 **Open Demo on Mac.command**。首次會建立隔離的合成 Owner／Editor／無關帳戶；隨機帳密顯示在本機終端機，保存在 `.data/demo/demo-credentials.json`。
 
-```sh
-python3 server.py
-```
-
-伺服器預設監聽本機 `127.0.0.1` 的 `8000` 埠。用瀏覽器連到這個服務的根路徑 `/`；它會提供 HTML 入口及 API。**不可直接雙擊 `static/index.html` 使用共享功能。** 這是本機開發服務，沒有部署或公開網址。
-
-可覆寫埠及資料庫位置：
+需要 Python 3.12 或以上版本。若 macOS 阻擋下載的 command，可在專案資料夾的 Terminal 執行：
 
 ```sh
-python3 server.py --port 8080 --db .data/kitchen.sqlite3
+python3 scripts/open_local.py
+# 或：python3 scripts/open_local.py --demo
 ```
 
-SQLite 資料庫在首次啟動時建立；帳戶、session、食物及偏好在重啟後保留。結束服務按 Ctrl+C。`.data/`、資料庫、測試產物及密鑰不提交 Git。不要在服務運行時直接刪除資料庫。
+一般模式可自行註冊並建立冰箱。Demo 不會覆寫一般資料庫，請勿將本機 Demo 帳密用在其他已部署的資料庫。不要直接雙擊 `static/index.html`，共享功能需要後端。
 
-首次使用請自行註冊及建立冰箱，**沒有內建 demo 帳戶或密碼**。可開兩個獨立瀏覽器設定檔／無痕視窗建立 Owner 及 Editor，以測試共享；同一瀏覽器設定檔內的分頁共用登入。
+## 在手機開啟／部署
+
+已有 PythonAnywhere 帳號 **Jzalx**，目前**尚未部署正式網址**。雙擊 **Deploy to PythonAnywhere.command**，核對帳號，在你自己的終端機隱藏輸入新 API Token。Token 不會保存到程式或傳回聊天；若曾貼到聊天，請先撤銷再產生新的 Token。
+
+部署器會保護不相關的既有網站、上傳本次版本、設定 HTTPS／持久 SQLite、執行公開存取及共享／權限 smoke check，並產生這個網站自己的教師 Demo 帳戶。成功才會顯示實際網址；帳密在本機 `.data/deployment/demo-credentials.json`。免費主機有用量與續用限制，須保持服務有效。
+
+若要從 Terminal 執行：
+
+```sh
+python3 scripts/deploy_pythonanywhere.py --username Jzalx --apply --ask-token --demo
+```
+
+手機使用正式 HTTPS 網址：iPhone Safari 分享 → 加入主畫面；Android 瀏覽器選單 → Install app／加入主畫面。提供圖示、standalone 與公開殼離線提示；庫存與共享需要網絡。部署腳本已做本機及安全保護測試，**尚未在你的主機實際執行**。
 
 ## 已實作
 
-- Email/password 註冊、登入、登出；密碼 10–128 字元，scrypt 雜湊；7 天 session，HttpOnly／SameSite=Lax cookie，CSRF token 與 Origin 檢查。
-- 每帳戶最多一個冰箱。建立冰箱為 Owner，邀請預覽及確認加入為 Editor；Owner 邀請／替換／移除，Editor 可離開；後端逐次驗證角色及成員身分。
-- 高熵邀請碼只在產生時顯示，7 天到期，資料庫只存雜湊。替換舊碼不會移除現有成員。
-- 扁平 CSS 冰箱／SVG 分類、較小調味架、冷凍位置捷徑、搜尋、Categories／Use first、未知日期區段。
-- 新增／編輯共用表單；分類與存放位置分開；完全用完與刪除分開；保留用完紀錄，清空僅影響目前冰箱的食物。
-- 包裝日期、生產日期＋正整數期限、未知日期。日曆月份／年份加法會調整月尾／閏日；推算須確認；未知日期會清除舊日期欄位。
-- Use by／Best before／Unspecified 分開；過 Use by 不可匹配，未知日期不發提醒，並不表示安全。
-- 個人跨分類多選，在此分頁的 sessionStorage 按使用者保存；刷新及頁面切換保留，登出清除。不同帳戶互不干擾，不會寫入共享庫存。
-- 4 個版本化示範食譜，精確中英文別名協助對應，表單可確認／修改材料映射；依已選食物覆蓋數及缺料數排序，列出庫存／缺料／油鹽等待檢查項目。閱讀不扣庫存。
-- 5 秒輪詢及視窗聚焦更新；失去成員身分時清除載入資料與選取。食物版本檢查避免默默覆寫；衝突保留輸入，需明確重新載入。
-- 個人語言、文字大小、預設視圖、日期格式、App 內 1／3／7 天日期提醒；按帳戶保存，不影響其他成員。
-- 手機／桌面配置、原生表單標籤、鍵盤焦點、跳至內容、文字日期狀態、可取消的對話框；文字以跳脫後的純文字渲染。
+- Email/password 登入、註冊、session、CSRF；scrypt、HttpOnly／SameSite cookie。
+- Owner／Editor 共用庫存；邀請預覽／確認、替換／7 天到期、移除／離開、後端逐次驗權。
+- **相機掃描邀請 QR Code**：影像只在裝置內處理，拒絕相機時可手動輸入；掃描不會自動加入。
+- 可操作的冰箱分類／調味架、冷凍位置捷徑、搜尋、Use first、跨分類個人多選。
+- Food CRUD、用完與刪除分開；包裝／生產日＋期限／未知三種日期；月尾／閏年；Use by 與 Best before 分開。
+- 四個固定雙語食譜、精確材料映射、全／部分／無匹配、缺料及 Check at home。閱讀不扣庫存。
+- 5 秒及聚焦刷新、失權清理、版本衝突保留草稿；新增表單 request_id 防止重試重複紀錄。
+- 個人雙語、放大文字、預設視圖、日期格式、App 內日期提醒；未知日期不提醒。
+- PWA manifest／圖示／安裝指引／Service worker；不快取任何 API 或私人資料。
+- WSGI／Gunicorn 部署入口、持久 SQLite、健康檢查、私人備份、Mac 啟動器。
 
-## 操作示範
-
-1. 註冊第一個帳戶，建立冰箱；點分類或 Add food，輸入少量食材。
-2. 進入 Settings → Shared kitchen，產生邀請碼並複製。
-3. 在獨立瀏覽器 session 註冊第二個帳戶，輸入碼、預覽、確認加入。同一個 Python 服務及資料庫支援雙方讀寫。
-4. 在不同分類勾選食物，點 Find recipes；查看配對及缺料，返回仍保留選取。
-5. 編輯食物可儲存、標記完全用完或確認刪除。Owner 才能移除成員及在 Settings 清空食物，清空需輸入冰箱名稱。
-6. Settings → Preferences／Reminders 調整個人顯示及 App 內提醒。
-
-## 驗證
-
-後端整合測試僅需 Python，使用暫存資料庫及獨立 HTTP session：
+## 開發與測試
 
 ```sh
+python3 server.py --port 8000
 python3 -m unittest discover -s tests -v
-```
-
-真實瀏覽器驗收需額外測試工具 **Playwright 1.62.0** 與 Chromium；不屬於應用程式執行依賴。此雲端環境已有這些工具。其他機器可在獨立虛擬環境安裝 `playwright==1.62.0`，並安裝 Chromium。測試預設使用 `/usr/bin/chromium`，也可設定 `LMB_TEST_CHROMIUM` 為自己的執行檔路徑。
-
-```sh
+node --check static/app.js
 python3 tests/browser_smoke.py
+python3 tests/mobile_acceptance.py
 ```
 
-測試啟動自己的臨時服務，不會使用／覆寫開發資料庫。截圖位於忽略的 `artifacts/`。實際結果及範圍見 [驗證紀錄](docs/VALIDATION.md)。
+瀏覽器測試需 Playwright 1.62.0、Pillow 13.0.0、Chromium；覆寫 `LMB_TEST_CHROMIUM` 可選執行檔。WebKit 測試另設 `LMB_TEST_WEBKIT=1` 並安裝其瀏覽器／系統依賴。測試使用暫存資料庫，截圖在忽略的 `artifacts/`。測試結果見 [VALIDATION.md](docs/VALIDATION.md)。
 
-## 設定與安全界線
+`.env.example` 是非秘密設定範例，不會自動載入。一般資料庫在 `.data/kitchen.sqlite3`；持久化保存帳戶／食物，不能提交 Git。正式部署設 `LMB_DB`、`LMB_ORIGIN`、`LMB_SECURE_COOKIE=1`。Gunicorn 依賴：`pip install --require-hashes -r requirements-deploy.txt`。不需要外部 AI／食譜 API key。
 
-[.env.example](.env.example) 列出可用的非秘密設定；程式**不會自動載入 .env**，請透過 shell／服務管理器注入。手動新增、登入、共享及固定食譜都不需外部 API。照片辨識／OCR **未實作且沒有假入口**，不需要提供 API key。
+此版完成 QR 相機功能，**未做食物照片辨識／OCR**。食譜仍待團隊審核；不提供安全／營養／過敏判斷或背景推播。Chromium／WebKit 的手機模擬與相機測試已執行，尚未實體手機驗收。課程平台／進階分類與分數仍由老師確認。
 
-本 Prototype 使用 Python `ThreadingHTTPServer`，供開發／課程示範。若日後正式部署，需要 HTTPS 反向代理、備份、服務監管、存取與負載審查；設定 `LMB_SECURE_COOKIE=1` 及外部同源 `LMB_ORIGIN`，不可直接把開發伺服器宣稱為正式雲端服務。未加入 Email 驗證、忘記密碼、跨機器速率限制或背景通知。登入／註冊限制每來源 IP 每 5 分鐘 30 次、每 Email 15 次；邀請嘗試每帳戶每 5 分鐘 20 次，限制在程序重啟後重設。
-
-日曆時區於註冊時從瀏覽器取得，無效時使用 Asia/Hong_Kong，並在偏好頁顯示；日期本身保留 `YYYY-MM-DD`，不做 UTC 轉換。提醒只在 App 開啟時出現；資料輪詢不是即時同步；個人選取只在目前瀏覽器分頁保留，並不跨裝置同步。
-
-示範食譜尚待團隊審核，未經真人試煮；不提供數量／營養／過敏或安全性判斷。登入、角色共享、日曆日期計算及配對為實際完成的功能；共享／其他功能是否符合課程「進階功能」計分分類仍需組員與課程要求核對，沒有聲稱獲課程認可。
-
-## 原始碼交付
+## 打包
 
 ```sh
 python3 scripts/package.py
 ```
 
-產生 `artifacts/S01G10.zip`，只包含 Git 追蹤的原始碼／文件／非秘密設定範例，不包含 `.git`、帳戶、資料庫、真實密碼或測試截圖。解壓後按上述 Python 命令啟動。
-
-- [架構、資料表與 API](docs/ARCHITECTURE.md)
-- [完整開發規格](DEVELOPMENT_PROMPT.md)
-- [工作流程](docs/APP_FLOW.md)
-- [設計參考索引](design/README.md)：索引中的 PNG 未包含在目前 checkout；介面使用實際 HTML/CSS/SVG 元件。
-
-以上文件說明實際實作，不宣稱已修改原 proposal 或完成團隊食譜審核。
+產生 `artifacts/S01G10.zip` 及可從 GitHub 下載的 `submission/S01G10.zip`。只包追蹤的原始碼／必要設定與技術文件，排除資料庫、Token、私人帳密、快取、截圖及 ZIP 自身。QR 程式庫授權見 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

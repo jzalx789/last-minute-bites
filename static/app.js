@@ -286,8 +286,8 @@ const words = {
     "先記下少量食物，跨分類選擇，再尋找食譜。編輯紀錄可標記完全用完或刪除。食用期限限制食譜匹配，最佳食用日期屬品質標示。未知日期不代表安全。共享資料定時更新，並非即時同步。偏好及食材選取只屬個人。被移除成員仍可能持有之前保存的副本。",
   ],
   limitations: [
-    "Prototype 0.1. No photo recognition, safety assessment or external recipe API. Recipes need team review. This shared version requires the Python backend, not an offline HTML file.",
-    "Prototype 0.1：未提供照片辨識、安全判斷或外部食譜 API；食譜待團隊審核。共享版本需要 Python 後端，並非離線單一 HTML。",
+    "Prototype 0.2. No photo recognition, safety assessment or external recipe API. Recipes need team review. This shared version requires the Python backend, not an offline HTML file.",
+    "Prototype 0.2：未提供照片辨識、安全判斷或外部食譜 API；食譜待團隊審核。共享版本需要 Python 後端，並非離線單一 HTML。",
   ],
   conflict: [
     "Someone changed this record. Your input is kept. Reload the latest record before submitting again.",
@@ -363,6 +363,26 @@ const words = {
   welcome_kitchen: ["Make room for good food.", "為好食材留個位置。"],
   skip: ["Skip to content", "跳至主要內容"],
 };
+Object.assign(words, {
+  scan_invite: ["Scan invitation QR", "掃描邀請 QR Code"],
+  install: ["Install app", "安裝 App"],
+  install_note: [
+    "On iPhone/iPad: open in Safari, tap Share, then Add to Home Screen. On Android: use the browser menu and choose Install app or Add to Home screen. Installation needs an HTTPS website. Shared food needs an internet connection.",
+    "iPhone／iPad：用 Safari 開啟，按分享，再選加入主畫面。Android：在瀏覽器選單選安裝 App 或加入主畫面。安裝需要 HTTPS 網站，共享食物需要網絡。",
+  ],
+  offline_start: [
+    "You are offline. Reconnect and retry to load your kitchen. Private food data is never cached on this device by the app.",
+    "目前離線。請恢復連線並重試以載入冰箱。本 App 不會快取私人冰箱資料。",
+  ],
+  request_reused: [
+    "This earlier save cannot be repeated. Reload the food list before making a new entry.",
+    "此儲存請求不能重複執行。請先重新載入清單，再新增紀錄。",
+  ],
+  help_steps: [
+    "Start with a few foods. Select across categories and find recipes. Dates and storage can be edited anytime. Ask your kitchen Owner for an invitation to share.",
+    "先新增幾樣食物，跨分類選擇後尋找食譜。日期與位置可隨時編輯。如需共享，請向冰箱 Owner 索取邀請碼。",
+  ],
+});
 let state = null,
   guestLanguage = "en",
   authMode = "login",
@@ -561,7 +581,7 @@ function auth() {
   return `<div class="auth-layout"><section class="auth-story"><div class="little-leaf">${icon("leaf")}</div><h1>${E(t("welcome"))}</h1><p>${E(t("intro"))}</p><div class="mini-fridge" aria-hidden="true"><span></span><span></span></div></section><section class="auth-panel"><div class="switcher">${button("auth-login", t("sign_in"), authMode === "login" ? "chosen" : "")}${button("auth-register", t("register"), authMode === "register" ? "chosen" : "")}</div><h2>${E(t(authMode === "login" ? "sign_in" : "register"))}</h2><p>${E(t("auth_hint"))}</p><form data-form="auth">${field("email", t("email"), "", "email", 'required maxlength="254" autocomplete="username"')}${field("password", t("password"), "", "password", `required minlength="10" maxlength="128" autocomplete="${authMode === "login" ? "current-password" : "new-password"}"`)}${authMode === "register" ? field("confirm_password", t("confirm_password"), "", "password", 'required minlength="10" maxlength="128" autocomplete="new-password"') : ""}<p class="hint">${E(t("password_hint"))}</p><label class="check"><input type="checkbox" data-show-password>${E(t("show_password"))}</label>${formError()}<button class="primary full">${E(t(authMode === "login" ? "sign_in" : "register"))}</button></form></section></div>`;
 }
 function setup() {
-  return `<section class="page-heading"><h1>${E(t("welcome_kitchen"))}</h1><p>${E(t("setup_intro"))}</p></section><div class="two-column"><section class="panel"><h2>${E(t("create_kitchen"))}</h2><form data-form="create-kitchen">${field("name", t("kitchen_name"), "", "text", 'required maxlength="80"')}${formError()}<button class="primary">${E(t("create_kitchen"))}</button></form></section><section class="panel"><h2>${E(t("join_kitchen"))}</h2><form data-form="preview-invite">${field("code", t("invite_code"), invitePreview?.code || "", "text", 'required maxlength="100" autocomplete="off"')}${formError()}<button>${E(t("preview_invite"))}</button></form>${invitePreview ? `<div class="invitation-preview"><h3>${E(invitePreview.name)}</h3><p>${E(t("preview_note"))}</p>${button("accept-invite", t("join_confirm"), "primary")}</div>` : ""}</section></div>${button("sign-out", t("sign_out"), "quiet")}`;
+  return `<section class="page-heading"><h1>${E(t("welcome_kitchen"))}</h1><p>${E(t("setup_intro"))}</p><details><summary>${E(t("help"))}</summary><p>${E(t("help_steps"))}</p></details></section><div class="two-column"><section class="panel"><h2>${E(t("create_kitchen"))}</h2><form data-form="create-kitchen">${field("name", t("kitchen_name"), "", "text", 'required maxlength="80"')}${formError()}<button class="primary">${E(t("create_kitchen"))}</button></form></section><section class="panel"><h2>${E(t("join_kitchen"))}</h2><form data-form="preview-invite">${field("code", t("invite_code"), invitePreview?.code || "", "text", 'required maxlength="100" autocomplete="off"')}${formError()}<div class="actions"><button>${E(t("preview_invite"))}</button>${button("scan-invite", t("scan_invite"))}</div></form>${invitePreview ? `<div class="invitation-preview"><h3>${E(invitePreview.name)}</h3><p>${E(t("preview_note"))}</p>${button("accept-invite", t("join_confirm"), "primary")}</div>` : ""}</section></div>${button("sign-out", t("sign_out"), "quiet")}`;
 }
 function categoryButton(key, svg, cls = "") {
   const count = state.foods.filter(
@@ -665,6 +685,7 @@ function foodForm(id) {
 function bindFoodForm() {
   const form = $('[data-form="food"]');
   if (!form) return;
+  form.dataset.requestId = crypto.randomUUID();
   function fields() {
     const s = form.elements.date_source.value;
     $("#dated-fields").hidden = s === "unknown";
@@ -748,7 +769,7 @@ function displayRecipes(id) {
 const settingsLink = (path, key) =>
   `<button class="settings-link" data-action="go" data-path="${path}"><span>${E(t(key))}</span><span aria-hidden="true">›</span></button>`;
 function settings() {
-  return `<div class="narrow">${back()}<h1>${E(t("settings"))}</h1>${state.kitchen ? `<h2>${E(t("kitchen"))}</h2><p>${E(state.kitchen.name)} · ${E(t(state.kitchen.role))}</p>${settingsLink("shared", "shared")}` : ""}<h2>${E(t("personal"))}</h2>${settingsLink("preferences", "preferences")}${state.kitchen ? settingsLink("reminders", "reminders") : ""}<h2>${E(t("help"))}</h2>${settingsLink("help", "help")}${state.kitchen?.role === "owner" ? `<h2>${E(t("kitchen_data"))}</h2>${button("clear-kitchen", t("clear_kitchen"), "danger full")}` : ""}<hr><p class="hint">${E(t("signout_note"))}</p>${button("sign-out", t("sign_out"), "full")}</div>`;
+  return `<div class="narrow">${back()}<h1>${E(t("settings"))}</h1>${state.kitchen ? `<h2>${E(t("kitchen"))}</h2><p>${E(state.kitchen.name)} · ${E(t(state.kitchen.role))}</p>${settingsLink("shared", "shared")}` : ""}<h2>${E(t("personal"))}</h2>${settingsLink("preferences", "preferences")}${state.kitchen ? settingsLink("reminders", "reminders") : ""}<h2>${E(t("help"))}</h2>${settingsLink("help", "help")}${button("install", t("install"), "settings-link")}<p class="hint" id="install-guide" hidden>${E(t("install_note"))}</p>${state.kitchen?.role === "owner" ? `<h2>${E(t("kitchen_data"))}</h2>${button("clear-kitchen", t("clear_kitchen"), "danger full")}` : ""}<hr><p class="hint">${E(t("signout_note"))}</p>${button("sign-out", t("sign_out"), "full")}</div>`;
 }
 function shared() {
   return `<div class="narrow">${back("settings")}<h1>${E(t("shared"))}</h1><h2>${E(state.kitchen.name)}</h2><p class="hint">${E(t("sync"))}</p><h3>${E(t("members"))}</h3><ul class="member-list">${state.members.map((m) => `<li><span>${E(m.email)}<small>${E(t(m.role))}</small></span>${state.kitchen.role === "owner" && m.role === "editor" ? button("remove-member", t("remove"), "danger", `data-id="${m.id}"`) : ""}</li>`).join("")}</ul>${state.kitchen.role === "owner" ? `<h3>${E(t("invite_editor"))}</h3><p>${E(t("invite_policy"))}</p>${button("invite", t("invite_editor"), "primary")}<div id="invite-output" aria-live="polite"></div>` : `<p>${E(t("preview_note"))}</p>${button("leave", t("leave"), "danger")}`}</div>`;
@@ -762,7 +783,7 @@ function reminders() {
   return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.1</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.2</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
 async function confirmAction(title, message, typed = false) {
   const dialog = $("#confirm");
@@ -792,6 +813,7 @@ async function confirmAction(title, message, typed = false) {
 }
 function foodData(form) {
   const data = Object.fromEntries(new FormData(form));
+  data.request_id = form.dataset.requestId;
   data.shelf_life = Number(data.shelf_life);
   data.date_confirmed = form.elements.date_confirmed.checked && !!calculation;
   if (form.dataset.id) {
@@ -875,6 +897,12 @@ document.addEventListener("click", async (event) => {
   b.disabled = true;
   try {
     switch (a) {
+      case "scan-invite":
+        await LMBMobile.startScanner();
+        break;
+      case "install":
+        await LMBMobile.install();
+        break;
       case "go":
         go(b.dataset.path);
         break;
@@ -994,6 +1022,7 @@ document.addEventListener("click", async (event) => {
         const r = await api("invitation/replace", {});
         $("#invite-output").innerHTML =
           `<label>${E(t("invite_code"))}<input id="generated-code" value="${E(r.code)}" readonly></label><p>${E(t("until"))}: ${E(new Date(r.expires * 1000).toLocaleString(language()))}</p>${button("copy-invite", t("copy"))}`;
+        LMBMobile.drawCode(r.code, $("#invite-output"));
         break;
       }
       case "copy-invite":
@@ -1088,7 +1117,8 @@ async function poll() {
       draw =
         ["kitchen", "category", "recipes"].includes(p) &&
         !document.activeElement?.matches("input,textarea,select") &&
-        !$("#confirm").open;
+        !$("#confirm").open &&
+        !$("#scanner").open;
     await refresh(draw);
   } catch (_) {
     offline = true;
@@ -1105,5 +1135,5 @@ async function poll() {
 setInterval(poll, 5000);
 window.addEventListener("focus", poll);
 refresh().catch((err) => {
-  app.innerHTML = `<main id="main"><h1>Last Minute Bites</h1><p role="alert">${E(errorText(err))}</p>${button("retry", t("retry"))}</main>`;
+  app.innerHTML = `<main id="main"><h1>Last Minute Bites</h1><p role="alert">${E(navigator.onLine ? errorText(err) : t("offline_start"))}</p>${button("retry", t("retry"))}</main>`;
 });

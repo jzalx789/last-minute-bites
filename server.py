@@ -43,7 +43,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS one_owner ON memberships(kitchen_id) WHERE rol
 CREATE TABLE IF NOT EXISTS invitations(code TEXT PRIMARY KEY, kitchen_id INTEGER UNIQUE NOT NULL REFERENCES kitchens(id), expires REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS food_items(id INTEGER PRIMARY KEY AUTOINCREMENT, kitchen_id INTEGER NOT NULL REFERENCES kitchens(id), version INTEGER NOT NULL DEFAULT 1, status TEXT NOT NULL CHECK(status IN ('active','used')), data TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS user_preferences(user_id INTEGER PRIMARY KEY REFERENCES users(id), data TEXT NOT NULL);
-PRAGMA user_version=1;
+CREATE TABLE IF NOT EXISTS mutation_keys(user_id INTEGER NOT NULL REFERENCES users(id), request_key TEXT NOT NULL, kitchen_id INTEGER NOT NULL REFERENCES kitchens(id), body_hash TEXT NOT NULL, result TEXT NOT NULL, PRIMARY KEY(user_id,request_key));
+PRAGMA user_version=2;
 '''
 DEFAULT_PREFS = dict(language='en', text_size='standard', default_view='categories', date_format='iso', reminders=True, reminder_days=3, timezone='Asia/Hong_Kong')
 
@@ -134,10 +135,10 @@ def eligible(food, today):
     return food['status'] == 'active' and not (food['date_kind'] == 'use_by' and food['effective_date'] and food['effective_date'] < today)
 
 
-class AppServer(ThreadingHTTPServer):
-    daemon_threads = True
+class Store:
+    """Application state shared by the development HTTP and deployment WSGI adapters."""
 
-    def __init__(self, address, db_path, secure=False, origin=None):
+    def __init__(self, db_path, secure=False, origin=None):
         self.db_path, self.secure, self.origin = str(db_path), secure, origin
         Path(db_path).parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         new_database = not Path(db_path).exists()
@@ -148,7 +149,6 @@ class AppServer(ThreadingHTTPServer):
         self.recipes = json.loads((ROOT / 'recipes.json').read_text())
         self.rate_lock = threading.Lock()
         self.attempts = defaultdict(deque)
-        super().__init__(address, Handler)
 
     @contextmanager
     def connect(self):
@@ -174,7 +174,7 @@ class AppServer(ThreadingHTTPServer):
             queue.append(now)
 
 
-class Handler(BaseHTTPRequestHandler):
+class ApplicationHandler:
     def log_message(self, fmt, *args):
         # Never log request bodies, cookies, invitation codes or query strings.
         pass
@@ -185,21 +185,20 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         self.handle_request()
 
-    def respond(self, status, body, content_type='application/json; charset=utf-8'):
+    def response_parts(self, body, content_type):
         if not isinstance(body, bytes):
             body = json.dumps(body, ensure_ascii=False).encode()
-        self.send_response(status)
-        self.send_header('Content-Type', content_type)
-        self.send_header('Content-Length', str(len(body)))
-        self.send_header('Cache-Control', 'no-store')
-        self.send_header('X-Content-Type-Options', 'nosniff')
-        self.send_header('Referrer-Policy', 'no-referrer')
-        self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
+        headers = [
+            ('Content-Type', content_type), ('Content-Length', str(len(body))),
+            ('Cache-Control', 'no-store'), ('X-Content-Type-Options', 'nosniff'),
+            ('Referrer-Policy', 'no-referrer'),
+            ('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()'),
+            ('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
+        ]
         if getattr(self, 'cookie', None):
             flags = '; Secure' if self.server.secure else ''
-            self.send_header('Set-Cookie', f'lmb_session={self.cookie}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800{flags}')
-        self.end_headers()
-        self.wfile.write(body)
+            headers.append(('Set-Cookie', f'lmb_session={self.cookie}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800{flags}'))
+        return body, headers
 
     def new_session(self, db, user_id=None):
         token, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
@@ -213,10 +212,26 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if not path.startswith('/api/'):
                 require(self.command == 'GET', 'not_found', 404)
-                files = {'/': ('index.html', 'text/html'), '/app.js': ('app.js', 'text/javascript'), '/style.css': ('style.css', 'text/css')}
+                if path == '/healthz':
+                    with self.server.connect() as db:
+                        db.execute('SELECT 1 FROM users LIMIT 1').fetchone()
+                    return self.respond(200, {'status': 'ok', 'version': '0.2'})
+                files = {
+                    '/': ('index.html', 'text/html; charset=utf-8'),
+                    '/app.js': ('app.js', 'text/javascript; charset=utf-8'),
+                    '/mobile.js': ('mobile.js', 'text/javascript; charset=utf-8'),
+                    '/style.css': ('style.css', 'text/css; charset=utf-8'),
+                    '/sw.js': ('sw.js', 'text/javascript; charset=utf-8'),
+                    '/manifest.webmanifest': ('manifest.webmanifest', 'application/manifest+json'),
+                    '/icons/icon-192.png': ('icons/icon-192.png', 'image/png'),
+                    '/icons/icon-512.png': ('icons/icon-512.png', 'image/png'),
+                    '/icons/apple-touch-icon.png': ('icons/apple-touch-icon.png', 'image/png'),
+                    '/vendor/jsQR.js': ('vendor/jsQR.js', 'text/javascript; charset=utf-8'),
+                    '/vendor/qrcode.js': ('vendor/qrcode.js', 'text/javascript; charset=utf-8'),
+                }
                 require(path in files, 'not_found', 404)
                 filename, mime = files[path]
-                return self.respond(200, (ROOT / 'static' / filename).read_bytes(), mime + '; charset=utf-8')
+                return self.respond(200, (ROOT / 'static' / filename).read_bytes(), mime)
             with self.server.connect() as db:
                 # Serialize writes, including membership checks and optimistic versions.
                 db.execute('BEGIN IMMEDIATE')
@@ -381,8 +396,21 @@ class Handler(BaseHTTPRequestHandler):
             return dict(ok=True)
         if path == '/api/food/create':
             food = validate_food(data)
+            key = data.get('request_id')
+            body_hash = digest(json.dumps(food, sort_keys=True))
+            if key is not None:
+                require(isinstance(key, str) and bool(re.fullmatch(r'[A-Za-z0-9-]{16,64}', key)))
+                previous = db.execute('SELECT * FROM mutation_keys WHERE user_id=? AND request_key=?', (uid, key)).fetchone()
+                if previous:
+                    require(previous['kitchen_id'] == kid and previous['body_hash'] == body_hash, 'request_reused', 409)
+                    result = json.loads(previous['result'])
+                    require(db.execute('SELECT 1 FROM food_items WHERE id=? AND kitchen_id=?', (result['id'], kid)).fetchone(), 'request_reused', 409)
+                    return result
             fid = db.execute("INSERT INTO food_items(kitchen_id,status,data) VALUES(?,'active',?)", (kid, json.dumps(food))).lastrowid
-            return dict(id=fid, version=1)
+            result = dict(id=fid, version=1)
+            if key is not None:
+                db.execute('INSERT INTO mutation_keys VALUES(?,?,?,?,?)', (uid, key, kid, body_hash, json.dumps(result)))
+            return result
         if path in ['/api/food/update', '/api/food/delete', '/api/food/used']:
             fid = integer(data.get('id'), 1, 2**63 - 1)
             version = integer(data.get('version'), 1, 2**63 - 1)
@@ -418,10 +446,28 @@ class Handler(BaseHTTPRequestHandler):
         raise Problem(404, 'not_found')
 
 
+class Handler(ApplicationHandler, BaseHTTPRequestHandler):
+    def respond(self, status, body, content_type='application/json; charset=utf-8'):
+        body, headers = self.response_parts(body, content_type)
+        self.send_response(status)
+        for key, value in headers:
+            self.send_header(key, value)
+        self.end_headers()
+        self.wfile.write(body)
+
+
+class AppServer(Store, ThreadingHTTPServer):
+    daemon_threads = True
+
+    def __init__(self, address, db_path, secure=False, origin=None):
+        Store.__init__(self, db_path, secure=secure, origin=origin)
+        ThreadingHTTPServer.__init__(self, address, Handler)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', default=os.getenv('LMB_HOST', '127.0.0.1'))
-    parser.add_argument('--port', type=int, default=int(os.getenv('LMB_PORT', '8000')))
+    parser.add_argument('--port', type=int, default=int(os.getenv('LMB_PORT', os.getenv('PORT', '8000'))))
     parser.add_argument('--db', default=os.getenv('LMB_DB', str(ROOT / '.data' / 'kitchen.sqlite3')))
     args = parser.parse_args()
     server = AppServer((args.host, args.port), args.db, secure=os.getenv('LMB_SECURE_COOKIE') == '1', origin=os.getenv('LMB_ORIGIN'))

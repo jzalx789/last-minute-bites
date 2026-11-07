@@ -1,4 +1,4 @@
-# Prototype 0.1 架構與 API
+# Prototype 0.2 架構與 API
 
 瀏覽器從同一 Python HTTP 服務載入 `static/index.html`、`app.js`、`style.css`；前端透過同源 `/api/*` JSON 呼叫後端。`server.py` 管理 SQLite 交易、session、日期計算、食譜配對與權限。`recipes.json` 保存四個雙語固定食譜。不需 CDN、外部字體、資料服務、前端 build 或 API key。
 
@@ -16,7 +16,7 @@
 
 食物 JSON 包含 name、category、location、note、ingredient、date_source、date_kind、effective_date、production_date、shelf_life、shelf_unit。未知日期會正規化並清除相關日期資料。推算日期每次在後端重算，不能信任前端有效日期。分類與位置獨立；確切標準材料由用戶在表單確認，未映射項目不匹配。
 
-每個連線開啟 foreign_keys、10 秒 SQLite busy timeout。WAL 模式。所有 API 在 `BEGIN IMMEDIATE` 交易中檢查 session 及 membership，寫入與權限檢查不會被其他寫入穿插；例外回滾，並關閉連線。新資料庫權限設為 0600，新資料目錄為 0700。`PRAGMA user_version=1` 為初版 schema，尚無跨版本遷移。
+每個連線開啟 foreign_keys、10 秒 SQLite busy timeout。WAL 模式。所有 API 在 `BEGIN IMMEDIATE` 交易中檢查 session 及 membership，寫入與權限檢查不會被其他寫入穿插；例外回滾，並關閉連線。新資料庫權限設為 0600，新資料目錄為 0700。`PRAGMA user_version=2` 為目前 schema，版本 2 非破壞性建立 mutation_keys 表，既有帳戶／食物不改動。
 
 ## API
 
@@ -55,3 +55,16 @@
 CSRF token 與 cookie 分離，同源 Origin 檢查；HttpOnly、SameSite=Lax，HTTPS 部署另開 Secure。靜態檔案只開放固定三條路徑，不可下載資料庫／後端原始碼。Content-Security-Policy 禁止 inline script、跨來源連線及被嵌入；文字資料跳脫後呈現。參數化 SQL 避免使用者輸入構成 SQL。例外回應不洩漏資料庫訊息；請求日誌不記錄 body/cookie/query。速率限制保存在單程序記憶體，屬 Prototype 防護，非正式多機防濫用設計。
 
 生產日期計算假設生產日為第零日，加日曆天／月／年，月尾調整至有效日。計算參考值不自動等於安全期限；Use by／Best before 只採用用戶明確確認的包裝措辭。資料未知不判定安全；日期未知、已用完、過 Use by 等規則在 UI 及伺服器端配對共同執行。
+
+
+## 0.2 手機與部署補充
+
+`Store` 將應用狀態與 HTTP 傳輸分開；`server.py` 用 BaseHTTPRequestHandler，`wsgi.py` 用 WSGI，兩者共用相同驗證／權限／交易方法。完整 HTTP 合約測試也在 WSGI 執行，實際 Gunicorn 啟動與重啟持久化另有測試。
+
+新增 mutation_keys：user_id、request_key 複合主鍵，kitchen_id 外鍵、body_hash、result JSON。只針對 food/create；同使用者／相同內容重試取回既有 ID，不同內容或已刪除項目 409。membership 仍在查鍵前驗證。
+
+Camera QR 使用 locally bundled jsQR 1.4.0 / qrcode-generator 2.0.4。payload 是 `lmb-invite:<32-character-code>`，不自動接受 URL 或加入；成功只填入表單，必須經伺服器預覽及確認。相機權限限同源，畫面不上傳；離頁、背景、關閉會停止 tracks。靜態資產白名單新增 icons／manifest／mobile.js／sw.js／兩個程式庫；授權／雜湊見 THIRD_PARTY_NOTICES.md。
+
+Service worker cache 名稱按版本更新，只保存明確公開殼路徑；所有 `/api/`、POST、跨來源、私人資料均略過，不提供假離線同步。原有登入 cookie 不能直接由 JavaScript 讀取。
+
+正式主機指引與安全 PythonAnywhere 部署腳本見 DEPLOYMENT.md。公開 HTTPS 尚待帳戶／token，不能從本機測試推論正式網址可用。
