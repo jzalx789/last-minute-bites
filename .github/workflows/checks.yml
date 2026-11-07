@@ -19,10 +19,14 @@ jobs:
       - run: pip install --require-hashes -r requirements-deploy.txt
       - run: python tests/deployment_smoke.py
       - name: Start isolated web backend and test-only AI service
+        env:
+          CLOUDFLARE_SEND_METRICS: 'false'
         run: |
-          web/node_modules/.bin/wrangler dev --config tests/fixtures/food-ai/wrangler.jsonc --port 8791 > /tmp/lmb-test-ai.log 2>&1 &
-          web/node_modules/.bin/wrangler dev --config web/wrangler.test.jsonc --port 8790 > /tmp/lmb-test-web.log 2>&1 &
-          curl --fail --retry 15 --retry-all-errors --retry-delay 2 http://127.0.0.1:8790/healthz
+          trap 'cat /tmp/lmb-test-ai.log /tmp/lmb-test-web.log 2>/dev/null || true' ERR
+          nohup web/node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --inspector-port 9231 --config tests/fixtures/food-ai/wrangler.jsonc --port 8791 > /tmp/lmb-test-ai.log 2>&1 &
+          curl --fail --max-time 2 --retry 30 --retry-all-errors --retry-delay 2 http://127.0.0.1:8791/
+          nohup web/node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --inspector-port 9230 --config web/wrangler.test.jsonc --port 8790 > /tmp/lmb-test-web.log 2>&1 &
+          curl --fail --max-time 2 --retry 30 --retry-all-errors --retry-delay 2 http://127.0.0.1:8790/healthz
       - name: Web API and mobile browser acceptance
         env:
           LMB_WEB_BASE_URL: http://127.0.0.1:8790
