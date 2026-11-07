@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "last-minute-bites-demo",
+  "main": "./worker.js",
+  "compatibility_date": "2026-09-15",
+  "assets": {
+    "directory": "../static",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/healthz"],
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "KITCHENS", "class_name": "KitchenStore" }],
+  },
+  "migrations": [
+    { "tag": "kitchen-v1", "new_sqlite_classes": ["KitchenStore"] },
+  ],
+}

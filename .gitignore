@@ -17,3 +17,5 @@ data/
 runtime/
 dist/
 artifacts/
+
+.wrangler/

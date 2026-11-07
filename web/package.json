@@ -1,0 +1,13 @@
+{
+  "name": "last-minute-bites-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --config wrangler.jsonc --port 8787 --persist-to ../.data/cloudflare",
+    "check": "node --check worker.js && node --check domain.js",
+    "test": "node --test ../tests/web/*.test.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "4.132.0"
+  }
+}
