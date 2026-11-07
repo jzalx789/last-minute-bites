@@ -238,10 +238,12 @@ class IntegrationTests(unittest.TestCase):
         quality = create('Oil', 'oil', **{'date_source':'printed', 'date_kind':'best_before', 'effective_date':'2001-01-01'})
         used = create('Used salt', 'salt')
         self.owner.post('food/used', dict(id=used, version=1, confirmed=True))
+        deleted = create('Deleted rice', 'rice')
+        self.owner.post('food/delete', dict(id=deleted, version=1, confirmed=True))
         foreign = self.other.food()['id']
-        result = self.owner.post('recipes', dict(selected=[tomato, egg, expired, quality, used, foreign, 99999]))
+        result = self.owner.post('recipes', dict(selected=[tomato, egg, expired, quality, used, deleted, foreign, 99999]))
         self.assertEqual(set(result['selected']), {tomato,egg,quality})
-        self.assertEqual(set(result['removed']), {expired,used,foreign,99999})
+        self.assertEqual(set(result['removed']), {expired,used,deleted,foreign,99999})
         first = result['recipes'][0]
         self.assertEqual(first['id'], 1)
         self.assertEqual(set(first['matched']), {tomato,egg,quality})

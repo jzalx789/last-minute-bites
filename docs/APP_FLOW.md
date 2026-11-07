@@ -1,6 +1,6 @@
 # Application workflow
 
-Proposed flow — not an implementation completion claim.
+Prototype 0.1 navigation. See [validation results](VALIDATION.md) for executed checks and limitations.
 
 ```mermaid
 flowchart TD

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#173E2C" />
+    <title>Last Minute Bites</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <div id="app">
+      <main id="main"><p>Loading Last Minute Bites…</p></main>
+    </div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <dialog id="confirm">
+      <form method="dialog">
+        <h2 id="confirm-title"></h2>
+        <p id="confirm-message"></p>
+        <label id="confirm-label" hidden
+          ><span id="confirm-input-label"></span
+          ><input id="confirm-input" autocomplete="off"
+        /></label>
+        <div class="actions">
+          <button value="cancel" id="confirm-cancel"></button
+          ><button class="primary" value="yes" id="confirm-yes"></button>
+        </div>
+      </form>
+    </dialog>
+    <noscript
+      >This application requires JavaScript and the Python backend.</noscript
+    >
+  </body>
+</html>

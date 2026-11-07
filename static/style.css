@@ -1,0 +1,1031 @@
+:root {
+  --ink: #173e2c;
+  --green: #347852;
+  --sage: #b8d2b3;
+  --pale: #edf5ef;
+  --line: #d4e3d7;
+  --muted: #52675a;
+  --amber: #894a04;
+  font-family: "Trebuchet MS", "Noto Sans TC", Arial, sans-serif;
+  color: var(--ink);
+  background: white;
+  font-size: 16px;
+  line-height: 1.6;
+  color-scheme: light;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.55rem 1rem;
+  background: white;
+  color: var(--ink);
+  font-weight: 600;
+  line-height: 1.4;
+}
+button:hover {
+  background: var(--pale);
+  border-color: var(--green);
+}
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+button.primary {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+button.primary:hover {
+  background: var(--ink);
+}
+button.quiet,
+button.back {
+  background: transparent;
+  border-color: transparent;
+}
+button.back:before {
+  content: "‹";
+  font-size: 1.4rem;
+  margin-right: 0.6rem;
+}
+button.danger {
+  color: #943b23;
+  border-color: #d6ad9e;
+}
+button.brand {
+  border: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+  letter-spacing: -0.04em;
+  background: none;
+}
+button.brand b {
+  color: var(--green);
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 4px;
+}
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+h1 {
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  line-height: 1.17;
+  letter-spacing: -0.045em;
+  margin-bottom: 1rem;
+}
+h2 {
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+h3 {
+  font-size: 1.05rem;
+}
+p {
+  max-width: 70ch;
+}
+main {
+  max-width: 1100px;
+  margin: auto;
+  padding: 2.5rem 2.2rem 13rem;
+  outline: none;
+}
+.topbar {
+  max-width: 1240px;
+  margin: auto;
+  padding: 1.2rem 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  gap: 1rem;
+}
+.header-actions {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 1rem;
+}
+.account {
+  font-size: 0.8rem;
+  color: var(--muted);
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+.brand .icon {
+  width: 32px;
+  height: 32px;
+}
+.page-heading {
+  margin-bottom: 2rem;
+}
+.page-heading p {
+  color: var(--muted);
+}
+.kitchen-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.kitchen-label {
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+.role {
+  font-size: 0.75rem;
+  border: 1px solid var(--line);
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+.kitchen-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.switcher {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  background: var(--pale);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+.switcher button {
+  border: 0;
+  background: none;
+  font-size: 0.92rem;
+  padding: 0.6rem 1rem;
+}
+.switcher button.chosen {
+  background: white;
+  box-shadow: 0 1px 3px #173e2c14;
+}
+.kitchen-illustration {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 3.8rem;
+  max-width: 830px;
+  margin: 1rem auto 2rem;
+  align-items: center;
+}
+.fridge {
+  background: var(--sage);
+  padding: 1.2rem;
+  border: 2px solid #6f986e;
+  border-radius: 28px 28px 16px 16px;
+  position: relative;
+}
+.fridge:after {
+  content: "";
+  position: absolute;
+  bottom: -9px;
+  left: 25px;
+  right: 25px;
+  border-bottom: 8px solid #567650;
+  border-radius: 0 0 8px 8px;
+}
+.fridge-top {
+  height: 36px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0 0.7rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  font-weight: bold;
+}
+.fridge-hinge {
+  width: 25px;
+  border-top: 4px solid #6f986e;
+  border-radius: 2px;
+  margin-top: 4px;
+}
+.fridge-shelves {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 0.7rem;
+  background: #dcebd8;
+  border-radius: 13px;
+  border: 1px solid #86a982;
+}
+.fridge-category {
+  background: #f8fbf6;
+  border: 1px solid #acc8a6;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.7rem;
+  min-height: 135px;
+  padding: 1rem 0.6rem;
+  flex-direction: column;
+  text-align: center;
+  border-radius: 10px;
+  line-height: 1.35;
+  position: relative;
+  font-size: 0.93rem;
+}
+.fridge-category small {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 400;
+  margin-top: 0.35rem;
+  color: var(--muted);
+}
+.fridge-category .chevron {
+  display: none;
+}
+.fridge-category .icon {
+  color: #4d7950;
+  width: 43px;
+  height: 43px;
+}
+.fridge-category:hover {
+  background: white;
+  border-color: var(--green);
+}
+.freezer-drawer {
+  border-top: 2px solid #86a982;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+.freezer-drawer .fridge-category {
+  width: 100%;
+  flex-direction: row;
+  min-height: 84px;
+  text-align: left;
+  padding: 0.8rem 1.2rem;
+}
+.freezer-drawer .chevron {
+  display: block;
+  margin-left: auto;
+}
+.pantry-rack {
+  padding-top: 4rem;
+}
+.rack-top {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  border-bottom: 9px solid #c8b99d;
+  border-radius: 4px;
+  color: #758e66;
+  padding: 0.5rem;
+  gap: 1rem;
+}
+.rack-top .icon:nth-child(2) {
+  height: 62px;
+  width: 62px;
+}
+.rack-category {
+  width: 100%;
+  min-height: 80px;
+  flex-direction: row;
+  background: var(--pale);
+  margin-top: 1rem;
+  text-align: left;
+  padding: 1rem;
+}
+.dry-category {
+  width: 100%;
+  margin-top: 2.3rem;
+  min-height: 90px;
+  background: #f7f8f4;
+  flex-direction: row;
+  text-align: left;
+  padding: 1rem;
+}
+.pantry-rack p {
+  font-size: 0.8rem;
+  margin-top: 1rem;
+}
+.selection {
+  position: fixed;
+  bottom: 81px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(100% - 2rem), 750px);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: white;
+  border: 1px solid var(--line);
+  box-shadow: 0 3px 16px #173e2c0f;
+  border-radius: 15px;
+  padding: 0.8rem 1rem;
+  z-index: 10;
+}
+.selection > span {
+  margin-right: auto;
+}
+.selection strong {
+  font-size: 1.3rem;
+}
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 4rem;
+  background: white;
+  border-top: 1px solid var(--line);
+  padding: 0.5rem 1rem max(0.5rem, env(safe-area-inset-bottom));
+  z-index: 9;
+}
+.bottom-nav button {
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--muted);
+  background: none;
+}
+.bottom-nav button[aria-current] {
+  color: var(--green);
+  box-shadow: inset 0 -3px var(--green);
+}
+.bottom-nav .icon {
+  height: 28px;
+  width: 28px;
+}
+.sync-note,
+.hint {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.sync-note {
+  text-align: center;
+  margin-top: 2rem;
+}
+.narrow {
+  max-width: 620px;
+  margin: auto;
+}
+.narrow > h1 {
+  margin-top: 1rem;
+}
+.two-column {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+.panel {
+  padding: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.two-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 1.2rem;
+  font-size: 0.95rem;
+}
+input:not([type="checkbox"]),
+select,
+textarea {
+  display: block;
+  min-height: 48px;
+  width: 100%;
+  border: 1px solid #98b09e;
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  background: white;
+  color: var(--ink);
+  margin-top: 0.4rem;
+  min-width: 0;
+}
+textarea {
+  resize: vertical;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-weight: 400;
+  min-height: 44px;
+  line-height: 1.4;
+}
+.check input,
+.food-select input {
+  width: 21px;
+  height: 21px;
+  accent-color: var(--green);
+  flex-shrink: 0;
+}
+.actions {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0;
+}
+.record-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  padding-top: 1.5rem;
+  margin-top: 2rem;
+}
+.error {
+  color: #923f27;
+  background: #fff2eb;
+  padding: 0.8rem;
+  border-radius: 8px;
+  white-space: pre-line;
+}
+.error:empty {
+  display: none;
+}
+.warning {
+  color: var(--amber) !important;
+}
+#toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: var(--ink);
+  color: white;
+  padding: 0.8rem 1.3rem;
+  border-radius: 10px;
+  max-width: min(90vw, 600px);
+  box-shadow: 0 4px 20px #0002;
+  pointer-events: none;
+}
+#toast:empty {
+  display: none;
+}
+.reminder-banner {
+  border: 1px solid #e4cca8;
+  background: #fff4df;
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 2rem;
+  color: var(--amber);
+  font-size: 0.9rem;
+}
+.reminder-banner small {
+  color: #74522c;
+}
+.list-tools {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+.search-label {
+  flex: 1;
+}
+.list-heading {
+  font-size: 1rem;
+  margin-top: 2rem;
+}
+.food-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-bottom: 1px solid var(--line);
+  padding: 1.1rem 0.3rem;
+}
+.food-select {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin: 0;
+  flex: 1;
+  font-weight: 400;
+}
+.food-select span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.food-select strong {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.food-select small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+}
+.empty {
+  padding: 3.5rem 1rem;
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 15px;
+  margin: 1.5rem 0;
+}
+.empty > .icon {
+  width: 70px;
+  height: 70px;
+  color: var(--green);
+  margin-bottom: 1rem;
+}
+.empty p {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 45ch;
+  color: var(--muted);
+}
+.settings-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 1.1rem 0.2rem;
+  font-weight: 400;
+}
+.narrow h2 {
+  margin-top: 2rem;
+}
+.full {
+  width: 100%;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 2rem 0;
+}
+.member-list {
+  padding: 0;
+  list-style: none;
+}
+.member-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding: 1rem 0;
+  gap: 1rem;
+  overflow-wrap: anywhere;
+}
+.member-list small {
+  display: block;
+  color: var(--muted);
+}
+.recipe-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.6rem;
+  margin-top: 1.5rem;
+}
+.recipe-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.recipe-art {
+  height: 145px;
+  background: var(--pale);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green);
+}
+.recipe-art .icon {
+  width: 90px;
+  height: 90px;
+}
+.recipe-card:nth-child(2n) .recipe-art {
+  background: #f1f1df;
+}
+.recipe-copy {
+  padding: 1.6rem;
+}
+.recipe-copy h2 {
+  font-size: 1.35rem;
+}
+.recipe-facts {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 1rem 0 1.5rem;
+}
+.recipe-facts dt {
+  color: var(--muted);
+  margin-top: 0.6rem;
+}
+.recipe-facts dd {
+  margin: 0;
+}
+.recipe-detail {
+  max-width: 650px;
+  margin: auto;
+}
+.recipe-detail h2 {
+  font-size: 2rem;
+  margin-top: 1rem;
+}
+.recipe-detail li {
+  margin-bottom: 1rem;
+  padding-left: 0.3rem;
+}
+.recipe-icon {
+  background: var(--pale);
+  width: 120px;
+  height: 120px;
+  border-radius: 100%;
+  display: grid;
+  place-items: center;
+  margin-top: 1rem;
+}
+.recipe-icon .icon {
+  width: 75px;
+  height: 75px;
+}
+.auth-layout {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 5rem;
+  align-items: center;
+  max-width: 950px;
+  margin: 2rem auto;
+}
+.auth-story h1 {
+  font-size: 3.2rem;
+  max-width: 10ch;
+}
+.auth-story p {
+  max-width: 35ch;
+  color: var(--muted);
+}
+.little-leaf {
+  color: var(--green);
+  margin-bottom: 1.5rem;
+}
+.auth-panel {
+  max-width: 400px;
+  width: 100%;
+}
+.auth-panel h2 {
+  margin-top: 2rem;
+  font-size: 1.7rem;
+}
+.auth-panel .switcher {
+  width: 100%;
+  display: flex;
+}
+.auth-panel .switcher button {
+  flex: 1;
+}
+.mini-fridge {
+  width: 110px;
+  height: 145px;
+  border: 2px solid #6f986e;
+  background: var(--sage);
+  border-radius: 15px 15px 8px 8px;
+  margin-top: 2rem;
+}
+.mini-fridge span {
+  display: block;
+  height: 90px;
+  border-bottom: 2px solid #6f986e;
+  position: relative;
+}
+.mini-fridge span:before {
+  content: "";
+  position: absolute;
+  top: 20px;
+  right: 12px;
+  height: 30px;
+  border-left: 4px solid #6f986e;
+  border-radius: 3px;
+}
+.mini-fridge span + span {
+  height: 50px;
+  border-bottom: 0;
+}
+.mini-fridge span + span:before {
+  top: 9px;
+  height: 22px;
+}
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink);
+  padding: 2rem;
+  width: min(90vw, 500px);
+  max-height: 85vh;
+  overflow: auto;
+}
+dialog::backdrop {
+  background: #173e2c66;
+}
+dialog h2 {
+  font-size: 1.4rem;
+}
+dialog .actions {
+  justify-content: flex-end;
+  margin-bottom: 0;
+}
+summary {
+  cursor: pointer;
+  padding: 0.7rem 0;
+  min-height: 44px;
+  font-size: 0.9rem;
+}
+details p {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.invitation-preview {
+  border-top: 1px solid var(--line);
+  padding-top: 1.5rem;
+  margin-top: 1.5rem;
+}
+#invite-output:not(:empty) {
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  background: var(--pale);
+  border-radius: 10px;
+}
+#generated-code {
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+.skip {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+}
+.skip:focus {
+  left: 1rem;
+  top: 1rem;
+  background: #fff;
+  padding: 1rem;
+  z-index: 100;
+}
+.large {
+  font-size: 20px;
+}
+[hidden] {
+  display: none !important;
+}
+@media (max-width: 760px) {
+  main {
+    padding: 1.6rem 1.2rem 13rem;
+  }
+  .topbar {
+    padding: 1rem 1.2rem;
+  }
+  .account {
+    display: none;
+  }
+  .auth-layout {
+    gap: 2rem;
+    grid-template-columns: 1fr;
+    margin: 0;
+  }
+  .auth-story h1 {
+    font-size: 2.4rem;
+    max-width: 15ch;
+  }
+  .auth-story .little-leaf,
+  .mini-fridge {
+    display: none;
+  }
+  .auth-panel {
+    max-width: none;
+  }
+  .kitchen-heading {
+    align-items: flex-start;
+  }
+  .kitchen-heading h1 {
+    font-size: 2rem;
+  }
+  .kitchen-heading > button {
+    white-space: nowrap;
+    margin-top: 2.7rem;
+  }
+  .kitchen-illustration {
+    gap: 1.2rem;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  }
+  .fridge {
+    padding: 0.7rem;
+    border-radius: 20px 20px 12px 12px;
+  }
+  .fridge-shelves {
+    padding: 0.4rem;
+    gap: 6px;
+  }
+  .fridge-category {
+    min-height: 125px;
+    font-size: 0.78rem;
+    padding: 0.7rem 0.3rem;
+    gap: 0.4rem;
+  }
+  .fridge-category small {
+    font-size: 0.65rem;
+  }
+  .fridge-category .icon {
+    width: 34px;
+    height: 34px;
+  }
+  .rack-category,
+  .dry-category {
+    padding: 0.7rem;
+    flex-direction: column;
+    text-align: center;
+    min-height: 100px;
+  }
+  .rack-top {
+    gap: 0;
+  }
+  .rack-top .icon {
+    width: 30px;
+    height: 35px;
+  }
+  .rack-top .icon:nth-child(2) {
+    width: 40px;
+    height: 45px;
+  }
+  .fridge-top {
+    font-size: 0.5rem;
+    padding: 0 0.2rem;
+    height: 28px;
+  }
+  .freezer-drawer .fridge-category {
+    padding: 0.5rem;
+    gap: 0.4rem;
+    min-height: 70px;
+  }
+  .pantry-rack {
+    padding-top: 1rem;
+  }
+  .pantry-rack p {
+    font-size: 0.7rem;
+  }
+  .two-column {
+    grid-template-columns: 1fr;
+  }
+  .list-tools {
+    display: block;
+  }
+  .recipe-grid {
+    gap: 1rem;
+  }
+  .recipe-copy {
+    padding: 1rem;
+  }
+  .recipe-copy h2 {
+    font-size: 1.1rem;
+  }
+  .selection {
+    padding: 0.6rem;
+    gap: 0.2rem;
+    bottom: 78px;
+  }
+  .selection button {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.65rem;
+  }
+  .selection > span {
+    font-size: 0.85rem;
+  }
+  .panel {
+    padding: 1.4rem;
+  }
+  .large .kitchen-illustration {
+    grid-template-columns: 1fr;
+  }
+  .large .rack-category,
+  .large .dry-category {
+    flex-direction: row;
+  }
+  .large .kitchen-heading {
+    display: block;
+  }
+  .large .kitchen-heading > button {
+    margin-top: 0;
+  }
+  .large .recipe-grid {
+    grid-template-columns: 1fr;
+  }
+  .large .selection {
+    flex-wrap: wrap;
+  }
+  .large .selection > span {
+    width: 100%;
+  }
+}
+@media (max-width: 400px) {
+  .kitchen-illustration {
+    gap: 0.7rem;
+  }
+  .kitchen-heading {
+    display: block;
+  }
+  .kitchen-heading > button {
+    margin-top: 0;
+  }
+  .recipe-grid {
+    grid-template-columns: 1fr;
+  }
+  .kitchen-toolbar {
+    gap: 0.3rem;
+  }
+  .switcher button {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.65rem;
+  }
+  .two-fields {
+    grid-template-columns: 1fr;
+  }
+  .food-select {
+    gap: 0.6rem;
+  }
+  .bottom-nav {
+    gap: 2rem;
+  }
+  .brand {
+    font-size: 1rem !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+/* Keep the empty kitchen's freezer visible above the selection controls on desktop. */
+@media (min-width: 761px) {
+  main {
+    padding-top: 1.75rem;
+  }
+  .kitchen-label {
+    margin-bottom: 0.5rem;
+  }
+  .kitchen-heading {
+    margin-bottom: 1.5rem;
+  }
+  .kitchen-heading h1 {
+    margin-bottom: 0.6rem;
+  }
+  .kitchen-heading p:last-child {
+    margin-bottom: 0;
+  }
+  .kitchen-toolbar {
+    margin-bottom: 1rem;
+  }
+  .fridge-category {
+    min-height: 120px;
+  }
+  .freezer-drawer .fridge-category {
+    min-height: 72px;
+  }
+}
