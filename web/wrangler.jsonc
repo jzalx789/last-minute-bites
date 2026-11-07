@@ -11,6 +11,13 @@
   "durable_objects": {
     "bindings": [{ "name": "KITCHENS", "class_name": "KitchenStore" }],
   },
+  "services": [
+    {
+      "binding": "FOOD_AI",
+      "service": "caresync-is3542-demo",
+      "entrypoint": "FoodAI",
+    },
+  ],
   "migrations": [
     { "tag": "kitchen-v1", "new_sqlite_classes": ["KitchenStore"] },
   ],

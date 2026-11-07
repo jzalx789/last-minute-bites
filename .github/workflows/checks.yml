@@ -7,18 +7,29 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: '24'
       - run: python -m unittest discover -s tests -v
+      - run: npm ci --prefix web && npm --prefix web run check && npm --prefix web test
       - run: node --check static/app.js && node --check static/mobile.js && node --check static/sw.js
       - run: pip install playwright==1.62.0 Pillow==13.0.0
       - run: python -m playwright install --with-deps chromium webkit
       - run: pip install --require-hashes -r requirements-deploy.txt
       - run: python tests/deployment_smoke.py
-      - name: Browser acceptance
+      - name: Start isolated web backend and test-only AI service
+        run: |
+          web/node_modules/.bin/wrangler dev --config tests/fixtures/food-ai/wrangler.jsonc --port 8791 > /tmp/lmb-test-ai.log 2>&1 &
+          web/node_modules/.bin/wrangler dev --config web/wrangler.test.jsonc --port 8790 > /tmp/lmb-test-web.log 2>&1 &
+          curl --fail --retry 15 --retry-all-errors --retry-delay 2 http://127.0.0.1:8790/healthz
+      - name: Web API and mobile browser acceptance
+        env:
+          LMB_WEB_BASE_URL: http://127.0.0.1:8790
         run: |
           export LMB_TEST_CHROMIUM="$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
-          python tests/browser_smoke.py
-          LMB_TEST_WEBKIT=1 python tests/mobile_acceptance.py
+          python tests/web_api_contract.py
+          python tests/ai_api_contract.py
+          python tests/web_browser.py
+          python tests/user_fixes_browser.py
+          LMB_WEB_ENGINE=webkit python tests/user_fixes_browser.py

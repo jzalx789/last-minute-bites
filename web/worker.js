@@ -1,5 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
-import recipes from "../recipes.json";
+import {
+  STYLES,
+  validateRecipes,
+  validatePhoto,
+  validateRecognition,
+} from "./ai.js";
 import {
   Problem,
   check,
@@ -19,6 +24,8 @@ import {
 } from "./domain.js";
 
 const SCHEMA = `
+CREATE TABLE IF NOT EXISTS recipe_generations(id TEXT PRIMARY KEY,user_id INTEGER NOT NULL,kitchen_id INTEGER NOT NULL,cache_key TEXT NOT NULL,data TEXT NOT NULL,created REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS ai_usage(day TEXT NOT NULL,kind TEXT NOT NULL,user_id INTEGER NOT NULL,count INTEGER NOT NULL,PRIMARY KEY(day,kind,user_id));
 PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL,password TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id INTEGER REFERENCES users(id),csrf TEXT NOT NULL,expires REAL NOT NULL);
@@ -55,6 +62,7 @@ export class KitchenStore extends DurableObject {
     super(ctx, env);
     this.sql = ctx.storage.sql;
     this.attempts = new Map();
+    this.aiBusy = new Set();
     ctx.blockConcurrencyWhile(async () => {
       this.sql.exec(SCHEMA);
     });
@@ -128,6 +136,12 @@ export class KitchenStore extends DurableObject {
     );
   }
   async fetch(request) {
+    if (
+      ["/api/recipes/generate", "/api/food/recognize"].includes(
+        new URL(request.url).pathname,
+      )
+    )
+      return this.aiFetch(request);
     // Serializes the short crypto/transaction boundary as well as reads. SQLite
     // transactionSync supplies rollback for every multi-statement mutation.
     return this.ctx.blockConcurrencyWhile(async () => {
@@ -139,7 +153,7 @@ export class KitchenStore extends DurableObject {
         if (url.pathname === "/healthz") {
           this.one("SELECT COUNT(*) AS count FROM users");
           return respond(
-            { status: "ok", version: "0.3", storage: "persistent-sqlite" },
+            { status: "ok", version: "0.4", storage: "persistent-sqlite" },
             200,
             null,
             secure,
@@ -210,8 +224,317 @@ export class KitchenStore extends DurableObject {
       }
     });
   }
+  async locked(callback) {
+    // blockConcurrencyWhile resets a Durable Object if its callback rejects.
+    // Convert request/validation failures to values inside the lock, then throw
+    // outside it so one failed AI request cannot restart unrelated requests.
+    const result = await this.ctx.blockConcurrencyWhile(async () => {
+      try {
+        return { value: await callback() };
+      } catch (error) {
+        return {
+          failure: {
+            status: error instanceof Problem ? error.status : 503,
+            code: error instanceof Problem ? error.code : "ai_unavailable",
+          },
+        };
+      }
+    });
+    if (result.failure)
+      throw new Problem(result.failure.status, result.failure.code);
+    return result.value;
+  }
+  async aiAuth(request, maxBytes) {
+    check(request.method === "POST", "not_found", 404);
+    const url = new URL(request.url),
+      origin = request.headers.get("Origin");
+    check(!origin || origin === url.origin, "csrf", 403);
+    const raw = /\blmb_session=([A-Za-z0-9_-]+)/.exec(
+        request.headers.get("Cookie") || "",
+      )?.[1],
+      hash = await sha(raw || "");
+    const session = this.one(
+      "SELECT * FROM sessions WHERE token=? AND expires>?",
+      hash,
+      Date.now(),
+    );
+    check(session?.user_id, "unauthorized", 401);
+    check(
+      equal(request.headers.get("X-CSRF-Token") || "", session.csrf),
+      "csrf",
+      403,
+    );
+    const member = this.one(
+      "SELECT * FROM memberships WHERE user_id=?",
+      session.user_id,
+    );
+    check(member, "no_kitchen", 403);
+    check(
+      Number(request.headers.get("Content-Length") || 0) <= maxBytes,
+      "invalid_input",
+      413,
+    );
+    const body = await request.text();
+    check(
+      new TextEncoder().encode(body).length <= maxBytes,
+      "invalid_input",
+      413,
+    );
+    let data;
+    try {
+      data = JSON.parse(body);
+    } catch {
+      throw new Problem(400, "invalid_input");
+    }
+    check(data && typeof data === "object" && !Array.isArray(data));
+    const preferences = JSON.parse(
+      this.one(
+        "SELECT data FROM user_preferences WHERE user_id=?",
+        session.user_id,
+      ).data,
+    );
+    return { session, member, preferences, data };
+  }
+  consumeAI(uid, kind) {
+    this.rate(kind + ":" + uid, 6);
+    const day = todayIn("Asia/Hong_Kong"),
+      limit = kind === "image" ? 12 : 24,
+      globalLimit = kind === "image" ? 60 : 150;
+    this.transaction(() => {
+      const count =
+          this.one(
+            "SELECT count FROM ai_usage WHERE day=? AND kind=? AND user_id=?",
+            day,
+            kind,
+            uid,
+          )?.count || 0,
+        total = this.one(
+          "SELECT COALESCE(SUM(count),0) AS total FROM ai_usage WHERE day=? AND kind=?",
+          day,
+          kind,
+        ).total;
+      check(count < limit && total < globalLimit, "ai_limit", 429);
+      this.sql.exec(
+        "INSERT INTO ai_usage VALUES(?,?,?,1) ON CONFLICT(day,kind,user_id) DO UPDATE SET count=count+1",
+        day,
+        kind,
+        uid,
+      );
+    });
+  }
+  async aiFetch(request) {
+    const image = new URL(request.url).pathname === "/api/food/recognize",
+      secure = new URL(request.url).protocol === "https:";
+    let busyKey,
+      busyOwned = false;
+    try {
+      const snapshot = await this.locked(async () => {
+        const auth = await this.aiAuth(request, image ? 1200000 : 16384),
+          uid = auth.session.user_id,
+          kid = auth.member.kitchen_id;
+        check(this.env.FOOD_AI, image ? "photo_failed" : "ai_unavailable", 503);
+        const input = { language: auth.preferences.language };
+        let fingerprint, cacheKey;
+        if (image) input.image = validatePhoto(auth.data.image);
+        else {
+          const foods = this.foods(kid, todayIn(auth.preferences.timezone))
+            .filter((f) => f.eligible)
+            .sort((a, b) => a.id - b.id);
+          check(foods.length > 0, "no_food");
+          check(foods.length <= 80, "invalid_input");
+          check(STYLES.includes(auth.data.style ?? "auto"));
+          check([1, 2].includes(auth.data.count ?? 2));
+          const selected =
+            auth.data.scope === "all"
+              ? foods.map((f) => f.id)
+              : auth.data.selected;
+          check(
+            Array.isArray(selected) &&
+              selected.length <= 80 &&
+              selected.every(Number.isSafeInteger),
+          );
+          const valid = selected.filter((id) => foods.some((f) => f.id === id));
+          check(valid.length > 0, "no_food");
+          const preference = auth.data.preference ?? "";
+          check(typeof preference === "string" && preference.length <= 120);
+          Object.assign(input, {
+            foods: foods.map((f) => ({
+              id: f.id,
+              name: f.name,
+              category: f.category,
+              location: f.location,
+            })),
+            selected: [...new Set(valid)],
+            style: auth.data.style ?? "auto",
+            count: auth.data.count ?? 2,
+            preference,
+          });
+          fingerprint = JSON.stringify(foods.map((f) => [f.id, f.version]));
+          cacheKey = await sha(JSON.stringify({ input, fingerprint }));
+          if (!auth.data.regenerate) {
+            const cached = this.one(
+              "SELECT data FROM recipe_generations WHERE user_id=? AND kitchen_id=? AND cache_key=? AND created>? ORDER BY created DESC LIMIT 1",
+              uid,
+              kid,
+              cacheKey,
+              Date.now() - 900000,
+            );
+            if (cached) return { cached: JSON.parse(cached.data) };
+          }
+        }
+        busyKey = uid + ":" + (image ? "image" : "recipes");
+        check(!this.aiBusy.has(busyKey), "ai_busy", 429);
+        this.consumeAI(uid, image ? "image" : "recipes");
+        this.aiBusy.add(busyKey);
+        busyOwned = true;
+        return {
+          uid,
+          kid,
+          hash: auth.session.token,
+          input,
+          fingerprint,
+          cacheKey,
+        };
+      });
+      if (snapshot.cached)
+        return respond({ generation: snapshot.cached }, 200, null, secure);
+      let result;
+      try {
+        result = image
+          ? await this.env.FOOD_AI.recognize(snapshot.input)
+          : await this.env.FOOD_AI.recipes(snapshot.input);
+      } catch {
+        throw new Problem(503, image ? "photo_failed" : "ai_unavailable");
+      }
+      check(!result?.error, result?.error || "ai_unavailable", 503);
+      return await this.locked(async () => {
+        check(
+          this.one(
+            "SELECT 1 FROM sessions WHERE token=? AND user_id=? AND expires>?",
+            snapshot.hash,
+            snapshot.uid,
+            Date.now(),
+          ),
+          "unauthorized",
+          401,
+        );
+        check(
+          this.one(
+            "SELECT 1 FROM memberships WHERE user_id=? AND kitchen_id=?",
+            snapshot.uid,
+            snapshot.kid,
+          ),
+          "no_kitchen",
+          403,
+        );
+        let output;
+        try {
+          output = image
+            ? validateRecognition(result.data)
+            : validateRecipes(result.data, snapshot.input);
+        } catch {
+          throw new Problem(502, "ai_invalid");
+        }
+        if (image)
+          return respond(
+            { foods: output, provider: result.provider, model: result.model },
+            200,
+            null,
+            secure,
+          );
+        const prefs = JSON.parse(
+            this.one(
+              "SELECT data FROM user_preferences WHERE user_id=?",
+              snapshot.uid,
+            ).data,
+          ),
+          current = this.foods(snapshot.kid, todayIn(prefs.timezone))
+            .filter((f) => f.eligible)
+            .sort((a, b) => a.id - b.id);
+        check(
+          prefs.language === snapshot.input.language &&
+            snapshot.fingerprint ===
+              JSON.stringify(current.map((f) => [f.id, f.version])),
+          "generation_stale",
+          409,
+        );
+        const generation = {
+          id: crypto.randomUUID(),
+          created: Date.now(),
+          language: snapshot.input.language,
+          provider: result.provider,
+          model: result.model,
+          recipes: output,
+          selected: snapshot.input.selected,
+          versions: Object.fromEntries(current.map((f) => [f.id, f.version])),
+        };
+        this.transaction(() => {
+          this.sql.exec(
+            "INSERT INTO recipe_generations VALUES(?,?,?,?,?,?)",
+            generation.id,
+            snapshot.uid,
+            snapshot.kid,
+            snapshot.cacheKey,
+            JSON.stringify(generation),
+            Date.now(),
+          );
+          this.sql.exec(
+            "DELETE FROM recipe_generations WHERE user_id=? AND id NOT IN (SELECT id FROM recipe_generations WHERE user_id=? ORDER BY created DESC LIMIT 5)",
+            snapshot.uid,
+            snapshot.uid,
+          );
+        });
+        return respond({ generation }, 200, null, secure);
+      });
+    } catch (error) {
+      return respond(
+        {
+          error: {
+            code:
+              error instanceof Problem
+                ? error.code
+                : image
+                  ? "photo_failed"
+                  : "ai_unavailable",
+          },
+        },
+        error instanceof Problem ? error.status : 503,
+        null,
+        secure,
+      );
+    } finally {
+      if (busyOwned) this.aiBusy.delete(busyKey);
+    }
+  }
   async route(request, path, data) {
     const uid = this.session.user_id;
+    if (request.method === "GET" && path === "/api/recipes/history") {
+      check(uid !== null, "unauthorized", 401);
+      const member = this.member();
+      const row = this.one(
+        "SELECT data FROM recipe_generations WHERE user_id=? AND kitchen_id=? ORDER BY created DESC LIMIT 1",
+        uid,
+        member.kitchen_id,
+      );
+      if (!row) return { generation: null };
+      const generation = JSON.parse(row.data);
+      if (generation.language !== this.prefs().language)
+        return { generation: null };
+      const current = new Map(
+        this.foods(member.kitchen_id, todayIn(this.prefs().timezone)).map(
+          (f) => [f.id, f],
+        ),
+      );
+      generation.stale = generation.recipes.some((r) =>
+        r.uses.some(
+          (use) =>
+            !current.get(use.food_id)?.eligible ||
+            current.get(use.food_id)?.version !==
+              generation.versions[use.food_id],
+        ),
+      );
+      return { generation };
+    }
     if (request.method === "GET" && path === "/api/state") {
       const state = { csrf: this.session.csrf, user: null, web_app: true };
       if (!uid) return state;
@@ -434,6 +757,44 @@ export class KitchenStore extends DurableObject {
       }
       const member = this.member(),
         kid = member.kitchen_id;
+      if (path === "/api/food/batch") {
+        check(data.confirmed === true, "confirmation_required");
+        check(["used", "delete", "restore"].includes(data.action));
+        check(
+          Array.isArray(data.items) &&
+            data.items.length > 0 &&
+            data.items.length <= 100,
+        );
+        const seen = new Set();
+        const rows = data.items.map((item) => {
+          integer(item.id);
+          integer(item.version);
+          check(!seen.has(item.id));
+          seen.add(item.id);
+          const row = this.one(
+            "SELECT * FROM food_items WHERE id=? AND kitchen_id=?",
+            item.id,
+            kid,
+          );
+          check(row, "food_not_found", 404);
+          check(row.version === item.version, "conflict", 409);
+          if (data.action === "used")
+            check(row.status === "active", "conflict", 409);
+          if (data.action === "restore")
+            check(row.status === "used", "conflict", 409);
+          return row;
+        });
+        for (const row of rows)
+          if (data.action === "delete")
+            this.sql.exec("DELETE FROM food_items WHERE id=?", row.id);
+          else
+            this.sql.exec(
+              "UPDATE food_items SET status=?,version=version+1 WHERE id=?",
+              data.action === "used" ? "used" : "active",
+              row.id,
+            );
+        return { ok: true, changed: rows.length };
+      }
       if (path === "/api/member/remove") {
         this.member(true);
         integer(data.user_id);
@@ -544,43 +905,7 @@ export class KitchenStore extends DurableObject {
         }
         return { ok: true };
       }
-      if (path === "/api/recipes") {
-        const ids = data.selected ?? [];
-        check(
-          Array.isArray(ids) &&
-            ids.length <= 500 &&
-            ids.every(Number.isSafeInteger),
-        );
-        const today = todayIn(this.prefs().timezone),
-          foods = this.foods(kid, today).filter((f) => f.eligible),
-          selected = foods.filter((f) => ids.includes(f.id)),
-          available = new Set(foods.map((f) => f.ingredient).filter(Boolean));
-        const result = recipes.map((recipe) => {
-          const missing = recipe.ingredients.filter((i) => !available.has(i));
-          return {
-            ...recipe,
-            matched: selected
-              .filter((f) => recipe.ingredients.includes(f.ingredient))
-              .map((f) => f.id),
-            available: recipe.ingredients.filter((i) => available.has(i)),
-            missing,
-            check_at_home: missing.filter((i) =>
-              ["oil", "salt", "soy_sauce"].includes(i),
-            ),
-          };
-        });
-        result.sort(
-          (a, b) =>
-            b.matched.length - a.matched.length ||
-            a.missing.length - b.missing.length ||
-            a.id - b.id,
-        );
-        return {
-          recipes: result,
-          selected: selected.map((f) => f.id),
-          removed: ids.filter((id) => !selected.some((f) => f.id === id)),
-        };
-      }
+      if (path === "/api/recipes") throw new Problem(409, "upgrade_required");
       throw new Problem(404, "not_found");
     });
   }

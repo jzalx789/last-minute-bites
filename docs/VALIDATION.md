@@ -44,3 +44,16 @@ python3 tests/mobile_acceptance.py
 - 此雲端 Chromium 的代理憑證不受信任；修改持久信任設定遭自動審核拒絕。保留原設定，改用沿用系統信任的 WebKit 成功完成公開瀏覽器驗證。
 - 部署工作流程 `42377641930` 已通過。首次新 Worker 部署後的網址傳播延遲造成第一次健康檢查 404，已改成有界重試；實際 /healthz 與資料操作已驗證。
 - 已建立可用的合成 Demo Owner／Editor 並驗證七項庫存共享與重新登入；私人交付帳密在忽略的 `.data/public-demo-credentials.json`，不放入原始碼包。
+
+## Web Prototype 0.4（本次修正，2026-11-07）
+
+正式網站仍為 https://last-minute-bites-demo.jzalx789.workers.dev，`/healthz` 回報 `0.4` 與 `persistent-sqlite`。部署鏡像 commit `a919242`、GitHub Actions `42389631708` 成功。原 Demo Owner 重新登入及七項庫存保留，沒有重建或清空資料庫。
+
+- Python 舊後端回歸：48 項通過；Worker 單元測試：7 項通過；CareSync 私有 RPC 增補後的回歸：114 項通過，語法檢查及兩個 Worker dry-run 通過。
+- 本機 AI API contract 使用**測試專用 RPC**：一款湯／兩款互補菜式、過 Use by 排除、私人歷史及快取、無效模型內容拒絕、等待模型不阻塞其他冰箱、重複請求限流、生成期間庫存變動拒絕、批次交易回滾、獨立用完／復原、圖片不自動入庫及不推測日期，全部通過。它不證明模型品質。
+- Chromium 及 WebKit 手機流程使用測試 RPC：320px／短螢幕／橫向／平板／桌面、繁中大字、內容可捲動、底部導覽不覆蓋表單、移除指定提醒、照片結果確認、直接用完／刪除／復原、明確按鈕生成、背景刷新不呼叫模型、無效模型結果保留舊食譜、煮完逐項確認移除，全部通過。Safari 引擎原先 360px 清單篩選器溢出已修正。這些是瀏覽器 viewport 測試，不是真機認證。
+- **正式 HTTPS、真實 DeepSeek 呼叫**：`tests/live_ai_browser.py` 用 WebKit 與系統 TLS 信任完成兩次模型呼叫。輸入已檢視的公開番茄照片（Wikimedia `Tomato_je.jpg`，不是私人相片），成功返回「番茄」候選，確認前庫存仍為空，日期維持未知。以番茄、雞蛋、豆腐、菠菜生成兩款不同類別的繁中菜式：「番茄炒蛋」及「菠菜豆腐湯」。API 回報 `provider=deepseek`、`model=deepseek-flash`；不是 fixture 或固定食譜。生成後四筆庫存全部保留，勾選一筆完全用完後，只有一筆進入已用完清單。390px 版面及食譜詳細頁通過，無未捕捉 JS 錯誤。
+- 正式網站 `tests/web_api_contract.py` 與 WebKit `tests/web_browser.py` 通過：登入／CSRF、跨冰箱權限、CRUD、衝突、日期、共享邀請及撤權、私人偏好、清空及重登入。
+- CareSync 首頁正常；原 `/api/analyse` 在沒有有效 owner code 的 near-fall POST 仍回 403。沒有取出其秘密或聲稱此次已用 owner code 執行 CareSync 真實模型；near-fall High 規則由原回歸測試驗證。
+
+正式模型驗收結果與截圖放在忽略的 `artifacts/live-ai/`，不包含秘密。CI 使用測試 RPC，避免每次 push 消耗模型額度。沒有關閉 TLS 驗證、修改系統信任或要求使用者執行額外設定。

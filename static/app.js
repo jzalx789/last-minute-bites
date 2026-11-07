@@ -282,12 +282,12 @@ const words = {
     "分類只供導航，實際存放請遵循包裝指示。",
   ],
   help_text: [
-    "Record a few foods, select across categories, then find a recipe. Edit a record to mark it fully used or delete it. Use-by dates limit recipe matching; best-before dates describe quality. Unknown dates are not proof of safety. Shared food updates by polling, not instantly. Personal preferences and ingredient selections are private to your account. Removed members may still hold copies saved earlier.",
-    "先記下少量食物，跨分類選擇，再尋找食譜。編輯紀錄可標記完全用完或刪除。食用期限限制食譜匹配，最佳食用日期屬品質標示。未知日期不代表安全。共享資料定時更新，並非即時同步。偏好及食材選取只屬個人。被移除成員仍可能持有之前保存的副本。",
+    "Add food manually or confirm names suggested from a photo. In My food, mark items used up, delete them, or restore used records. Recipes generates one or two dishes from your selected food or current inventory. After cooking, choose only the items you fully used up.",
+    "手動新增食物，或拍照後確認辨識名稱。在「我的食材」可直接標記用完、刪除，或復原已用完紀錄。「食譜」可用所選食材或目前庫存產生一至兩道菜。煮完後，只勾選真正完全用完的食材。",
   ],
   limitations: [
-    "Prototype 0.3. No photo recognition, safety assessment or external recipe API. Recipes need team review. Shared food is stored on the online service and requires an internet connection.",
-    "Prototype 0.3：未提供照片辨識、安全判斷或外部食譜 API；食譜待團隊審核。共享食物保存在網上服務，需要網絡連線。",
+    "Photo recognition and recipes use DeepSeek and require an internet connection. Confirm photo results and review recipes. The app does not assess food safety or infer expiry dates from photos.",
+    "照片辨識及食譜使用 DeepSeek，需要網絡連線。請確認辨識結果並檢查食譜；此程式不判斷食物安全，也不會從照片猜測到期日。",
   ],
   conflict: [
     "Someone changed this record. Your input is kept. Reload the latest record before submitting again.",
@@ -383,6 +383,136 @@ Object.assign(words, {
     "先新增幾樣食物，跨分類選擇後尋找食譜。日期與位置可隨時編輯。如需共享，請向冰箱 Owner 索取邀請碼。",
   ],
 });
+Object.assign(words, {
+  ai_busy: [
+    "A request is already running. Please wait.",
+    "已有請求正在處理，請稍候。",
+  ],
+  invalid_image: [
+    "Choose a clear JPEG or PNG photo.",
+    "請選擇清晰的 JPEG 或 PNG 相片。",
+  ],
+  inventory: ["My food", "我的食材"],
+  items: ["items", "項"],
+  used_short: ["Used up", "已用完"],
+  remove_short: ["Delete", "刪除"],
+  restore: ["Restore to inventory", "放回庫存"],
+  manage_used: ["Mark selected as used up", "已選食材已用完"],
+  manage_delete: ["Delete selected", "刪除已選食材"],
+  active_food: ["Current inventory", "目前庫存"],
+  used_food: ["Used-up records", "已用完紀錄"],
+  photo: ["Identify food from a photo", "拍照／上傳識別"],
+  photo_hint: [
+    "Confirm the food name. Dates are entered separately. The photo is sent to DeepSeek.",
+    "請確認名稱，日期另行輸入；照片將傳送至 DeepSeek 識別。",
+  ],
+  photo_busy: ["Identifying food…", "正在識別食材…"],
+  photo_empty: [
+    "No clear food was found. Try a clearer photo or enter it manually.",
+    "未能清楚辨識食材，可換相片或手動輸入。",
+  ],
+  photo_confirm: ["Choose a food to fill the form", "選擇食材填入表單"],
+  photo_failed: [
+    "Photo recognition is unavailable. You can still enter food manually.",
+    "暫時無法識別相片，你仍可手動新增。",
+  ],
+  photo_large: [
+    "Use a clear food photo under 12 MB.",
+    "請使用 12 MB 以內的清晰食物相片。",
+  ],
+  generate: ["Generate recipes", "生成食譜"],
+  regenerate: ["Generate another set", "再生成一組"],
+  generating: [
+    "DeepSeek is planning your dishes…",
+    "DeepSeek 正在為你配搭菜式…",
+  ],
+  recipe_title: ["What shall we cook?", "今天煮甚麼？"],
+  recipe_hint: [
+    "Use your ingredients to suggest one or two dishes.",
+    "依庫存食材建議 1–2 款菜式。",
+  ],
+  dish_style: ["Dish style", "菜式款式"],
+  dish_count: ["Number of dishes", "菜式數目"],
+  scope: ["Ingredients", "使用食材"],
+  scope_selected: ["Selected food", "已選食材"],
+  scope_all: ["All current food", "目前庫存"],
+  style_auto: ["Let AI suggest", "讓 AI 配搭"],
+  style_mixed: ["A meal with different dishes", "一餐不同菜式配搭"],
+  style_cold: ["Cold dish", "涼菜"],
+  style_soup: ["Soup", "湯"],
+  style_main: ["Main / staple", "主食"],
+  style_meat: ["Meat or seafood dish", "肉類／海鮮菜"],
+  style_vegetable: ["Vegetable / tofu dish", "蔬菜／豆腐菜"],
+  preference: ["Preference (optional)", "口味偏好（選填）"],
+  preference_hint: ["e.g. quick, Cantonese, mild", "例如：快手、粵式、清淡"],
+  ai_note: [
+    "AI suggestions: check ingredients and cooking steps.",
+    "AI 建議，請確認食材及烹調步驟。",
+  ],
+  ai_provider: ["Generated with DeepSeek", "由 DeepSeek 生成"],
+  used_ingredients: ["From your inventory", "用到的庫存食材"],
+  extra_ingredients: ["Also prepare", "還需準備"],
+  suggested_amount: ["Suggested amount", "建議用量"],
+  pairing: ["Serve with", "配搭建議"],
+  servings: ["servings", "人份"],
+  cooked: ["I cooked this / update food", "煮好了／更新食材"],
+  pick_used: ["Which foods are completely used up?", "哪些食材已完全用完？"],
+  pick_used_hint: [
+    "Only tick foods with none left. Partly used food stays in your inventory.",
+    "只勾選完全用完的食材，仍有剩餘的會保留在庫存。",
+  ],
+  confirm_used: ["Confirm used up", "確認已用完"],
+  no_food: [
+    "Add some food before generating recipes.",
+    "請先新增食材，再生成食譜。",
+  ],
+  ai_unavailable: [
+    "Recipe generation is temporarily unavailable. Your food is unchanged.",
+    "食譜生成暫時無法使用，食材紀錄沒有改變。",
+  ],
+  ai_invalid: [
+    "The recipe response was incomplete. Please try again.",
+    "食譜內容未完整返回，請重試。",
+  ],
+  ai_limit: [
+    "Generation limit reached. Try again later.",
+    "已達生成次數限制，請稍後再試。",
+  ],
+  ai_busy: [
+    "An AI request is already in progress. Please wait.",
+    "AI 正在處理上一個請求，請稍候。",
+  ],
+  generation_stale: [
+    "Your inventory changed. Generate again with the latest food.",
+    "庫存已變更，請以最新食材重新生成。",
+  ],
+  no_recipes_yet: [
+    "Choose ingredients and generate a recipe.",
+    "選擇食材後，按生成食譜。",
+  ],
+  upgrade_required: [
+    "The app has updated. Refresh this page.",
+    "程式已更新，請重新整理頁面。",
+  ],
+  all: ["All food", "全部食材"],
+  kitchen_subtitle: ["", ""],
+  unknown_note: ["", ""],
+  recipe_disclaimer: [
+    "AI suggestions: check ingredients and cooking steps.",
+    "AI 建議，請確認食材及烹調步驟。",
+  ],
+});
+let inventoryStatus = "active",
+  photoCandidates = [],
+  photoBusy = false,
+  recipeBusy = false,
+  recipeHistoryLoaded = false;
+let recipeOptions = {
+  style: "auto",
+  count: 2,
+  scope: "selected",
+  preference: "",
+};
 let state = null,
   guestLanguage = "en",
   authMode = "login",
@@ -470,6 +600,10 @@ async function refresh(draw = true) {
     uid = next.user?.id ?? null,
     kid = next.kitchen?.id ?? null;
   if (uid !== lastUser) {
+    recipeResult = null;
+    recipeHistoryLoaded = false;
+    photoCandidates = [];
+    recipeSeq++;
     selection.clear();
     if (uid)
       try {
@@ -484,12 +618,27 @@ async function refresh(draw = true) {
   if (lost) {
     if ($("#confirm").open) $("#confirm").close("cancel");
     selection.clear();
+    recipeResult = null;
+    recipeHistoryLoaded = false;
+    photoCandidates = [];
+    recipeSeq++;
     notify(t("lost_access"));
     location.hash = "kitchen";
   }
   lastUser = uid;
   lastKitchen = kid;
   state = next;
+  if (recipeResult) {
+    const current = new Map(state.foods.map((f) => [f.id, f]));
+    recipeResult.stale = recipeResult.recipes.some((r) =>
+      r.uses.some(
+        (use) =>
+          !current.get(use.food_id)?.eligible ||
+          current.get(use.food_id)?.version !==
+            recipeResult.versions[use.food_id],
+      ),
+    );
+  }
   offline = false;
   if (uid) {
     const valid = new Set(
@@ -501,7 +650,7 @@ async function refresh(draw = true) {
     if (size !== selection.size) notify(t("selection_changed"));
     view ||= state.preferences.default_view;
   }
-  if (draw || lost) render();
+  if (draw || lost) render(!lost);
 }
 const route = () => location.hash.slice(1).split("/").filter(Boolean);
 function go(path) {
@@ -546,10 +695,16 @@ function foodStatus(f) {
 const dateLine = (f) =>
   `${t(f.date_source === "unknown" ? "no_date" : f.date_source)} · ${foodStatus(f)}${f.effective_date ? " · " + dateText(f.effective_date) : ""}`;
 function selectionBar() {
-  return `<aside class="selection" aria-label="${E(t("selected"))}"><span><strong id="selected-count">${selection.size}</strong> ${E(t("selected"))}</span>${button("clear-selection", t("clear"))}${button("find-recipes", t("find"), "primary")}</aside>`;
+  if (
+    !selection.size ||
+    !["kitchen", "category"].includes(route()[0] || "kitchen")
+  )
+    return "";
+  return `<aside class="selection" aria-label="${E(t("selected"))}"><div class="selection-summary"><strong id="selected-count">${selection.size}</strong> ${E(t("selected"))}${button("clear-selection", t("clear"), "quiet")}</div><div class="selection-actions">${button("batch-used", t("used_short"))}${button("batch-delete", t("remove_short"), "danger")}${button("find-recipes", t("find"), "primary")}</div></aside>`;
 }
-function render() {
+function render(keepScroll = false) {
   if (!state) return;
+  const scrollTop = keepScroll ? $("#main")?.scrollTop || 0 : 0;
   document.documentElement.lang = language();
   document.documentElement.classList.toggle(
     "large",
@@ -573,9 +728,18 @@ function render() {
   else if (page === "reminders") content = reminders();
   else if (page === "help") content = help();
   else content = kitchen();
-  app.innerHTML = `<header class="topbar"><button class="brand" data-action="go" data-path="kitchen">${icon("leaf")}<span>Last Minute <b>Bites</b></span></button><div class="header-actions">${state.user ? button("go", t("settings"), "", 'data-path="settings"') : button("language", language() === "en" ? "繁體中文" : "English")}${state.user ? `<span class="account">${E(state.user.email)}</span>` : ""}</div></header><main id="main" tabindex="-1">${offline ? `<p class="error">${E(t("offline"))} ${button("retry", t("retry"))}</p>` : ""}${content}</main>${state.user && state.kitchen ? selectionBar() + `<nav class="bottom-nav" aria-label="${E(t("kitchen"))}"><button data-action="go" data-path="kitchen" ${["kitchen", "category"].includes(page) ? 'aria-current="page"' : ""}>${icon("home")}${E(t("kitchen"))}</button><button data-action="go" data-path="recipes" ${page === "recipes" ? 'aria-current="page"' : ""}>${icon("book")}${E(t("recipes"))}</button></nav>` : ""}`;
+  app.innerHTML = `<header class="topbar"><button class="brand" data-action="go" data-path="kitchen">${icon("leaf")}<span>Last Minute <b>Bites</b></span></button><div class="header-actions">${state.user ? button("go", t("settings"), "", 'data-path="settings"') : button("language", language() === "en" ? "繁體中文" : "English")}</div></header><main id="main" tabindex="-1">${offline ? `<p class="error">${E(t("offline"))} ${button("retry", t("retry"))}</p>` : ""}${content}</main>${state.user && state.kitchen ? `<footer class="app-dock">${selectionBar()}<nav class="bottom-nav" aria-label="${E(t("kitchen"))}"><button data-action="go" data-path="kitchen" ${page === "kitchen" ? 'aria-current="page"' : ""}>${icon("home")}${E(t("kitchen"))}</button><button data-action="go" data-path="category/all" ${page === "category" ? 'aria-current="page"' : ""}>${icon("bag")}${E(t("inventory"))}</button><button data-action="go" data-path="recipes" ${page === "recipes" ? 'aria-current="page"' : ""}>${icon("book")}${E(t("recipes"))}</button></nav></footer>` : ""}`;
   if (page === "food") bindFoodForm();
-  if (page === "recipes" && state.user && state.kitchen) loadRecipes(arg);
+  if (page === "recipes") displayRecipes(arg);
+  if ($("#main")) $("#main").scrollTop = scrollTop;
+  if (
+    page === "recipes" &&
+    state.user &&
+    state.kitchen &&
+    !recipeHistoryLoaded &&
+    !recipeBusy
+  )
+    loadRecipes(arg);
 }
 function auth() {
   return `<div class="auth-layout"><section class="auth-story"><div class="little-leaf">${icon("leaf")}</div><h1>${E(t("welcome"))}</h1><p>${E(t("intro"))}</p><div class="mini-fridge" aria-hidden="true"><span></span><span></span></div></section><section class="auth-panel"><div class="switcher">${button("auth-login", t("sign_in"), authMode === "login" ? "chosen" : "")}${button("auth-register", t("register"), authMode === "register" ? "chosen" : "")}</div><h2>${E(t(authMode === "login" ? "sign_in" : "register"))}</h2><p>${E(t("auth_hint"))}</p><form data-form="auth">${field("email", t("email"), "", "email", 'required maxlength="254" autocomplete="username"')}${field("password", t("password"), "", "password", `required minlength="10" maxlength="128" autocomplete="${authMode === "login" ? "current-password" : "new-password"}"`)}${authMode === "register" ? field("confirm_password", t("confirm_password"), "", "password", 'required minlength="10" maxlength="128" autocomplete="new-password"') : ""}<p class="hint">${E(t("password_hint"))}</p><label class="check"><input type="checkbox" data-show-password>${E(t("show_password"))}</label>${formError()}<button class="primary full">${E(t(authMode === "login" ? "sign_in" : "register"))}</button></form></section></div>`;
@@ -593,7 +757,7 @@ function categoryButton(key, svg, cls = "") {
           ? ["dry", "other"].includes(f.category)
           : f.category === key),
   ).length;
-  return `<button data-action="category" data-category="${key}" class="fridge-category ${cls}">${icon(svg)}<span>${E(t(key))}<small>${count} ${E(t("active"))}</small></span><span class="chevron" aria-hidden="true">›</span></button>`;
+  return `<button data-action="category" data-category="${key}" class="fridge-category ${cls}">${icon(svg)}<span>${E(t(key))}<small>${count} ${E(t("items"))}</small></span><span class="chevron" aria-hidden="true">›</span></button>`;
 }
 function reminderBanner() {
   if (!state.preferences.reminders) return "";
@@ -617,23 +781,23 @@ function reminderBanner() {
     : "";
 }
 function kitchen() {
-  return `<section class="page-heading kitchen-heading"><div><p class="kitchen-label">${E(state.kitchen.name)} <span class="role">${E(t(state.kitchen.role))}</span></p><h1>${E(t("kitchen_intro"))}</h1><p>${E(t("kitchen_subtitle"))}</p></div>${button("add", t("add"), "primary")}</section><div class="kitchen-toolbar"><div class="switcher">${button("view-categories", t("categories"), view === "categories" ? "chosen" : "")}${button("view-first", t("use_first"), view === "use_first" ? "chosen" : "")}</div>${button("category", t("all"), "quiet", 'data-category="all"')}</div>${reminderBanner()}${
+  return `<section class="page-heading kitchen-heading"><div><p class="kitchen-label">${E(state.kitchen.name)} <span class="role">${E(t(state.kitchen.role))}</span></p><h1>${E(t("kitchen_intro"))}</h1></div>${button("add", t("add"), "primary")}</section><div class="kitchen-toolbar"><div class="switcher">${button("view-categories", t("categories"), view === "categories" ? "chosen" : "")}${button("view-first", t("use_first"), view === "use_first" ? "chosen" : "")}</div>${button("category", t("all"), "quiet", 'data-category="all"')}</div>${reminderBanner()}${
     view === "categories"
-      ? `<div class="kitchen-illustration"><section class="fridge" aria-label="${E(t("fridge"))}"><div class="fridge-top"><span>Last Minute Bites</span><span class="fridge-hinge"></span></div><div class="fridge-shelves">${categoryButton("produce", "leaf")}${categoryButton("dairy", "egg")}${categoryButton("protein", "fish")}${categoryButton("cooked", "bowl")}</div><div class="freezer-drawer">${categoryButton("freezer", "snow")}</div></section><aside class="pantry-rack"><div class="rack-top">${icon("jar")}${icon("jar")}${icon("jar")}</div>${categoryButton("condiments", "jar", "rack-category")}${categoryButton("dryother", "bag", "dry-category")}<p class="hint">${E(t("storage_guidance"))}</p></aside></div>`
+      ? `<div class="kitchen-illustration"><section class="fridge" aria-label="${E(t("fridge"))}"><div class="fridge-top"><span>Last Minute Bites</span><span class="fridge-hinge"></span></div><div class="fridge-shelves">${categoryButton("produce", "leaf")}${categoryButton("dairy", "egg")}${categoryButton("protein", "fish")}${categoryButton("cooked", "bowl")}</div><div class="freezer-drawer">${categoryButton("freezer", "snow")}</div></section><aside class="pantry-rack"><div class="rack-top">${icon("jar")}${icon("jar")}${icon("jar")}</div>${categoryButton("condiments", "jar", "rack-category")}${categoryButton("dryother", "bag", "dry-category")}</aside></div>`
       : foodList(
           state.foods.filter((f) => f.status === "active"),
           "use_first",
         )
-  }<p class="sync-note">${E(t("sync"))}</p>`;
+  }`;
 }
 function categoryPage(key) {
-  return `${back()}<section class="page-heading kitchen-heading"><div><h1>${E(t(key))}</h1><p>${E(t("sync"))}</p></div>${button("add", t("add"), "primary", `data-category="${E(key)}"`)}</section><div class="list-tools"><label class="search-label">${E(t("search"))}<input type="search" id="search" value="${E(search)}"></label><label class="check"><input type="checkbox" id="include-used" ${includeUsed ? "checked" : ""}>${E(t("view_used"))}</label></div><div id="food-list">${filteredList(key)}</div>`;
+  return `${back()}<section class="page-heading kitchen-heading"><h1>${E(key === "all" ? t("inventory") : t(key))}</h1>${button("add", t("add"), "primary", `data-category="${E(key)}"`)}</section><div class="list-tools"><label class="search-label"><span>${E(t("search"))}</span><input type="search" id="search" value="${E(search)}"></label><label>${E(t("inventory"))}<select id="inventory-status"><option value="active" ${inventoryStatus === "active" ? "selected" : ""}>${E(t("active_food"))}</option><option value="used" ${inventoryStatus === "used" ? "selected" : ""}>${E(t("used_food"))}</option></select></label></div><div id="food-list">${filteredList(key)}</div>`;
 }
 function filteredList(key) {
   return foodList(
     state.foods.filter(
       (f) =>
-        (includeUsed || f.status === "active") &&
+        f.status === inventoryStatus &&
         (key === "all" ||
           (key === "freezer"
             ? f.location === "freezer"
@@ -655,10 +819,10 @@ function foodList(foods, key) {
           a.effective_date.localeCompare(b.effective_date) || a.id - b.id,
       ),
     unknown = foods.filter((f) => !f.effective_date);
-  return `${known.length ? `<h2 class="list-heading">${E(t("known_dates"))}</h2><div class="food-rows">${known.map(foodRow).join("")}</div>` : ""}${unknown.length ? `<h2 class="list-heading">${E(t("unknown"))}</h2><p class="hint">${E(t("unknown_note"))}</p><div class="food-rows">${unknown.map(foodRow).join("")}</div>` : ""}`;
+  return `${known.length ? `<h2 class="list-heading">${E(t("known_dates"))}</h2><div class="food-rows">${known.map(foodRow).join("")}</div>` : ""}${unknown.length ? `<h2 class="list-heading">${E(t("unknown"))}</h2><div class="food-rows">${unknown.map(foodRow).join("")}</div>` : ""}`;
 }
 function foodRow(f) {
-  return `<article class="food-row"><label class="food-select"><input type="checkbox" data-select="${f.id}" ${selection.has(f.id) ? "checked" : ""} ${f.eligible ? "" : "disabled"} aria-label="${E(t("selected") + " " + f.name)}"><span><strong>${E(f.name)}</strong><small class="${!f.eligible && f.status !== "used" ? "warning" : ""}">${E(dateLine(f))}</small><small>${E(t(f.category))} · ${E(t(f.location))}${f.ingredient ? " · " + E(t(f.ingredient)) : ""}</small></span></label>${button("edit", t("edit"), "quiet", `data-id="${f.id}"`)}</article>`;
+  return `<article class="food-row" data-food-id="${f.id}"><label class="food-select"><input type="checkbox" data-select="${f.id}" ${selection.has(f.id) ? "checked" : ""} ${f.eligible ? "" : "disabled"} aria-label="${E(t("selected") + " " + f.name)}"><span><strong>${E(f.name)}</strong><small class="${!f.eligible && f.status !== "used" ? "warning" : ""}">${E(dateLine(f))}</small><small>${E(t(f.category))} · ${E(t(f.location))}</small></span></label><div class="food-actions">${button("edit", t("edit"), "quiet", `data-id="${f.id}"`)}${f.status === "used" ? button("row-restore", t("restore"), "", 'data-id="' + f.id + '"') : f.eligible ? button("row-used", t("used_short"), "", 'data-id="' + f.id + '"') : ""}${button("row-delete", t("remove_short"), "danger", `data-id="${f.id}"`)}</div></article>`;
 }
 function foodForm(id) {
   const f = id ? state.foods.find((f) => f.id === Number(id)) : null;
@@ -674,13 +838,7 @@ function foodForm(id) {
       ingredient: "",
     };
   calculation = f?.date_source === "production" ? f.effective_date : null;
-  return `<div class="narrow">${back()}<h1>${E(t(f ? "edit" : "add"))}</h1><form data-form="food" data-id="${f?.id || ""}" data-version="${f?.version || ""}">${field("name", t("name"), v.name, "text", 'required maxlength="120" autocomplete="off"')}<label>${E(t("date_information"))}<select name="date_source">${["unknown", "printed", "production"].map((k) => option(k, t(k === "unknown" ? "no_date" : k), v.date_source)).join("")}</select></label><div id="dated-fields" ${v.date_source === "unknown" ? "hidden" : ""}>${select("date_kind", t("label_type"), ["unspecified", "use_by", "best_before"], v.date_kind)}<div id="printed-fields" ${v.date_source !== "printed" ? "hidden" : ""}>${field("effective_date", t("date"), v.effective_date || "", "date")}</div><div id="production-fields" ${v.date_source !== "production" ? "hidden" : ""}>${field("production_date", t("production_date"), v.production_date || "", "date")}<div class="two-fields">${field("shelf_life", t("shelf_life"), v.shelf_life || "", "number", 'min="1" max="10000" step="1"')}${select("shelf_unit", t("shelf_life"), ["days", "months", "years"], v.shelf_unit || "days")}</div>${button("calculate", t("calculate"))}<p id="calculation-result" role="status">${calculation ? E(t("reference") + ": " + dateText(calculation)) : ""}</p><label class="check"><input type="checkbox" name="date_confirmed" ${calculation ? "checked" : ""}>${E(t("confirm_date"))}</label><details><summary>${E(t("calc_explanation"))}</summary><p>${E(t("calc_note"))}</p></details></div></div><div class="two-fields">${select("category", t("category"), cats, v.category)}${select("location", t("location"), ["fridge", "freezer", "pantry", "other"], v.location)}</div><label>${E(t("recipe_ingredient"))}<select name="ingredient">${option("", t("unmapped"), v.ingredient)}${Object.keys(
-    state.ingredients,
-  )
-    .map((i) => option(i, t(i), v.ingredient))
-    .join(
-      "",
-    )}</select></label><p class="hint">${E(t("mapping_hint"))}</p><label>${E(t("note"))}<textarea name="note" maxlength="1000" rows="3">${E(v.note)}</textarea></label><p class="hint">${E(t("note_hint"))}</p>${formError()}<div class="actions"><button class="primary" ${f?.status === "used" ? "disabled" : ""}>${E(t(f ? "save" : "add"))}</button>${button("go", t("cancel"), "", 'data-path="kitchen"')}</div>${f ? `<div class="record-actions">${f.status === "active" ? button("mark-used", t("mark_used")) : ""}${button("delete-food", t("delete"), "danger")}${button("reload-record", t("reload_record"), "quiet")}</div>` : ""}</form></div>`;
+  return `<div class="narrow">${back()}<h1>${E(t(f ? "edit" : "add"))}</h1>${!f ? `<section class="photo-panel"><label class="photo-upload">${E(t("photo"))}<input type="file" id="food-photo" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment"></label><p class="hint">${E(t("photo_hint"))}</p><div id="photo-results">${photoCandidates.length ? photoCandidateHTML() : ""}</div><p id="photo-error" class="error" role="alert"></p></section>` : ""}<form data-form="food" data-id="${f?.id || ""}" data-version="${f?.version || ""}">${field("name", t("name"), v.name, "text", 'required maxlength="120" autocomplete="off"')}<label>${E(t("date_information"))}<select name="date_source">${["unknown", "printed", "production"].map((k) => option(k, t(k === "unknown" ? "no_date" : k), v.date_source)).join("")}</select></label><div id="dated-fields" ${v.date_source === "unknown" ? "hidden" : ""}>${select("date_kind", t("label_type"), ["unspecified", "use_by", "best_before"], v.date_kind)}<div id="printed-fields" ${v.date_source !== "printed" ? "hidden" : ""}>${field("effective_date", t("date"), v.effective_date || "", "date")}</div><div id="production-fields" ${v.date_source !== "production" ? "hidden" : ""}>${field("production_date", t("production_date"), v.production_date || "", "date")}<div class="two-fields">${field("shelf_life", t("shelf_life"), v.shelf_life || "", "number", 'min="1" max="10000" step="1"')}${select("shelf_unit", t("shelf_life"), ["days", "months", "years"], v.shelf_unit || "days")}</div>${button("calculate", t("calculate"))}<p id="calculation-result" role="status">${calculation ? E(t("reference") + ": " + dateText(calculation)) : ""}</p><label class="check"><input type="checkbox" name="date_confirmed" ${calculation ? "checked" : ""}>${E(t("confirm_date"))}</label><details><summary>${E(t("calc_explanation"))}</summary><p>${E(t("calc_note"))}</p></details></div></div><div class="two-fields">${select("category", t("category"), cats, v.category)}${select("location", t("location"), ["fridge", "freezer", "pantry", "other"], v.location)}</div><input type="hidden" name="ingredient" value="${E(v.ingredient)}"><label>${E(t("note"))}<textarea name="note" maxlength="1000" rows="3">${E(v.note)}</textarea></label>${formError()}<div class="actions"><button class="primary" ${f?.status === "used" ? "disabled" : ""}>${E(t(f ? "save" : "add"))}</button>${button("go", t("cancel"), "", 'data-path="kitchen"')}</div>${f ? `<div class="record-actions">${f.status === "active" ? button("mark-used", t("mark_used")) : ""}${button("delete-food", t("delete"), "danger")}${button("reload-record", t("reload_record"), "quiet")}</div>` : ""}</form></div>`;
 }
 function bindFoodForm() {
   const form = $('[data-form="food"]');
@@ -724,55 +882,61 @@ function bindFoodForm() {
   });
 }
 function recipesPage(id) {
-  return `<section class="page-heading"><h1>${E(t("recipe_intro"))}</h1><p>${E(t("recipe_disclaimer"))}</p></section>${!selection.size ? `<p>${E(t("choose_food"))}</p>` : ""}<div id="recipe-content" data-id="${E(id || "")}"><p role="status">${E(t("loading"))}</p></div>`;
+  if (id)
+    return `<div class="narrow"><div id="recipe-content" aria-live="polite"></div></div>`;
+  const selected = selection.size;
+  if (!selected && recipeOptions.scope === "selected")
+    recipeOptions.scope = "all";
+  return `<section class="page-heading"><h1>${E(t("recipe_title"))}</h1><p>${E(t("recipe_hint"))}</p></section><form data-form="ai-recipes" class="recipe-controls"><div class="two-fields"><label>${E(t("dish_style"))}<select name="style">${["auto", "mixed", "cold", "soup", "main", "meat", "vegetable"].map((v) => option(v, t("style_" + v), recipeOptions.style)).join("")}</select></label><label>${E(t("dish_count"))}<select name="count">${[1, 2].map((v) => option(v, String(v), recipeOptions.count)).join("")}</select></label></div><label>${E(t("scope"))}<select name="scope"><option value="selected" ${recipeOptions.scope === "selected" ? "selected" : ""} ${!selected ? "disabled" : ""}>${E(t("scope_selected"))} (${selected})</option><option value="all" ${recipeOptions.scope === "all" ? "selected" : ""}>${E(t("scope_all"))}</option></select></label><label>${E(t("preference"))}<input name="preference" value="${E(recipeOptions.preference)}" maxlength="120" placeholder="${E(t("preference_hint"))}"></label>${formError()}<button class="primary full" ${recipeBusy ? "disabled" : ""}>${E(t(recipeBusy ? "generating" : recipeResult ? "regenerate" : "generate"))}</button></form><div id="recipe-content" aria-live="polite">${recipeBusy ? `<p class="loading">${E(t("generating"))}</p>` : ""}</div>`;
 }
 async function loadRecipes(id) {
   const seq = ++recipeSeq;
   try {
-    const result = await api("recipes", { selected: [...selection] });
-    if (seq !== recipeSeq || route()[0] !== "recipes") return;
-    recipeResult = result;
-    const before = selection.size;
-    selection = new Set(result.selected);
-    storeSelection();
-    if (before !== selection.size) notify(t("selection_changed"));
-    $("#selected-count").textContent = selection.size;
-    displayRecipes(id);
-  } catch (err) {
-    if (seq === recipeSeq && $("#recipe-content"))
+    const result = await api("recipes/history");
+    if (seq !== recipeSeq) return;
+    recipeHistoryLoaded = true;
+    if (result.generation) recipeResult = result.generation;
+    if (route()[0] === "recipes") displayRecipes(id);
+  } catch (error) {
+    if ($("#recipe-content"))
       $("#recipe-content").innerHTML =
-        `<p class="error">${E(errorText(err))}</p>${button("reload-recipes", t("retry"))}`;
+        `<p class="error">${E(errorText(error))}</p>`;
   }
 }
-const names = (keys) =>
-  keys.length ? keys.map((k) => E(t(k))).join(", ") : E(t("none"));
-function recipeFacts(r) {
-  return `<dl class="recipe-facts"><dt>${E(t("matches"))}</dt><dd>${r.matched.length ? r.matched.map((id) => E(state.foods.find((f) => f.id === id)?.name || "")).join(", ") : E(t("none"))}</dd><dt>${E(t("available"))}</dt><dd>${names(r.available)}</dd><dt>${E(t("missing"))}</dt><dd>${names(r.missing.filter((i) => !r.check_at_home.includes(i)))}</dd><dt>${E(t("check_home"))}</dt><dd>${names(r.check_at_home)}</dd></dl>`;
+function photoCandidateHTML() {
+  return `<p>${E(t("photo_confirm"))}</p><div class="photo-candidates">${photoCandidates.map((food, index) => button("photo-fill", food.name, "", `data-index="${index}"`)).join("")}</div>`;
 }
 function displayRecipes(id) {
   const root = $("#recipe-content");
-  if (!root || !recipeResult) return;
+  if (!root) return;
+  if (recipeBusy) {
+    root.innerHTML = `<p class="loading">${E(t("generating"))}</p>`;
+    return;
+  }
+  if (!recipeResult?.recipes?.length) {
+    root.innerHTML = `<section class="empty"><p>${E(t("no_recipes_yet"))}</p></section>`;
+    return;
+  }
   const recipes = recipeResult.recipes;
   if (id) {
-    const r = recipes.find((r) => r.id === Number(id));
+    const r = recipes.find((r) => String(r.id) === String(id));
     if (!r) {
       root.innerHTML = E(t("not_found"));
       return;
     }
-    root.innerHTML = `${back("recipes")}<article class="recipe-detail"><div class="recipe-icon">${icon(r.icon)}</div><h2>${E(r.name[language()])}</h2><p>${r.minutes} ${E(t("minutes"))}</p>${recipeFacts(r)}<h3>${E(t("ingredients"))}</h3><ul>${r.ingredients.map((i) => `<li>${E(t(i))} — ${E(t(r.available.includes(i) ? "available" : r.check_at_home.includes(i) ? "check_home" : "missing"))}</li>`).join("")}</ul><h3>${E(t("steps"))}</h3><ol>${r.steps[language()].map((s) => `<li>${E(s)}</li>`).join("")}</ol><p class="hint">${E(t("read_no_change"))}</p>${button("category", t("update_list"), "primary", 'data-category="all"')}</article>`;
+    root.innerHTML = `${back("recipes")}<article class="recipe-detail"><span class="dish-tag">${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p><h3>${E(t("used_ingredients"))}</h3><ul>${r.uses.map((use) => `<li>${E(use.name)} <span>${E(use.amount)}</span></li>`).join("")}</ul>${r.additional.length ? `<h3>${E(t("extra_ingredients"))}</h3><ul>${r.additional.map((item) => `<li>${E(item.name)} ${E(item.amount)}</li>`).join("")}</ul>` : ""}<h3>${E(t("steps"))}</h3><ol>${r.steps.map((step) => `<li>${E(step)}</li>`).join("")}</ol>${r.pairing ? `<h3>${E(t("pairing"))}</h3><p>${E(r.pairing)}</p>` : ""}<p class="hint">${E(t("ai_note"))}</p>${button("cooked-recipe", t("cooked"), "primary full", `data-id="${r.id}"`)}</article>`;
     return;
   }
-  const matched = recipes.filter((r) => r.matched.length),
-    shown = !selection.size || browse ? recipes : matched;
-  root.innerHTML = `${selection.size && !matched.length ? `<section class="empty"><h2>${E(t("no_match"))}</h2><p>${E(t("no_match_note"))}</p></section>` : ""}${selection.size ? button("browse-recipes", t("browse"), "quiet") : ""}<div class="recipe-grid">${shown.map((r) => `<article class="recipe-card"><div class="recipe-art">${icon(r.icon)}</div><div class="recipe-copy"><p class="hint">${r.minutes} ${E(t("minutes"))}</p><h2>${E(r.name[language()])}</h2>${recipeFacts(r)}${button("recipe-detail", t("details"), "primary", `data-id="${r.id}"`)}</div></article>`).join("")}</div>`;
+  root.innerHTML = `<div class="recipe-source">${E(t("ai_provider"))}</div>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<div class="recipe-grid">${recipes.map((r) => `<article class="recipe-card"><div class="recipe-art">${icon(r.kind === "soup" ? "bowl" : r.kind === "meat" ? "fish" : r.kind === "main" ? "bowl" : "leaf")}</div><div class="recipe-copy"><span class="dish-tag">${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p><p class="recipe-used">${r.uses.map((f) => E(f.name)).join("、")}</p>${r.pairing ? `<p class="hint">${E(r.pairing)}</p>` : ""}<div class="actions">${button("recipe-detail", t("details"), "primary", `data-id="${r.id}"`)}${button("cooked-recipe", t("cooked"), "", `data-id="${r.id}"`)}</div></div></article>`).join("")}</div><p class="hint">${E(t("ai_note"))}</p>`;
 }
+
 const settingsLink = (path, key) =>
   `<button class="settings-link" data-action="go" data-path="${path}"><span>${E(t(key))}</span><span aria-hidden="true">›</span></button>`;
 function settings() {
   return `<div class="narrow">${back()}<h1>${E(t("settings"))}</h1>${state.kitchen ? `<h2>${E(t("kitchen"))}</h2><p>${E(state.kitchen.name)} · ${E(t(state.kitchen.role))}</p>${settingsLink("shared", "shared")}` : ""}<h2>${E(t("personal"))}</h2>${settingsLink("preferences", "preferences")}${state.kitchen ? settingsLink("reminders", "reminders") : ""}<h2>${E(t("help"))}</h2>${settingsLink("help", "help")}${state.web_app ? "" : button("install", t("install"), "settings-link")}<p class="hint" id="install-guide" hidden>${E(t("install_note"))}</p>${state.kitchen?.role === "owner" ? `<h2>${E(t("kitchen_data"))}</h2>${button("clear-kitchen", t("clear_kitchen"), "danger full")}` : ""}<hr><p class="hint">${E(t("signout_note"))}</p>${button("sign-out", t("sign_out"), "full")}</div>`;
 }
 function shared() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("shared"))}</h1><h2>${E(state.kitchen.name)}</h2><p class="hint">${E(t("sync"))}</p><h3>${E(t("members"))}</h3><ul class="member-list">${state.members.map((m) => `<li><span>${E(m.email)}<small>${E(t(m.role))}</small></span>${state.kitchen.role === "owner" && m.role === "editor" ? button("remove-member", t("remove"), "danger", `data-id="${m.id}"`) : ""}</li>`).join("")}</ul>${state.kitchen.role === "owner" ? `<h3>${E(t("invite_editor"))}</h3><p>${E(t("invite_policy"))}</p>${button("invite", t("invite_editor"), "primary")}<div id="invite-output" aria-live="polite"></div>` : `<p>${E(t("preview_note"))}</p>${button("leave", t("leave"), "danger")}`}</div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("shared"))}</h1><h2>${E(state.kitchen.name)}</h2><h3>${E(t("members"))}</h3><ul class="member-list">${state.members.map((m) => `<li><span>${E(m.email)}<small>${E(t(m.role))}</small></span>${state.kitchen.role === "owner" && m.role === "editor" ? button("remove-member", t("remove"), "danger", `data-id="${m.id}"`) : ""}</li>`).join("")}</ul>${state.kitchen.role === "owner" ? `<h3>${E(t("invite_editor"))}</h3><p>${E(t("invite_policy"))}</p>${button("invite", t("invite_editor"), "primary")}<div id="invite-output" aria-live="polite"></div>` : `<p>${E(t("preview_note"))}</p>${button("leave", t("leave"), "danger")}`}</div>`;
 }
 function preferences() {
   const p = state.preferences;
@@ -783,7 +947,7 @@ function reminders() {
   return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.3</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.4</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
 async function confirmAction(title, message, typed = false) {
   const dialog = $("#confirm");
@@ -834,6 +998,42 @@ document.addEventListener("submit", async (event) => {
   const data = Object.fromEntries(new FormData(form));
   try {
     switch (form.dataset.form) {
+      case "ai-recipes": {
+        recipeOptions = {
+          style: data.style,
+          count: Number(data.count),
+          scope: data.scope,
+          preference: data.preference,
+        };
+        recipeBusy = true;
+        displayRecipes();
+        const uid = state.user.id,
+          kid = state.kitchen.id,
+          language = state.preferences.language;
+        try {
+          const generated = await api("recipes/generate", {
+            ...recipeOptions,
+            selected: [...selection],
+            regenerate: !!recipeResult,
+          });
+          if (
+            state.user?.id === uid &&
+            state.kitchen?.id === kid &&
+            state.preferences.language === language
+          ) {
+            recipeResult = generated.generation;
+            recipeHistoryLoaded = true;
+            notify(t("saved"));
+          }
+        } finally {
+          recipeBusy = false;
+        }
+        if (route()[0] === "recipes") {
+          render();
+          displayRecipes();
+        }
+        break;
+      }
       case "auth":
         await api(authMode === "login" ? "login" : "register", {
           ...data,
@@ -867,6 +1067,10 @@ document.addEventListener("submit", async (event) => {
         notify(t("saved"));
         break;
       case "preferences":
+        if (data.language !== state.preferences.language) {
+          recipeResult = null;
+          recipeHistoryLoaded = false;
+        }
         await api("preferences", data);
         await refresh(false);
         view = state.preferences.default_view;
@@ -883,7 +1087,9 @@ document.addEventListener("submit", async (event) => {
         break;
     }
   } catch (err) {
+    recipeBusy = false;
     error.textContent = errorText(err);
+    if (form.dataset.form === "ai-recipes") displayRecipes();
     if (["no_kitchen", "unauthorized"].includes(err.code))
       await refresh().catch(() => {});
   } finally {
@@ -903,6 +1109,41 @@ document.addEventListener("click", async (event) => {
       case "install":
         await LMBMobile.install();
         break;
+      case "row-used":
+      case "row-delete":
+      case "row-restore": {
+        const food = state.foods.find((f) => f.id === Number(b.dataset.id));
+        if (!food) break;
+        await manageFoods(
+          [food],
+          a === "row-used" ? "used" : a === "row-delete" ? "delete" : "restore",
+        );
+        break;
+      }
+      case "batch-used":
+      case "batch-delete":
+        await manageFoods(
+          state.foods.filter((f) => selection.has(f.id)),
+          a === "batch-used" ? "used" : "delete",
+        );
+        break;
+      case "cooked-recipe": {
+        const recipe = recipeResult?.recipes.find(
+          (r) => String(r.id) === b.dataset.id,
+        );
+        if (recipe) await chooseUsedFoods(recipe);
+        break;
+      }
+      case "photo-fill": {
+        const item = photoCandidates[Number(b.dataset.index)],
+          form = $('[data-form="food"]');
+        if (!item || !form) break;
+        form.elements.name.value = item.name;
+        form.elements.category.value = item.category || "other";
+        form.elements.ingredient.value = item.ingredient || "";
+        form.elements.name.focus();
+        break;
+      }
       case "go":
         go(b.dataset.path);
         break;
@@ -943,7 +1184,7 @@ document.addEventListener("click", async (event) => {
         document.querySelectorAll("[data-select]").forEach((input) => {
           input.checked = false;
         });
-        $("#selected-count").textContent = "0";
+        updateDock();
         if (route()[0] === "recipes") render();
         break;
       case "find-recipes":
@@ -1081,19 +1322,20 @@ document.addEventListener("change", (e) => {
     if (el.checked) selection.add(id);
     else selection.delete(id);
     storeSelection();
-    $("#selected-count").textContent = selection.size;
+    updateDock();
   }
   if (el.matches("[data-show-password]"))
     for (const input of el
       .closest("form")
       .querySelectorAll('input[name*="password"]'))
       input.type = el.checked ? "text" : "password";
-  if (el.id === "include-used") {
-    includeUsed = el.checked;
+  if (el.id === "inventory-status") {
+    inventoryStatus = el.value;
     $("#food-list").innerHTML = filteredList(route()[1] || "all");
   }
 });
 document.addEventListener("input", (e) => {
+  if (e.target.id === "food-photo") recognizePhoto(e.target.files?.[0]);
   if (e.target.id === "search") {
     search = e.target.value;
     $("#food-list").innerHTML = filteredList(route()[1] || "all");
@@ -1106,7 +1348,7 @@ document.addEventListener("input", (e) => {
 window.addEventListener("hashchange", () => {
   render();
   $("#main")?.focus();
-  window.scrollTo(0, 0);
+  if ($("#main")) $("#main").scrollTop = 0;
 });
 let polling = false;
 async function poll() {
@@ -1115,16 +1357,17 @@ async function poll() {
   try {
     const p = route()[0] || "kitchen",
       draw =
-        ["kitchen", "category", "recipes"].includes(p) &&
+        ["kitchen", "category"].includes(p) &&
         !document.activeElement?.matches("input,textarea,select") &&
         !$("#confirm").open &&
-        !$("#scanner").open;
+        !$("#scanner").open &&
+        !$("#used-picker").open;
     await refresh(draw);
   } catch (_) {
     offline = true;
     const p = route()[0] || "kitchen";
     if (
-      ["kitchen", "category", "recipes"].includes(p) &&
+      ["kitchen", "category"].includes(p) &&
       !document.activeElement?.matches("input")
     )
       render();
@@ -1137,3 +1380,148 @@ window.addEventListener("focus", poll);
 refresh().catch((err) => {
   app.innerHTML = `<main id="main"><h1>Last Minute Bites</h1><p role="alert">${E(navigator.onLine ? errorText(err) : t("offline_start"))}</p>${button("retry", t("retry"))}</main>`;
 });
+
+function updateDock() {
+  const old = $(".selection"),
+    html = selectionBar();
+  if (old) old.outerHTML = html;
+  else if (html) $(".app-dock")?.insertAdjacentHTML("afterbegin", html);
+}
+async function manageFoods(foods, action) {
+  if (!foods.length) return;
+  if (
+    action !== "restore" &&
+    !(await confirmAction(
+      t(action === "used" ? "mark_used" : "delete"),
+      `${foods
+        .map((f) => f.name)
+        .slice(0, 4)
+        .join(
+          "、",
+        )}\n${t(action === "used" ? "used_confirm" : "delete_confirm")}`,
+    ))
+  )
+    return;
+  await api("food/batch", {
+    action,
+    items: foods.map((f) => ({ id: f.id, version: f.version })),
+    confirmed: true,
+  });
+  await refresh(false);
+  render();
+  notify(t("saved"));
+}
+async function chooseUsedFoods(recipe) {
+  const ids = new Set(recipe.uses.map((f) => f.food_id));
+  const foods = state.foods.filter(
+    (f) => ids.has(f.id) && f.status === "active",
+  );
+  if (!foods.length) {
+    notify(t("none"));
+    return;
+  }
+  const dialog = $("#used-picker");
+  $("#used-title").textContent = t("pick_used");
+  $("#used-note").textContent = t("pick_used_hint");
+  $("#used-foods").innerHTML = foods
+    .map(
+      (f) =>
+        `<label class="check"><input type="checkbox" value="${f.id}">${E(f.name)}</label>`,
+    )
+    .join("");
+  $("#used-cancel").textContent = t("cancel");
+  $("#used-confirm").textContent = t("confirm_used");
+  $("#used-error").textContent = "";
+  dialog.returnValue = "cancel";
+  dialog.showModal();
+  const confirmed = await new Promise((resolve) =>
+    dialog.addEventListener(
+      "close",
+      () => resolve(dialog.returnValue === "confirm"),
+      { once: true },
+    ),
+  );
+  if (!confirmed) return;
+  const picked = new Set(
+    [...dialog.querySelectorAll("input:checked")].map((el) => Number(el.value)),
+  );
+  if (!picked.size) return;
+  await api("food/batch", {
+    action: "used",
+    items: foods
+      .filter((f) => picked.has(f.id))
+      .map((f) => ({ id: f.id, version: f.version })),
+    confirmed: true,
+  });
+  await refresh(false);
+  render();
+  notify(t("saved"));
+}
+async function recognizePhoto(file) {
+  if (!file || photoBusy) return;
+  const output = $("#photo-results"),
+    error = $("#photo-error"),
+    input = $("#food-photo");
+  if (file.size > 12 * 1024 * 1024) {
+    error.textContent = t("photo_large");
+    return;
+  }
+  const uid = state.user?.id,
+    kid = state.kitchen?.id;
+  photoBusy = true;
+  input.disabled = true;
+  error.textContent = "";
+  output.innerHTML = `<p role="status">${E(t("photo_busy"))}</p>`;
+  let objectUrl;
+  try {
+    objectUrl = URL.createObjectURL(file);
+    const image = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = objectUrl;
+    });
+    const ratio = Math.min(
+        1,
+        1024 / Math.max(image.naturalWidth, image.naturalHeight),
+      ),
+      canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#fff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const result = await api("food/recognize", {
+      image: canvas.toDataURL("image/jpeg", 0.78),
+    });
+    if (state.user?.id !== uid || state.kitchen?.id !== kid) return;
+    photoCandidates = result.foods;
+    if ($("#photo-results"))
+      $("#photo-results").innerHTML = photoCandidates.length
+        ? photoCandidateHTML()
+        : `<p>${E(t("photo_empty"))}</p>`;
+  } catch (err) {
+    if ($("#photo-error"))
+      $("#photo-error").textContent = err?.code
+        ? t(
+            ["ai_unavailable", "ai_invalid"].includes(err.code)
+              ? "photo_failed"
+              : err.code,
+          )
+        : t("photo_failed");
+    if ($("#photo-results")) $("#photo-results").innerHTML = "";
+  } finally {
+    photoBusy = false;
+    input.disabled = false;
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function fitViewport() {
+  if (window.visualViewport && Math.abs(window.visualViewport.scale - 1) < 0.01)
+    app.style.height = Math.round(window.visualViewport.height) + "px";
+  else app.style.height = "";
+}
+window.visualViewport?.addEventListener("resize", fitViewport);
+fitViewport();

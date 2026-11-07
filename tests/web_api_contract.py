@@ -68,13 +68,13 @@ def run(base):
     quality=owner.post('food/create',dict(name='Oil',ingredient='oil',date_source='printed',date_kind='best_before',effective_date='2000-01-01'))
     foods=owner.state()['foods'];old=next(f for f in foods if f['name']=='Old rice')
     assert not old['eligible'] and next(f for f in foods if f['name']=='Oil')['eligible']
-    matched=owner.post('recipes',dict(selected=[f['id'] for f in foods]))
-    assert old['id'] in matched['removed'] and matched['recipes'][0]['id']==1
-    assert 'rice' in matched['recipes'][0]['missing']
+    # Web recipes are now generated on explicit request; legacy fixed matching is retired.
+    assert owner.request('recipes/history')[1]['generation'] is None
+    owner.post('recipes',dict(selected=[f['id'] for f in foods]),409)
     owner.post('food/used',dict(id=tomato['id'],version=1,confirmed=True))
-    assert tomato['id'] in owner.post('recipes',dict(selected=[tomato['id']]))['removed']
+    assert not next(f for f in owner.state()['foods'] if f['id']==tomato['id'])['eligible']
     owner.post('food/delete',dict(id=quality['id'],version=1,confirmed=True))
-    assert quality['id'] in owner.post('recipes',dict(selected=[quality['id']]))['removed']
+    assert not any(f['id']==quality['id'] for f in owner.state()['foods'])
     # Private preferences and literal user data.
     owner.post('preferences',dict(language='zh-Hant',text_size='large',reminders=False,reminder_days=7,date_format='dmy'))
     assert owner.state()['preferences']['language']=='zh-Hant' and editor.state()['preferences']['language']=='en'
@@ -86,7 +86,7 @@ def run(base):
     newcode=owner.post('invitation/replace')['code']
     owner.post('member/remove',dict(user_id=eid,confirmed=True))
     assert editor.state()['kitchen'] is None and editor.state()['foods']==[]
-    for path in ['food/create','food/update','food/delete','recipes']:editor.post(path,{},403)
+    for path in ['food/create','food/update','food/delete','recipes/generate','food/recognize']:editor.post(path,{},403)
     editor.post('invitation/accept',dict(code=code,confirmed=True),404)
     editor.post('invitation/accept',dict(code=newcode,confirmed=True))
     editor.post('kitchen/leave',dict(confirmed=True));assert len(owner.state()['members'])==1
@@ -100,7 +100,7 @@ def run(base):
     owner.post('login',dict(email=prefix+'-owner@example.test',password='wrong-password-123'),401)
     owner.post('login',dict(email=prefix+'-owner@example.test',password='test-password-123'))
     assert owner.state()['kitchen']['name']=='Web contract '+prefix
-    print('PASS: live web API auth/CSRF, shared roles, scoped CRUD, calendar dates, retry keys, stale versions, recipe exclusions, private preferences, invitation rotation, immediate revocation, leave, clear and login persistence.')
+    print('PASS: live web API auth/CSRF, shared roles, scoped CRUD, calendar dates, retry keys, stale versions, eligible food exclusions, private recipe history/preferences, invitation rotation, immediate revocation, leave, clear and login persistence.')
 
 
 if __name__=='__main__':run(os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8787'))

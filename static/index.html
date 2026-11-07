@@ -44,8 +44,20 @@
         ><button id="scanner-retry" type="button">Retry / 重試</button>
       </div>
     </dialog>
+    <dialog id="used-picker" aria-labelledby="used-title">
+      <form method="dialog">
+        <h2 id="used-title"></h2>
+        <p id="used-note"></p>
+        <div id="used-foods"></div>
+        <p id="used-error" class="error" role="alert"></p>
+        <div class="actions">
+          <button id="used-cancel" value="cancel"></button
+          ><button id="used-confirm" class="primary" value="confirm"></button>
+        </div>
+      </form>
+    </dialog>
     <noscript
-      >This application requires JavaScript and the Python backend.</noscript
+      >This application requires JavaScript and an internet connection.</noscript
     >
   </body>
 </html>
