@@ -1,0 +1,84 @@
+[
+  {
+    "id": 1,
+    "name": { "en": "Tomato & egg rice", "zh-Hant": "番茄炒蛋飯" },
+    "icon": "tomato",
+    "minutes": 20,
+    "ingredients": ["tomato", "egg", "rice", "oil", "salt"],
+    "steps": {
+      "en": [
+        "Wash and chop the tomatoes. Beat the eggs in a separate bowl.",
+        "Heat oil in a pan. Cook the eggs until set, then transfer to a plate.",
+        "Cook the tomatoes until softened. Return the eggs and stir together; season to taste.",
+        "Serve with freshly cooked rice. Cook eggs thoroughly and follow local food-safety guidance."
+      ],
+      "zh-Hant": [
+        "洗淨番茄並切塊，另用碗打勻雞蛋。",
+        "鍋中加油，將蛋炒至凝固後盛起。",
+        "炒軟番茄，加入雞蛋拌勻，按口味調味。",
+        "配新鮮煮好的白飯。雞蛋須煮熟，並遵循當地食物安全指引。"
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "name": { "en": "Spinach & egg skillet", "zh-Hant": "菠菜炒蛋" },
+    "icon": "leaf",
+    "minutes": 15,
+    "ingredients": ["spinach", "egg", "oil", "salt"],
+    "steps": {
+      "en": [
+        "Wash the spinach thoroughly and drain. Beat the eggs.",
+        "Heat oil and cook the spinach until wilted.",
+        "Add eggs and gently stir until fully set. Season to taste and serve."
+      ],
+      "zh-Hant": [
+        "徹底洗淨菠菜並瀝乾，打勻雞蛋。",
+        "熱油後加入菠菜，炒至軟身。",
+        "倒入蛋液輕炒至完全凝固，調味後享用。"
+      ]
+    }
+  },
+  {
+    "id": 3,
+    "name": { "en": "Simple tomato pasta", "zh-Hant": "簡易番茄意粉" },
+    "icon": "bowl",
+    "minutes": 25,
+    "ingredients": ["tomato", "pasta", "oil", "salt"],
+    "steps": {
+      "en": [
+        "Wash and chop the tomatoes.",
+        "Cook pasta according to its packaging, then drain; keep a little cooking water.",
+        "Cook the tomatoes in oil until soft. Add a little pasta water to loosen the sauce.",
+        "Toss with the pasta, season to taste and serve."
+      ],
+      "zh-Hant": [
+        "洗淨番茄並切塊。",
+        "按包裝指示煮意粉，瀝乾並保留少量煮麵水。",
+        "用油炒軟番茄，加入少量煮麵水調整醬汁。",
+        "加入意粉拌勻，調味後享用。"
+      ]
+    }
+  },
+  {
+    "id": 4,
+    "name": { "en": "Tofu & spinach rice bowl", "zh-Hant": "豆腐菠菜飯碗" },
+    "icon": "bowl",
+    "minutes": 20,
+    "ingredients": ["tofu", "spinach", "rice", "soy_sauce", "oil"],
+    "steps": {
+      "en": [
+        "Drain and cube the tofu. Wash the spinach thoroughly.",
+        "Heat oil and cook tofu until hot throughout, following the packaging instructions.",
+        "Add spinach and cook until wilted. Season with soy sauce to taste.",
+        "Serve over freshly cooked rice."
+      ],
+      "zh-Hant": [
+        "豆腐瀝乾切塊，徹底洗淨菠菜。",
+        "熱油後按包裝指示將豆腐煮至中心熱透。",
+        "加入菠菜炒至軟身，用豉油調味。",
+        "放在新鮮煮好的白飯上享用。"
+      ]
+    }
+  }
+]
