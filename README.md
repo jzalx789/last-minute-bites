@@ -1,4 +1,4 @@
-# Last Minute Bites — Web Prototype 0.4
+# Last Minute Bites — Web Prototype 0.5
 
 **網站：https://last-minute-bites-demo.jzalx789.workers.dev**
 
@@ -8,11 +8,13 @@
 
 - Email/password 登入、session cookie、CSRF、Owner／Editor 共用庫存、邀請及後端撤權。
 - 手機可捲動的主要內容區，底部導覽及選取操作不遮擋表單；支援窄屏、橫向及大字。
-- 我的食材：搜尋、分類、多選、直接用完／刪除、已用完清單及復原，均不依賴食譜。
+- 我的食材：數量＋單位、購買日期與獨立批次。不同日期買的同名食物保留各自份量及期限；先列較早到期，期限相同再按購買日。
+- 消耗：填寫每批實際使用量，部分扣減保留剩餘，歸零才移到已用完。整批用完、刪除及復原也可獨立操作；復原只撤銷最後一次用完的份量。舊資料顯示「份量未設定」，不臆測數量。
 - 照片辨識：選取照片後縮小並轉為 JPEG，DeepSeek 建議食物名稱；使用者確認才儲存，不猜到期日、不自動新增。
-- DeepSeek 動態生成 1–2 道食譜，可選涼菜、湯、主食、肉類、蔬菜或搭配菜式。使用所選食材或現有庫存，列出還需準備的材料、步驟及搭配。
+- DeepSeek 動態生成 1–2 道食譜，可選涼菜、湯、主食、肉類、蔬菜或搭配菜式；設定 1–12 人、小／一般／大食量、時間上限、不想使用的食材及口味／飲食偏好。
+- 「清庫存」只用現有庫存，優先較近到期批次，不添購；「設計一餐」可加入新食材，以採購／準備清單列出每道菜所缺份量，也可從空庫存規劃。每道菜均按所選人數設計，兩道菜的庫存用量合計不可超過同一批現存量。
 - 只有明確按下生成才呼叫模型；瀏覽及背景同步不觸發生成。保留個人最近結果，庫存變動後顯示需要更新。
-- 煮完後由使用者勾選真正完全用完的食物；單純查看或生成食譜不扣庫存。
+- 煮完後由使用者選批次及填寫實際消耗量；單純查看或生成食譜不扣庫存。採購清單不會自動建立食物，買好後須新增實際份量。
 - 包裝日期／生產日＋期限／未知日期、日曆月尾及閏年計算、Use by／Best before、QR 邀請及雙語偏好。
 
 網站使用 Cloudflare Worker＋SQLite-backed Durable Object，靜態頁面與 API 同源。密碼使用 PBKDF2-SHA256 與隨機 salt，session token 只保存雜湊。保留的 Python 後端供舊 API 對照；目前網頁的 AI／批次庫存功能需要 Worker。
@@ -35,7 +37,7 @@ web/node_modules/.bin/wrangler dev --config tests/fixtures/food-ai/wrangler.json
 web/node_modules/.bin/wrangler dev --config web/wrangler.test.jsonc --port 8790
 ```
 
-然後執行 `LMB_WEB_BASE_URL=http://127.0.0.1:8790 python3 tests/web_api_contract.py`、`python3 tests/ai_api_contract.py`、`python3 tests/user_fixes_browser.py` 及同網址的 `tests/web_browser.py`。`LMB_WEB_ENGINE=webkit` 可切換引擎。CI 不花費模型額度。`tests/live_ai_browser.py` 需明確設定 `LMB_LIVE_AI=1`、正式網址及經檢視的測試食物照片才執行兩次真實 DeepSeek 呼叫。驗證紀錄見 [docs/VALIDATION.md](docs/VALIDATION.md)。
+然後執行 `LMB_WEB_BASE_URL=http://127.0.0.1:8790 python3 tests/web_api_contract.py`、`python3 tests/ai_api_contract.py`、`python3 tests/stock_api_contract.py`、`python3 tests/stock_browser.py`、`python3 tests/user_fixes_browser.py` 及同網址的 `tests/web_browser.py`。`LMB_WEB_ENGINE=webkit` 可切換引擎。CI 不花費模型額度。`tests/live_ai_browser.py` 需明確設定 `LMB_LIVE_AI=1`、正式網址及經檢視的測試食物照片才驗證四個真實 DeepSeek 流程（辨識、4 人大食量設計、清庫存、空庫存採購計劃）；每次食譜最多可再修正一次。驗證紀錄見 [docs/VALIDATION.md](docs/VALIDATION.md)。
 
 ## 部署結構
 
@@ -43,8 +45,8 @@ web/node_modules/.bin/wrangler dev --config web/wrangler.test.jsonc --port 8790
 
 食物 Worker 的 `FOOD_AI` service binding 呼叫 CareSync Worker 的私有 `FoodAI` RPC entrypoint，沿用其現有伺服器端 DeepSeek 設定；沒有複製或向瀏覽器傳送金鑰。部署順序為先註冊該 entrypoint，再部署獨立食物 Worker。CareSync 預設 HTTP 功能及資料綁定保留；其日後獨立部署須保留此 export 與 gateway 檔案。原有兩個專案的主分支沒有修改。
 
-實際模型為 `deepseek-flash`，使用 DeepSeek OpenAI-compatible Chat Completions 及官方 vision 格式。選取照片會將處理後影像交給 DeepSeek；應用程式不把照片寫入資料庫。每帳戶每天最多 12 次辨識、24 次食譜，另設整站及短時間限額；失敗顯示錯誤並保留手動新增／既有結果，不以固定食譜假裝 AI。實際菜式仍需使用者檢查，不提供食物安全、營養判斷或照片到期日推測。
+實際模型為 `deepseek-flash`，使用 DeepSeek OpenAI-compatible Chat Completions 及官方 vision 格式。選取照片會將處理後影像交給 DeepSeek；應用程式不把照片寫入資料庫。每帳戶每天最多 12 次辨識、24 次食譜，另設整站及短時間限額；回覆會先檢驗，未通過可由模型修正一次再完整檢驗；仍失敗便顯示錯誤並保留手動新增／既有結果，不以固定食譜假裝 AI。數量以千分之一單位做精確扣減，批次修改使用版本與交易保護。模型的菜式人數／時間／合計庫存用量、清庫存不添購與避免食材名稱均會檢驗。口味／飲食偏好仍屬模型建議，名稱檢查不是過敏原認證；實際菜式仍需使用者檢查，不提供食物安全、營養判斷或照片到期日推測。
 
-同步 `static/` 及正式 `web/` 檔案時，**不要部署測試 fixture 或 wrangler.test.jsonc**。同一個 Worker／Durable Object class／object name 會保留原資料，0.4 只新增資料表。`.data/`、`.wrangler/`、資料庫及私人帳密均忽略。`python3 scripts/package.py` 產生 `submission/S01G10.zip`，不包含秘密或執行資料。
+同步 `static/` 及正式 `web/` 檔案時，**不要部署測試 fixture 或 wrangler.test.jsonc**。同一個 Worker／Durable Object class／object name 會保留原資料，0.4 新增資料表；0.5 以相容的 JSON 欄位擴充份量及批次。`.data/`、`.wrangler/`、資料庫及私人帳密均忽略。`python3 scripts/package.py` 產生 `submission/S01G10.zip`，不包含秘密或執行資料。
 
 沒有製作問卷或正式 user guide；此版本專注可操作的 prototype。

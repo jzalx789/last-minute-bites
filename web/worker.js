@@ -4,6 +4,11 @@ import {
   validateRecipes,
   validatePhoto,
   validateRecognition,
+  PORTIONS,
+  avoidTerms,
+  matchesAvoid,
+  RECIPE_MODES,
+  priorityFoodIds,
 } from "./ai.js";
 import {
   Problem,
@@ -21,6 +26,8 @@ import {
   sha,
   passwordHash,
   verifyPassword,
+  consumeFood,
+  restoreFood,
 } from "./domain.js";
 
 const SCHEMA = `
@@ -125,6 +132,9 @@ export class KitchenStore extends DurableObject {
     return this.rows("SELECT * FROM food_items WHERE kitchen_id=?", kid).map(
       (r) => {
         const f = {
+          quantity: null,
+          unit: "pcs",
+          purchased_date: null,
           ...JSON.parse(r.data),
           id: r.id,
           version: r.version,
@@ -153,7 +163,7 @@ export class KitchenStore extends DurableObject {
         if (url.pathname === "/healthz") {
           this.one("SELECT COUNT(*) AS count FROM users");
           return respond(
-            { status: "ok", version: "0.4", storage: "persistent-sqlite" },
+            { status: "ok", version: "0.5", storage: "persistent-sqlite" },
             200,
             null,
             secure,
@@ -236,12 +246,16 @@ export class KitchenStore extends DurableObject {
           failure: {
             status: error instanceof Problem ? error.status : 503,
             code: error instanceof Problem ? error.code : "ai_unavailable",
+            reason: error.reason,
           },
         };
       }
     });
-    if (result.failure)
-      throw new Problem(result.failure.status, result.failure.code);
+    if (result.failure) {
+      const error = new Problem(result.failure.status, result.failure.code);
+      error.reason = result.failure.reason;
+      throw error;
+    }
     return result.value;
   }
   async aiAuth(request, maxBytes) {
@@ -337,11 +351,23 @@ export class KitchenStore extends DurableObject {
         let fingerprint, cacheKey;
         if (image) input.image = validatePhoto(auth.data.image);
         else {
-          const foods = this.foods(kid, todayIn(auth.preferences.timezone))
+          const allFoods = this.foods(kid, todayIn(auth.preferences.timezone))
             .filter((f) => f.eligible)
             .sort((a, b) => a.id - b.id);
-          check(foods.length > 0, "no_food");
-          check(foods.length <= 80, "invalid_input");
+          const mode = auth.data.mode ?? "use_up";
+          check(RECIPE_MODES.includes(mode));
+          if (mode === "use_up") check(allFoods.length > 0, "no_food");
+          check(allFoods.length <= 80, "invalid_input");
+          const servings = auth.data.servings ?? 2,
+            portion = auth.data.portion ?? "standard",
+            maxMinutes = auth.data.max_minutes ?? null,
+            avoid = auth.data.avoid ?? "";
+          integer(servings, 1, 12);
+          check(PORTIONS.includes(portion));
+          if (maxMinutes !== null) integer(maxMinutes, 5, 180);
+          const terms = avoidTerms(avoid);
+          const foods = allFoods.filter((f) => !matchesAvoid(f, terms));
+          if (mode === "use_up") check(foods.length > 0, "preference_conflict");
           check(STYLES.includes(auth.data.style ?? "auto"));
           check([1, 2].includes(auth.data.count ?? 2));
           const selected =
@@ -354,7 +380,11 @@ export class KitchenStore extends DurableObject {
               selected.every(Number.isSafeInteger),
           );
           const valid = selected.filter((id) => foods.some((f) => f.id === id));
-          check(valid.length > 0, "no_food");
+          if (mode === "use_up" || auth.data.scope === "selected")
+            check(
+              valid.length > 0,
+              terms.length ? "preference_conflict" : "no_food",
+            );
           const preference = auth.data.preference ?? "";
           check(typeof preference === "string" && preference.length <= 120);
           Object.assign(input, {
@@ -363,13 +393,31 @@ export class KitchenStore extends DurableObject {
               name: f.name,
               category: f.category,
               location: f.location,
+              quantity: f.quantity,
+              unit: f.unit,
+              purchased_date: f.purchased_date,
+              effective_date: f.effective_date,
             })),
             selected: [...new Set(valid)],
             style: auth.data.style ?? "auto",
             count: auth.data.count ?? 2,
             preference,
+            servings,
+            portion,
+            max_minutes: maxMinutes,
+            avoid,
+            mode,
+            require_selected: auth.data.scope === "selected",
+            priority_ids:
+              mode === "use_up"
+                ? priorityFoodIds(
+                    foods,
+                    valid,
+                    todayIn(auth.preferences.timezone),
+                  )
+                : [],
           });
-          fingerprint = JSON.stringify(foods.map((f) => [f.id, f.version]));
+          fingerprint = JSON.stringify(allFoods.map((f) => [f.id, f.version]));
           cacheKey = await sha(JSON.stringify({ input, fingerprint }));
           if (!auth.data.regenerate) {
             const cached = this.one(
@@ -406,7 +454,14 @@ export class KitchenStore extends DurableObject {
       } catch {
         throw new Problem(503, image ? "photo_failed" : "ai_unavailable");
       }
-      check(!result?.error, result?.error || "ai_unavailable", 503);
+      if (!result || result.error) {
+        const error = new Problem(
+          result?.error === "ai_invalid" ? 502 : 503,
+          result?.error || "ai_unavailable",
+        );
+        error.reason = result?.reason;
+        throw error;
+      }
       return await this.locked(async () => {
         check(
           this.one(
@@ -432,8 +487,10 @@ export class KitchenStore extends DurableObject {
           output = image
             ? validateRecognition(result.data)
             : validateRecipes(result.data, snapshot.input);
-        } catch {
-          throw new Problem(502, "ai_invalid");
+        } catch (failure) {
+          const error = new Problem(502, "ai_invalid");
+          error.reason = failure.code;
+          throw error;
         }
         if (image)
           return respond(
@@ -464,9 +521,21 @@ export class KitchenStore extends DurableObject {
           language: snapshot.input.language,
           provider: result.provider,
           model: result.model,
+          repair_reason: result.repair_reason ?? null,
           recipes: output,
           selected: snapshot.input.selected,
           versions: Object.fromEntries(current.map((f) => [f.id, f.version])),
+          options: {
+            mode: snapshot.input.mode,
+            style: snapshot.input.style,
+            count: snapshot.input.count,
+            scope: snapshot.input.require_selected ? "selected" : "all",
+            servings: snapshot.input.servings,
+            portion: snapshot.input.portion,
+            max_minutes: snapshot.input.max_minutes,
+            avoid: snapshot.input.avoid,
+            preference: snapshot.input.preference,
+          },
         };
         this.transaction(() => {
           this.sql.exec(
@@ -496,6 +565,10 @@ export class KitchenStore extends DurableObject {
                 : image
                   ? "photo_failed"
                   : "ai_unavailable",
+            ...(typeof error.reason === "string" &&
+            /^[a-z0-9_]{1,50}$/.test(error.reason)
+              ? { reason: error.reason }
+              : {}),
           },
         },
         error instanceof Problem ? error.status : 503,
@@ -525,14 +598,10 @@ export class KitchenStore extends DurableObject {
           (f) => [f.id, f],
         ),
       );
-      generation.stale = generation.recipes.some((r) =>
-        r.uses.some(
-          (use) =>
-            !current.get(use.food_id)?.eligible ||
-            current.get(use.food_id)?.version !==
-              generation.versions[use.food_id],
-        ),
-      );
+      const eligibleNow = [...current.values()].filter((f) => f.eligible);
+      generation.stale =
+        eligibleNow.length !== Object.keys(generation.versions).length ||
+        eligibleNow.some((f) => generation.versions[f.id] !== f.version);
       return { generation };
     }
     if (request.method === "GET" && path === "/api/state") {
@@ -757,6 +826,45 @@ export class KitchenStore extends DurableObject {
       }
       const member = this.member(),
         kid = member.kitchen_id;
+      if (path === "/api/food/consume") {
+        check(data.confirmed === true, "confirmation_required");
+        check(
+          Array.isArray(data.items) &&
+            data.items.length > 0 &&
+            data.items.length <= 100,
+        );
+        const seen = new Set();
+        const updates = data.items.map((item) => {
+          integer(item.id);
+          integer(item.version);
+          check(!seen.has(item.id));
+          seen.add(item.id);
+          const row = this.one(
+            "SELECT * FROM food_items WHERE id=? AND kitchen_id=?",
+            item.id,
+            kid,
+          );
+          check(row, "food_not_found", 404);
+          check(row.version === item.version, "conflict", 409);
+          check(item.all === undefined || typeof item.all === "boolean");
+          const food = consumeFood(
+            { ...JSON.parse(row.data), status: row.status },
+            item.quantity,
+            item.all === true,
+          );
+          return { row, food };
+        });
+        for (const { row, food } of updates) {
+          const { status, ...saved } = food;
+          this.sql.exec(
+            "UPDATE food_items SET data=?,status=?,version=version+1 WHERE id=?",
+            JSON.stringify(saved),
+            status,
+            row.id,
+          );
+        }
+        return { ok: true, changed: updates.length };
+      }
       if (path === "/api/food/batch") {
         check(data.confirmed === true, "confirmation_required");
         check(["used", "delete", "restore"].includes(data.action));
@@ -787,12 +895,19 @@ export class KitchenStore extends DurableObject {
         for (const row of rows)
           if (data.action === "delete")
             this.sql.exec("DELETE FROM food_items WHERE id=?", row.id);
-          else
+          else {
+            const current = { ...JSON.parse(row.data), status: row.status };
+            const { status, ...saved } =
+              data.action === "used"
+                ? consumeFood(current, null, true)
+                : restoreFood(current);
             this.sql.exec(
-              "UPDATE food_items SET status=?,version=version+1 WHERE id=?",
-              data.action === "used" ? "used" : "active",
+              "UPDATE food_items SET data=?,status=?,version=version+1 WHERE id=?",
+              JSON.stringify(saved),
+              status,
               row.id,
             );
+          }
         return { ok: true, changed: rows.length };
       }
       if (path === "/api/member/remove") {
@@ -890,13 +1005,24 @@ export class KitchenStore extends DurableObject {
           this.sql.exec("DELETE FROM food_items WHERE id=?", data.id);
         } else if (path.endsWith("used")) {
           check(data.confirmed === true, "confirmation_required");
+          const { status, ...saved } = consumeFood(
+            { ...JSON.parse(row.data), status: row.status },
+            null,
+            true,
+          );
           this.sql.exec(
-            "UPDATE food_items SET status='used',version=version+1 WHERE id=?",
+            "UPDATE food_items SET data=?,status=?,version=version+1 WHERE id=?",
+            JSON.stringify(saved),
+            status,
             data.id,
           );
         } else {
           check(row.status === "active", "food_used", 409);
-          const updated = validateFood(data);
+          const previous = JSON.parse(row.data);
+          const updated = {
+            ...previous,
+            ...validateFood({ ...previous, ...data }),
+          };
           this.sql.exec(
             "UPDATE food_items SET data=?,version=version+1 WHERE id=?",
             JSON.stringify(updated),
@@ -914,10 +1040,39 @@ export class KitchenStore extends DurableObject {
 export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
-    if (path.startsWith("/api/") || path === "/healthz")
+    if (path.startsWith("/api/") || path === "/healthz") {
+      // Finish bounded request-body reads before forwarding to the actor. An
+      // early auth/CSRF rejection must not race the incoming network stream.
+      let forwarded = request;
+      if (request.method === "POST" && request.body) {
+        const limit = path === "/api/food/recognize" ? 1200000 : 16384;
+        if (Number(request.headers.get("Content-Length") || 0) > limit)
+          return respond({ error: { code: "invalid_input" } }, 413);
+        const reader = request.body.getReader(),
+          bytes = new Uint8Array(limit);
+        let size = 0;
+        try {
+          for (;;) {
+            const chunk = await reader.read();
+            if (chunk.done) break;
+            size += chunk.value.byteLength;
+            if (size > limit) {
+              await reader.cancel();
+              return respond({ error: { code: "invalid_input" } }, 413);
+            }
+            bytes.set(chunk.value, size - chunk.value.byteLength);
+          }
+          forwarded = new Request(request, { body: bytes.slice(0, size) });
+        } catch {
+          return respond({ error: { code: "invalid_input" } }, 400);
+        } finally {
+          reader.releaseLock();
+        }
+      }
       return env.KITCHENS.get(
         env.KITCHENS.idFromName("shared-kitchens-v1"),
-      ).fetch(request);
+      ).fetch(forwarded);
+    }
     const response = await env.ASSETS.fetch(request),
       headers = new Headers(response.headers);
     for (const [key, value] of Object.entries(securityHeaders))

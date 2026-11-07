@@ -282,8 +282,8 @@ const words = {
     "分類只供導航，實際存放請遵循包裝指示。",
   ],
   help_text: [
-    "Add food manually or confirm names suggested from a photo. In My food, mark items used up, delete them, or restore used records. Recipes generates one or two dishes from your selected food or current inventory. After cooking, choose only the items you fully used up.",
-    "手動新增食物，或拍照後確認辨識名稱。在「我的食材」可直接標記用完、刪除，或復原已用完紀錄。「食譜」可用所選食材或目前庫存產生一至兩道菜。煮完後，只勾選真正完全用完的食材。",
+    "Add food manually or confirm names suggested from a photo. In My food, enter the amount consumed from each purchase batch, delete records, or restore the last fully consumed amount. Recipes generates one or two dishes from your selected food or current inventory. After cooking, confirm actual consumption; partial amounts remain in stock.",
+    "手動新增食物，或拍照後確認辨識名稱。在「我的食材」可選購買批次、填寫消耗量、刪除，或復原最後一次用完的份量。「食譜」可用所選食材或目前庫存產生一至兩道菜。煮完後確認實際消耗量，仍有剩餘的會留在庫存。",
   ],
   limitations: [
     "Photo recognition and recipes use DeepSeek and require an internet connection. Confirm photo results and review recipes. The app does not assess food safety or infer expiry dates from photos.",
@@ -388,6 +388,94 @@ Object.assign(words, {
     "A request is already running. Please wait.",
     "已有請求正在處理，請稍候。",
   ],
+  diners: ["People eating", "用餐人數"],
+  per_person_portion: ["Portion per person", "每人份量"],
+  portion_light: ["Light", "小食量"],
+  portion_standard: ["Standard", "一般食量"],
+  portion_hearty: ["Hearty", "大食量"],
+  max_minutes: ["Cooking time", "烹調時間上限"],
+  any_time: ["No limit", "不限"],
+  avoid: ["Ingredients to avoid", "不想使用的食材"],
+  avoid_hint: [
+    "e.g. egg, milk (separate with commas)",
+    "例如：雞蛋、牛奶（用逗號分隔）",
+  ],
+  more_preferences: ["More preferences", "更多偏好"],
+  preference_conflict: [
+    "Your selected food conflicts with your preferences. Adjust the selection or preferences.",
+    "所選食材與偏好不符，請調整食材或條件。",
+  ],
+  recipe_mode: ["What is your goal?", "這次想做甚麼？"],
+  mode_use_up: ["Use up stock · no shopping", "清庫存・不另外採購"],
+  mode_plan: ["Design a meal · shopping allowed", "設計一餐・可以添購"],
+  mode_hint_use_up: [
+    "Prioritise food approaching expiry, using stock only. Small stocks may only make sides or snacks.",
+    "優先使用快到期食材，只用現有庫存；份量少時可能只夠小菜。",
+  ],
+  mode_hint_plan: [
+    "Plan for your group and preferences. Extra ingredients appear in the shopping list.",
+    "按人數與偏好設計菜式，缺少食材會列入採購清單。",
+  ],
+  shopping_list: ["Shopping / preparation list", "待採購／準備清單"],
+  shopping_note: [
+    "Amounts are listed per dish. Add purchases to your inventory before recording their consumption.",
+    "以下列出各菜式所需份量；買好後請先加入庫存，再記錄消耗。",
+  ],
+  no_shopping: [
+    "Uses stock only · no extra purchases",
+    "只用現有庫存・不用添購",
+  ],
+  quantity: ["Quantity remaining", "剩餘數量"],
+  unit: ["Unit", "單位"],
+  purchased_date: ["Purchase date", "購買日期"],
+  remaining: ["Remaining", "剩餘"],
+  quantity_unknown: ["Quantity not set", "份量未設定"],
+  purchase_unknown: ["Purchase date not set", "購買日未設定"],
+  batch: ["Batch", "批次"],
+  batch_note: [
+    "Each purchase keeps its own quantity and date.",
+    "每次購買會分開記錄份量與期限。",
+  ],
+  consume: ["Use some", "記錄消耗"],
+  consume_title: ["How much did you use?", "這次用了多少？"],
+  consume_hint: [
+    "Choose the purchase batch and enter the amount actually used.",
+    "選擇購買批次，填寫實際使用量。",
+  ],
+  consumed_amount: ["Amount used", "這次用了"],
+  use_all: ["Use all remaining", "全部用完"],
+  after_consumption: ["Left afterwards", "消耗後剩餘"],
+  confirm_consumption: ["Confirm consumption", "確認消耗"],
+  choose_consumption: [
+    "Choose at least one batch and enter its amount.",
+    "請選擇至少一個批次並填寫使用量。",
+  ],
+  invalid_quantity: [
+    "Enter a positive quantity with up to 3 decimal places (maximum 1,000,000).",
+    "請輸入大於零的數量，最多三位小數，上限 1,000,000。",
+  ],
+  quantity_required: [
+    "Edit this batch to set its quantity before using part of it, or choose Use all remaining.",
+    "部分消耗前請先編輯此批次的份量，或選擇「全部用完」。",
+  ],
+  insufficient_quantity: [
+    "The amount exceeds the remaining quantity. Check the latest stock.",
+    "使用量超過剩餘數量，請檢查最新庫存。",
+  ],
+  consumption_conflict: [
+    "This batch changed. Cancel and reopen to load the latest quantity.",
+    "此批次已變更，請取消後重新開啟，以載入最新份量。",
+  ],
+  restore_amount: ["Quantity to restore", "將復原數量"],
+  unit_pcs: ["pcs", "個"],
+  unit_g: ["g", "克"],
+  unit_kg: ["kg", "公斤"],
+  unit_ml: ["ml", "毫升"],
+  unit_l: ["L", "公升"],
+  unit_pack: ["packs", "包"],
+  unit_box: ["boxes", "盒"],
+  unit_bottle: ["bottles", "瓶"],
+  unit_portion: ["portions", "份"],
   invalid_image: [
     "Choose a clear JPEG or PNG photo.",
     "請選擇清晰的 JPEG 或 PNG 相片。",
@@ -443,8 +531,14 @@ Object.assign(words, {
   style_main: ["Main / staple", "主食"],
   style_meat: ["Meat or seafood dish", "肉類／海鮮菜"],
   style_vegetable: ["Vegetable / tofu dish", "蔬菜／豆腐菜"],
-  preference: ["Preference (optional)", "口味偏好（選填）"],
-  preference_hint: ["e.g. quick, Cantonese, mild", "例如：快手、粵式、清淡"],
+  preference: [
+    "Taste / dietary preferences (optional)",
+    "口味／飲食偏好（選填）",
+  ],
+  preference_hint: [
+    "e.g. Cantonese, mild, vegetarian",
+    "例如：粵式、清淡、素食",
+  ],
   ai_note: [
     "AI suggestions: check ingredients and cooking steps.",
     "AI 建議，請確認食材及烹調步驟。",
@@ -463,8 +557,8 @@ Object.assign(words, {
   ],
   confirm_used: ["Confirm used up", "確認已用完"],
   no_food: [
-    "Add some food before generating recipes.",
-    "請先新增食材，再生成食譜。",
+    "Add food to use up, or switch to Design a meal.",
+    "請先新增要清理的食材，或切換「設計一餐」。",
   ],
   ai_unavailable: [
     "Recipe generation is temporarily unavailable. Your food is unchanged.",
@@ -507,12 +601,18 @@ let inventoryStatus = "active",
   photoBusy = false,
   recipeBusy = false,
   recipeHistoryLoaded = false;
-let recipeOptions = {
+const defaultRecipeOptions = () => ({
   style: "auto",
   count: 2,
   scope: "selected",
   preference: "",
-};
+  mode: "use_up",
+  servings: 2,
+  portion: "standard",
+  max_minutes: null,
+  avoid: "",
+});
+let recipeOptions = defaultRecipeOptions();
 let state = null,
   guestLanguage = "en",
   authMode = "login",
@@ -600,6 +700,8 @@ async function refresh(draw = true) {
     uid = next.user?.id ?? null,
     kid = next.kitchen?.id ?? null;
   if (uid !== lastUser) {
+    recipeOptions = defaultRecipeOptions();
+    if ($("#used-picker").open) $("#used-picker").close("cancel");
     recipeResult = null;
     recipeHistoryLoaded = false;
     photoCandidates = [];
@@ -617,6 +719,7 @@ async function refresh(draw = true) {
   const lost = lastUser === uid && lastKitchen && lastKitchen !== kid;
   if (lost) {
     if ($("#confirm").open) $("#confirm").close("cancel");
+    if ($("#used-picker").open) $("#used-picker").close("cancel");
     selection.clear();
     recipeResult = null;
     recipeHistoryLoaded = false;
@@ -629,15 +732,10 @@ async function refresh(draw = true) {
   lastKitchen = kid;
   state = next;
   if (recipeResult) {
-    const current = new Map(state.foods.map((f) => [f.id, f]));
-    recipeResult.stale = recipeResult.recipes.some((r) =>
-      r.uses.some(
-        (use) =>
-          !current.get(use.food_id)?.eligible ||
-          current.get(use.food_id)?.version !==
-            recipeResult.versions[use.food_id],
-      ),
-    );
+    const current = state.foods.filter((f) => f.eligible);
+    recipeResult.stale =
+      current.length !== Object.keys(recipeResult.versions).length ||
+      current.some((f) => recipeResult.versions[f.id] !== f.version);
   }
   offline = false;
   if (uid) {
@@ -700,7 +798,7 @@ function selectionBar() {
     !["kitchen", "category"].includes(route()[0] || "kitchen")
   )
     return "";
-  return `<aside class="selection" aria-label="${E(t("selected"))}"><div class="selection-summary"><strong id="selected-count">${selection.size}</strong> ${E(t("selected"))}${button("clear-selection", t("clear"), "quiet")}</div><div class="selection-actions">${button("batch-used", t("used_short"))}${button("batch-delete", t("remove_short"), "danger")}${button("find-recipes", t("find"), "primary")}</div></aside>`;
+  return `<aside class="selection" aria-label="${E(t("selected"))}"><div class="selection-summary"><strong id="selected-count">${selection.size}</strong> ${E(t("selected"))}${button("clear-selection", t("clear"), "quiet")}</div><div class="selection-actions">${button("batch-used", t("consume"))}${button("batch-delete", t("remove_short"), "danger")}${button("find-recipes", t("find"), "primary")}</div></aside>`;
 }
 function render(keepScroll = false) {
   if (!state) return;
@@ -816,13 +914,43 @@ function foodList(foods, key) {
       .filter((f) => f.effective_date)
       .sort(
         (a, b) =>
-          a.effective_date.localeCompare(b.effective_date) || a.id - b.id,
+          a.effective_date.localeCompare(b.effective_date) ||
+          (a.purchased_date || "9999").localeCompare(
+            b.purchased_date || "9999",
+          ) ||
+          a.id - b.id,
       ),
-    unknown = foods.filter((f) => !f.effective_date);
+    unknown = foods
+      .filter((f) => !f.effective_date)
+      .sort(
+        (a, b) =>
+          (a.purchased_date || "9999").localeCompare(
+            b.purchased_date || "9999",
+          ) || a.id - b.id,
+      );
   return `${known.length ? `<h2 class="list-heading">${E(t("known_dates"))}</h2><div class="food-rows">${known.map(foodRow).join("")}</div>` : ""}${unknown.length ? `<h2 class="list-heading">${E(t("unknown"))}</h2><div class="food-rows">${unknown.map(foodRow).join("")}</div>` : ""}`;
 }
+const quantityUnits = [
+  "pcs",
+  "g",
+  "kg",
+  "ml",
+  "l",
+  "pack",
+  "box",
+  "bottle",
+  "portion",
+];
+function amountText(quantity, unit = "pcs") {
+  return typeof quantity === "number"
+    ? `${new Intl.NumberFormat(language() === "en" ? "en" : "zh-Hant", { maximumFractionDigits: 3 }).format(quantity)} ${t("unit_" + unit)}`
+    : t("quantity_unknown");
+}
+function batchLine(food) {
+  return `${t("batch")} #${food.id} · ${food.purchased_date ? t("purchased_date") + " " + dateText(food.purchased_date) : t("purchase_unknown")}`;
+}
 function foodRow(f) {
-  return `<article class="food-row" data-food-id="${f.id}"><label class="food-select"><input type="checkbox" data-select="${f.id}" ${selection.has(f.id) ? "checked" : ""} ${f.eligible ? "" : "disabled"} aria-label="${E(t("selected") + " " + f.name)}"><span><strong>${E(f.name)}</strong><small class="${!f.eligible && f.status !== "used" ? "warning" : ""}">${E(dateLine(f))}</small><small>${E(t(f.category))} · ${E(t(f.location))}</small></span></label><div class="food-actions">${button("edit", t("edit"), "quiet", `data-id="${f.id}"`)}${f.status === "used" ? button("row-restore", t("restore"), "", 'data-id="' + f.id + '"') : f.eligible ? button("row-used", t("used_short"), "", 'data-id="' + f.id + '"') : ""}${button("row-delete", t("remove_short"), "danger", `data-id="${f.id}"`)}</div></article>`;
+  return `<article class="food-row" data-food-id="${f.id}"><label class="food-select"><input type="checkbox" data-select="${f.id}" ${selection.has(f.id) ? "checked" : ""} ${f.eligible ? "" : "disabled"} aria-label="${E(t("selected") + " " + f.name)}"><span><strong>${E(f.name)}</strong><span class="stock-quantity">${E(t("remaining"))}: ${E(amountText(f.quantity, f.unit))}</span><small class="batch-label">${E(batchLine(f))}</small><small class="${!f.eligible && f.status !== "used" ? "warning" : ""}">${E(dateLine(f))}</small><small>${E(t(f.category))} · ${E(t(f.location))}</small></span></label><div class="food-actions">${button("edit", t("edit"), "quiet", `data-id="${f.id}"`)}${f.status === "used" ? button("row-restore", t("restore"), "", 'data-id="' + f.id + '"') : button("row-used", t("consume"), "", 'data-id="' + f.id + '"')}${button("row-delete", t("remove_short"), "danger", `data-id="${f.id}"`)}</div></article>`;
 }
 function foodForm(id) {
   const f = id ? state.foods.find((f) => f.id === Number(id)) : null;
@@ -838,7 +966,7 @@ function foodForm(id) {
       ingredient: "",
     };
   calculation = f?.date_source === "production" ? f.effective_date : null;
-  return `<div class="narrow">${back()}<h1>${E(t(f ? "edit" : "add"))}</h1>${!f ? `<section class="photo-panel"><label class="photo-upload">${E(t("photo"))}<input type="file" id="food-photo" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment"></label><p class="hint">${E(t("photo_hint"))}</p><div id="photo-results">${photoCandidates.length ? photoCandidateHTML() : ""}</div><p id="photo-error" class="error" role="alert"></p></section>` : ""}<form data-form="food" data-id="${f?.id || ""}" data-version="${f?.version || ""}">${field("name", t("name"), v.name, "text", 'required maxlength="120" autocomplete="off"')}<label>${E(t("date_information"))}<select name="date_source">${["unknown", "printed", "production"].map((k) => option(k, t(k === "unknown" ? "no_date" : k), v.date_source)).join("")}</select></label><div id="dated-fields" ${v.date_source === "unknown" ? "hidden" : ""}>${select("date_kind", t("label_type"), ["unspecified", "use_by", "best_before"], v.date_kind)}<div id="printed-fields" ${v.date_source !== "printed" ? "hidden" : ""}>${field("effective_date", t("date"), v.effective_date || "", "date")}</div><div id="production-fields" ${v.date_source !== "production" ? "hidden" : ""}>${field("production_date", t("production_date"), v.production_date || "", "date")}<div class="two-fields">${field("shelf_life", t("shelf_life"), v.shelf_life || "", "number", 'min="1" max="10000" step="1"')}${select("shelf_unit", t("shelf_life"), ["days", "months", "years"], v.shelf_unit || "days")}</div>${button("calculate", t("calculate"))}<p id="calculation-result" role="status">${calculation ? E(t("reference") + ": " + dateText(calculation)) : ""}</p><label class="check"><input type="checkbox" name="date_confirmed" ${calculation ? "checked" : ""}>${E(t("confirm_date"))}</label><details><summary>${E(t("calc_explanation"))}</summary><p>${E(t("calc_note"))}</p></details></div></div><div class="two-fields">${select("category", t("category"), cats, v.category)}${select("location", t("location"), ["fridge", "freezer", "pantry", "other"], v.location)}</div><input type="hidden" name="ingredient" value="${E(v.ingredient)}"><label>${E(t("note"))}<textarea name="note" maxlength="1000" rows="3">${E(v.note)}</textarea></label>${formError()}<div class="actions"><button class="primary" ${f?.status === "used" ? "disabled" : ""}>${E(t(f ? "save" : "add"))}</button>${button("go", t("cancel"), "", 'data-path="kitchen"')}</div>${f ? `<div class="record-actions">${f.status === "active" ? button("mark-used", t("mark_used")) : ""}${button("delete-food", t("delete"), "danger")}${button("reload-record", t("reload_record"), "quiet")}</div>` : ""}</form></div>`;
+  return `<div class="narrow">${back()}<h1>${E(t(f ? "edit" : "add"))}</h1>${!f ? `<section class="photo-panel"><label class="photo-upload">${E(t("photo"))}<input type="file" id="food-photo" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment"></label><p class="hint">${E(t("photo_hint"))}</p><div id="photo-results">${photoCandidates.length ? photoCandidateHTML() : ""}</div><p id="photo-error" class="error" role="alert"></p></section>` : ""}<form data-form="food" data-id="${f?.id || ""}" data-version="${f?.version || ""}">${field("name", t("name"), v.name, "text", 'required maxlength="120" autocomplete="off"')}<p class="hint">${E(t("batch_note"))}</p><div class="two-fields">${field("quantity", t("quantity"), v.quantity ?? "", "number", `required min="0.001" max="1000000" step="0.001" inputmode="decimal"`)}<label>${E(t("unit"))}<select name="unit">${quantityUnits.map((unit) => option(unit, t("unit_" + unit), v.unit || "pcs")).join("")}</select></label></div>${field("purchased_date", t("purchased_date"), f ? f.purchased_date || "" : state.today, "date")}<label>${E(t("date_information"))}<select name="date_source">${["unknown", "printed", "production"].map((k) => option(k, t(k === "unknown" ? "no_date" : k), v.date_source)).join("")}</select></label><div id="dated-fields" ${v.date_source === "unknown" ? "hidden" : ""}>${select("date_kind", t("label_type"), ["unspecified", "use_by", "best_before"], v.date_kind)}<div id="printed-fields" ${v.date_source !== "printed" ? "hidden" : ""}>${field("effective_date", t("date"), v.effective_date || "", "date")}</div><div id="production-fields" ${v.date_source !== "production" ? "hidden" : ""}>${field("production_date", t("production_date"), v.production_date || "", "date")}<div class="two-fields">${field("shelf_life", t("shelf_life"), v.shelf_life || "", "number", 'min="1" max="10000" step="1"')}${select("shelf_unit", t("shelf_life"), ["days", "months", "years"], v.shelf_unit || "days")}</div>${button("calculate", t("calculate"))}<p id="calculation-result" role="status">${calculation ? E(t("reference") + ": " + dateText(calculation)) : ""}</p><label class="check"><input type="checkbox" name="date_confirmed" ${calculation ? "checked" : ""}>${E(t("confirm_date"))}</label><details><summary>${E(t("calc_explanation"))}</summary><p>${E(t("calc_note"))}</p></details></div></div><div class="two-fields">${select("category", t("category"), cats, v.category)}${select("location", t("location"), ["fridge", "freezer", "pantry", "other"], v.location)}</div><input type="hidden" name="ingredient" value="${E(v.ingredient)}"><label>${E(t("note"))}<textarea name="note" maxlength="1000" rows="3">${E(v.note)}</textarea></label>${formError()}<div class="actions"><button class="primary" ${f?.status === "used" ? "disabled" : ""}>${E(t(f ? "save" : "add"))}</button>${button("go", t("cancel"), "", 'data-path="kitchen"')}</div>${f ? `<div class="record-actions">${f.status === "active" ? button("mark-used", t("consume")) : ""}${button("delete-food", t("delete"), "danger")}${button("reload-record", t("reload_record"), "quiet")}</div>` : ""}</form></div>`;
 }
 function bindFoodForm() {
   const form = $('[data-form="food"]');
@@ -887,7 +1015,33 @@ function recipesPage(id) {
   const selected = selection.size;
   if (!selected && recipeOptions.scope === "selected")
     recipeOptions.scope = "all";
-  return `<section class="page-heading"><h1>${E(t("recipe_title"))}</h1><p>${E(t("recipe_hint"))}</p></section><form data-form="ai-recipes" class="recipe-controls"><div class="two-fields"><label>${E(t("dish_style"))}<select name="style">${["auto", "mixed", "cold", "soup", "main", "meat", "vegetable"].map((v) => option(v, t("style_" + v), recipeOptions.style)).join("")}</select></label><label>${E(t("dish_count"))}<select name="count">${[1, 2].map((v) => option(v, String(v), recipeOptions.count)).join("")}</select></label></div><label>${E(t("scope"))}<select name="scope"><option value="selected" ${recipeOptions.scope === "selected" ? "selected" : ""} ${!selected ? "disabled" : ""}>${E(t("scope_selected"))} (${selected})</option><option value="all" ${recipeOptions.scope === "all" ? "selected" : ""}>${E(t("scope_all"))}</option></select></label><label>${E(t("preference"))}<input name="preference" value="${E(recipeOptions.preference)}" maxlength="120" placeholder="${E(t("preference_hint"))}"></label>${formError()}<button class="primary full" ${recipeBusy ? "disabled" : ""}>${E(t(recipeBusy ? "generating" : recipeResult ? "regenerate" : "generate"))}</button></form><div id="recipe-content" aria-live="polite">${recipeBusy ? `<p class="loading">${E(t("generating"))}</p>` : ""}</div>`;
+  return `<section class="page-heading"><h1>${E(t("recipe_title"))}</h1></section>
+  <form data-form="ai-recipes" class="recipe-controls">
+    <label>${E(t("recipe_mode"))}<select name="mode">${["use_up", "plan"].map((v) => option(v, t("mode_" + v), recipeOptions.mode)).join("")}</select></label>
+    <p id="mode-hint" class="hint">${E(t("mode_hint_" + recipeOptions.mode))}</p>
+    <div class="two-fields recipe-dish-fields"><label>${E(t("dish_style"))}<select name="style">${["auto", "mixed", "cold", "soup", "main", "meat", "vegetable"].map((v) => option(v, t("style_" + v), recipeOptions.style)).join("")}</select></label><label>${E(t("dish_count"))}<select name="count">${[1, 2].map((v) => option(v, String(v), recipeOptions.count)).join("")}</select></label></div>
+    <div class="two-fields"><label>${E(t("diners"))}<input name="servings" type="number" min="1" max="12" step="1" inputmode="numeric" value="${recipeOptions.servings}" required></label><label>${E(t("per_person_portion"))}<select name="portion">${["light", "standard", "hearty"].map((v) => option(v, t("portion_" + v), recipeOptions.portion)).join("")}</select></label></div>
+    <label>${E(t("scope"))}<select name="scope"><option value="selected" ${recipeOptions.scope === "selected" ? "selected" : ""} ${!selected ? "disabled" : ""}>${E(t("scope_selected"))} (${selected})</option><option value="all" ${recipeOptions.scope === "all" ? "selected" : ""}>${E(t("scope_all"))}</option></select></label>
+    <details class="recipe-preferences"><summary>${E(t("more_preferences"))}</summary>
+      <label>${E(t("max_minutes"))}<select name="max_minutes">${option("", t("any_time"), recipeOptions.max_minutes ?? "")}${[15, 30, 45, 60].map((v) => option(v, `${v} ${t("minutes")}`, recipeOptions.max_minutes)).join("")}</select></label>
+      <label>${E(t("avoid"))}<input name="avoid" value="${E(recipeOptions.avoid)}" maxlength="120" placeholder="${E(t("avoid_hint"))}"></label>
+      <label>${E(t("preference"))}<input name="preference" value="${E(recipeOptions.preference)}" maxlength="120" placeholder="${E(t("preference_hint"))}"></label>
+    </details>
+    ${formError()}<button class="primary full" ${recipeBusy ? "disabled" : ""}>${E(t(recipeBusy ? "generating" : recipeResult ? "regenerate" : "generate"))}</button>
+  </form><div id="recipe-content" aria-live="polite">${recipeBusy ? `<p class="loading">${E(t("generating"))}</p>` : ""}</div>`;
+}
+function recipeSummary(generation) {
+  const options = generation.options || {};
+  return `${t("mode_" + (options.mode || "plan"))} · ${options.servings || generation.recipes[0]?.servings || 2} ${t("servings")} · ${t("portion_" + (options.portion || "standard"))}${options.max_minutes ? ` · ≤${options.max_minutes} ${t("minutes")}` : ""}`;
+}
+function shoppingHTML(generation) {
+  if (generation.options?.mode === "use_up")
+    return `<p class="recipe-source">${E(t("no_shopping"))}</p>`;
+  const items = generation.recipes.flatMap((r) =>
+    r.additional.map((item) => ({ ...item, recipe: r.title })),
+  );
+  if (!items.length) return "";
+  return `<section class="shopping-list"><h2>${E(t("shopping_list"))}</h2><p class="hint">${E(t("shopping_note"))}</p><ul>${items.map((item) => `<li><strong>${E(item.name)} ${E(item.amount)}</strong><small>${E(item.recipe)}</small></li>`).join("")}</ul></section>`;
 }
 async function loadRecipes(id) {
   const seq = ++recipeSeq;
@@ -896,6 +1050,18 @@ async function loadRecipes(id) {
     if (seq !== recipeSeq) return;
     recipeHistoryLoaded = true;
     if (result.generation) recipeResult = result.generation;
+    const form = $('[data-form="ai-recipes"]');
+    if (recipeResult && form && !form.dataset.dirty) {
+      const saved = recipeResult.options || {};
+      recipeOptions = {
+        ...defaultRecipeOptions(),
+        ...saved,
+        mode: saved.mode || "plan",
+        servings: saved.servings || recipeResult.recipes[0]?.servings || 2,
+        count: saved.count || recipeResult.recipes.length,
+      };
+      render(true);
+    }
     if (route()[0] === "recipes") displayRecipes(id);
   } catch (error) {
     if ($("#recipe-content"))
@@ -924,10 +1090,10 @@ function displayRecipes(id) {
       root.innerHTML = E(t("not_found"));
       return;
     }
-    root.innerHTML = `${back("recipes")}<article class="recipe-detail"><span class="dish-tag">${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p><h3>${E(t("used_ingredients"))}</h3><ul>${r.uses.map((use) => `<li>${E(use.name)} <span>${E(use.amount)}</span></li>`).join("")}</ul>${r.additional.length ? `<h3>${E(t("extra_ingredients"))}</h3><ul>${r.additional.map((item) => `<li>${E(item.name)} ${E(item.amount)}</li>`).join("")}</ul>` : ""}<h3>${E(t("steps"))}</h3><ol>${r.steps.map((step) => `<li>${E(step)}</li>`).join("")}</ol>${r.pairing ? `<h3>${E(t("pairing"))}</h3><p>${E(r.pairing)}</p>` : ""}<p class="hint">${E(t("ai_note"))}</p>${button("cooked-recipe", t("cooked"), "primary full", `data-id="${r.id}"`)}</article>`;
+    root.innerHTML = `${back("recipes")}<p class="recipe-source">${E(recipeSummary(recipeResult))}</p>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<article class="recipe-detail"><span class="dish-tag">${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p>${r.uses.length ? `<h3>${E(t("used_ingredients"))}</h3><ul>${r.uses.map((use) => `<li>${E(use.name)} <span>${E(use.amount)}</span>${typeof use.quantity === "number" ? `<small class="recipe-stock">${E(t("suggested_amount"))}: ${E(amountText(use.quantity, use.unit))}</small>` : ""}<small class="recipe-stock">${E(t("remaining"))}: ${E(amountText(state.foods.find((f) => f.id === use.food_id)?.quantity, use.unit))} · ${E(batchLine({ id: use.food_id, purchased_date: use.purchased_date }))}</small></li>`).join("")}</ul>` : ""}${r.additional.length ? `<h3>${E(t("extra_ingredients"))}</h3><ul>${r.additional.map((item) => `<li>${E(item.name)} ${E(item.amount)}</li>`).join("")}</ul>` : ""}<h3>${E(t("steps"))}</h3><ol>${r.steps.map((step) => `<li>${E(step)}</li>`).join("")}</ol>${recipeResult.options?.mode !== "use_up" && r.pairing ? `<h3>${E(t("pairing"))}</h3><p>${E(r.pairing)}</p>` : ""}${r.notes ? `<p class="hint">${E(r.notes)}</p>` : ""}<p class="hint">${E(t("ai_note"))}</p>${r.uses.length ? button("cooked-recipe", t("cooked"), "primary full", `data-id="${r.id}"`) : `<p class="hint">${E(t("shopping_note"))}</p>`}</article>${shoppingHTML({ ...recipeResult, recipes: [r] })}`;
     return;
   }
-  root.innerHTML = `<div class="recipe-source">${E(t("ai_provider"))}</div>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<div class="recipe-grid">${recipes.map((r) => `<article class="recipe-card"><div class="recipe-art">${icon(r.kind === "soup" ? "bowl" : r.kind === "meat" ? "fish" : r.kind === "main" ? "bowl" : "leaf")}</div><div class="recipe-copy"><span class="dish-tag">${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p><p class="recipe-used">${r.uses.map((f) => E(f.name)).join("、")}</p>${r.pairing ? `<p class="hint">${E(r.pairing)}</p>` : ""}<div class="actions">${button("recipe-detail", t("details"), "primary", `data-id="${r.id}"`)}${button("cooked-recipe", t("cooked"), "", `data-id="${r.id}"`)}</div></div></article>`).join("")}</div><p class="hint">${E(t("ai_note"))}</p>`;
+  root.innerHTML = `<div class="recipe-source">${E(t("ai_provider"))}<br>${E(recipeSummary(recipeResult))}</div>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<div class="recipe-grid">${recipes.map((r) => `<article class="recipe-card"><div class="recipe-art">${icon(r.kind === "soup" ? "bowl" : r.kind === "meat" ? "fish" : r.kind === "main" ? "bowl" : "leaf")}</div><div class="recipe-copy"><span class="dish-tag">${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p><p class="recipe-used">${r.uses.map((f) => E(f.name)).join("、")}</p>${recipeResult.options?.mode !== "use_up" && r.pairing ? `<p class="hint">${E(r.pairing)}</p>` : ""}<div class="actions">${button("recipe-detail", t("details"), "primary", `data-id="${r.id}"`)}${r.uses.length ? button("cooked-recipe", t("cooked"), "", `data-id="${r.id}"`) : ""}</div></div></article>`).join("")}</div>${shoppingHTML(recipeResult)}<p class="hint">${E(t("ai_note"))}</p>`;
 }
 
 const settingsLink = (path, key) =>
@@ -947,7 +1113,7 @@ function reminders() {
   return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.4</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.5</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
 async function confirmAction(title, message, typed = false) {
   const dialog = $("#confirm");
@@ -979,6 +1145,7 @@ function foodData(form) {
   const data = Object.fromEntries(new FormData(form));
   data.request_id = form.dataset.requestId;
   data.shelf_life = Number(data.shelf_life);
+  data.quantity = data.quantity === "" ? null : Number(data.quantity);
   data.date_confirmed = form.elements.date_confirmed.checked && !!calculation;
   if (form.dataset.id) {
     data.id = Number(form.dataset.id);
@@ -1004,7 +1171,13 @@ document.addEventListener("submit", async (event) => {
           count: Number(data.count),
           scope: data.scope,
           preference: data.preference,
+          mode: data.mode,
+          servings: Number(data.servings),
+          portion: data.portion,
+          max_minutes: data.max_minutes ? Number(data.max_minutes) : null,
+          avoid: data.avoid,
         };
+        recipeSeq++;
         recipeBusy = true;
         displayRecipes();
         const uid = state.user.id,
@@ -1234,6 +1407,14 @@ document.addEventListener("click", async (event) => {
       case "mark-used":
       case "delete-food": {
         const used = a === "mark-used";
+        if (used) {
+          const f = b.closest("form");
+          const food = state.foods.find(
+            (item) => item.id === Number(f.dataset.id),
+          );
+          if (food) await consumeFoods([food], true);
+          break;
+        }
         if (
           !(await confirmAction(
             t(used ? "mark_used" : "delete"),
@@ -1317,6 +1498,8 @@ document.addEventListener("click", async (event) => {
 });
 document.addEventListener("change", (e) => {
   const el = e.target;
+  const recipeForm = el.closest('[data-form="ai-recipes"]');
+  if (recipeForm) recipeForm.dataset.dirty = "true";
   if (el.matches("[data-select]")) {
     const id = Number(el.dataset.select);
     if (el.checked) selection.add(id);
@@ -1329,12 +1512,16 @@ document.addEventListener("change", (e) => {
       .closest("form")
       .querySelectorAll('input[name*="password"]'))
       input.type = el.checked ? "text" : "password";
+  if (el.name === "mode" && el.closest('[data-form="ai-recipes"]'))
+    $("#mode-hint").textContent = t("mode_hint_" + el.value);
   if (el.id === "inventory-status") {
     inventoryStatus = el.value;
     $("#food-list").innerHTML = filteredList(route()[1] || "all");
   }
 });
 document.addEventListener("input", (e) => {
+  const recipeForm = e.target.closest('[data-form="ai-recipes"]');
+  if (recipeForm) recipeForm.dataset.dirty = "true";
   if (e.target.id === "food-photo") recognizePhoto(e.target.files?.[0]);
   if (e.target.id === "search") {
     search = e.target.value;
@@ -1389,6 +1576,21 @@ function updateDock() {
 }
 async function manageFoods(foods, action) {
   if (!foods.length) return;
+  if (action === "used") return consumeFoods(foods, true);
+  if (action === "restore") {
+    if (
+      !(await confirmAction(
+        t("restore"),
+        foods
+          .map(
+            (f) =>
+              `${f.name} · ${batchLine(f)}\n${t("restore_amount")}: ${amountText(f.restore_quantity ?? null, f.unit)}`,
+          )
+          .join("\n"),
+      ))
+    )
+      return;
+  }
   if (
     action !== "restore" &&
     !(await confirmAction(
@@ -1413,49 +1615,122 @@ async function manageFoods(foods, action) {
 }
 async function chooseUsedFoods(recipe) {
   const ids = new Set(recipe.uses.map((f) => f.food_id));
-  const foods = state.foods.filter(
-    (f) => ids.has(f.id) && f.status === "active",
+  return consumeFoods(
+    state.foods.filter((f) => ids.has(f.id) && f.status === "active"),
   );
+}
+async function consumeFoods(foods, direct = false) {
   if (!foods.length) {
     notify(t("none"));
     return;
   }
-  const dialog = $("#used-picker");
-  $("#used-title").textContent = t("pick_used");
-  $("#used-note").textContent = t("pick_used_hint");
+  const dialog = $("#used-picker"),
+    form = $("form", dialog);
+  if (dialog.open) return;
+  $("#used-title").textContent = t("consume_title");
+  $("#used-note").textContent = t("consume_hint");
   $("#used-foods").innerHTML = foods
-    .map(
-      (f) =>
-        `<label class="check"><input type="checkbox" value="${f.id}">${E(f.name)}</label>`,
-    )
+    .map((f) => {
+      const known = typeof f.quantity === "number" && f.quantity > 0;
+      return `<section class="consume-item" data-id="${f.id}"><label class="check"><input type="checkbox" data-consume-select value="${f.id}" ${direct ? "checked" : ""}><strong>${E(f.name)}</strong></label><p class="hint">${E(batchLine(f))}<br>${E(t("remaining"))}: ${E(amountText(f.quantity, f.unit))} · ${E(dateLine(f))}</p>${known ? `<label>${E(t("consumed_amount"))} (${E(t("unit_" + f.unit))})<input type="number" data-consume-amount min="0.001" max="${f.quantity}" step="0.001" inputmode="decimal" placeholder="0"></label>` : `<p class="hint">${E(t("quantity_required"))}</p>`}<label class="check"><input type="checkbox" data-consume-all>${E(t("use_all"))}</label><p class="consume-remainder" aria-live="polite"></p></section>`;
+    })
     .join("");
   $("#used-cancel").textContent = t("cancel");
-  $("#used-confirm").textContent = t("confirm_used");
+  $("#used-confirm").textContent = t("confirm_consumption");
   $("#used-error").textContent = "";
+  const update = () => {
+    for (const row of dialog.querySelectorAll(".consume-item")) {
+      const f = foods.find((f) => f.id === Number(row.dataset.id));
+      const selected = $("[data-consume-select]", row).checked,
+        all = $("[data-consume-all]", row),
+        amount = $("[data-consume-amount]", row);
+      all.disabled = !selected;
+      if (amount) {
+        amount.disabled = !selected || all.checked;
+        amount.required = selected && !all.checked;
+      }
+      const consumed = all.checked
+        ? f.quantity
+        : amount?.value
+          ? Number(amount.value)
+          : 0;
+      const remaining =
+        typeof f.quantity === "number"
+          ? Math.round((f.quantity - consumed) * 1000) / 1000
+          : null;
+      $(".consume-remainder", row).textContent =
+        selected && (all.checked || amount?.value)
+          ? `${t("after_consumption")}: ${all.checked ? (typeof f.quantity === "number" ? amountText(0, f.unit) : t("used")) : remaining < 0 ? t("insufficient_quantity") : amountText(remaining, f.unit)}`
+          : "";
+    }
+  };
+  let busy = false;
+  const submit = async (event) => {
+    if (event.submitter?.value !== "confirm") return;
+    event.preventDefault();
+    if (busy) return;
+    const picked = [...dialog.querySelectorAll(".consume-item")].filter(
+      (row) => $("[data-consume-select]", row).checked,
+    );
+    const error = $("#used-error");
+    error.textContent = "";
+    if (!picked.length) {
+      error.textContent = t("choose_consumption");
+      return;
+    }
+    const items = picked.map((row) => {
+      const f = foods.find((f) => f.id === Number(row.dataset.id));
+      return {
+        id: f.id,
+        version: f.version,
+        all: $("[data-consume-all]", row).checked,
+        quantity: Number($("[data-consume-amount]", row)?.value || 0),
+      };
+    });
+    if (items.some((item) => !item.all && !item.quantity)) {
+      error.textContent = t("quantity_required");
+      return;
+    }
+    busy = true;
+    $("#used-confirm").disabled = true;
+    $("#used-cancel").disabled = true;
+    try {
+      await api("food/consume", { items, confirmed: true });
+      await refresh(false);
+      dialog.close("saved");
+      render();
+      notify(t("saved"));
+    } catch (err) {
+      error.textContent =
+        err.code === "conflict" ? t("consumption_conflict") : errorText(err);
+      if (["no_kitchen", "unauthorized"].includes(err.code))
+        await refresh(false).catch(() => {});
+    } finally {
+      busy = false;
+      $("#used-confirm").disabled = false;
+      $("#used-cancel").disabled = false;
+    }
+  };
+  const preventCancel = (event) => {
+    if (busy) event.preventDefault();
+  };
+  form.addEventListener("submit", submit);
+  form.addEventListener("input", update);
+  form.addEventListener("change", update);
+  dialog.addEventListener("cancel", preventCancel);
+  update();
   dialog.returnValue = "cancel";
   dialog.showModal();
-  const confirmed = await new Promise((resolve) =>
-    dialog.addEventListener(
-      "close",
-      () => resolve(dialog.returnValue === "confirm"),
-      { once: true },
-    ),
-  );
-  if (!confirmed) return;
-  const picked = new Set(
-    [...dialog.querySelectorAll("input:checked")].map((el) => Number(el.value)),
-  );
-  if (!picked.size) return;
-  await api("food/batch", {
-    action: "used",
-    items: foods
-      .filter((f) => picked.has(f.id))
-      .map((f) => ({ id: f.id, version: f.version })),
-    confirmed: true,
-  });
-  await refresh(false);
-  render();
-  notify(t("saved"));
+  try {
+    await new Promise((resolve) =>
+      dialog.addEventListener("close", resolve, { once: true }),
+    );
+  } finally {
+    form.removeEventListener("submit", submit);
+    form.removeEventListener("input", update);
+    form.removeEventListener("change", update);
+    dialog.removeEventListener("cancel", preventCancel);
+  }
 }
 async function recognizePhoto(file) {
   if (!file || photoBusy) return;

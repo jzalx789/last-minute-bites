@@ -30,6 +30,9 @@ jobs:
           export LMB_TEST_CHROMIUM="$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
           python tests/web_api_contract.py
           python tests/ai_api_contract.py
+          python tests/stock_api_contract.py
           python tests/web_browser.py
           python tests/user_fixes_browser.py
+          python tests/stock_browser.py
           LMB_WEB_ENGINE=webkit python tests/user_fixes_browser.py
+          LMB_WEB_ENGINE=webkit python tests/stock_browser.py

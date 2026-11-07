@@ -5,7 +5,7 @@ import sys
 import uuid
 from playwright.sync_api import sync_playwright,expect
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from browser_smoke import click,navigate,register,confirm
+from browser_smoke import set_stock,click,navigate,register,confirm
 
 base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8787')
 artifacts=Path(__file__).resolve().parents[1]/'artifacts/web';artifacts.mkdir(parents=True,exist_ok=True)
@@ -21,8 +21,8 @@ with sync_playwright() as p:
     register(page,base,prefix+'-owner@example.test')
     page.locator('[data-form=create-kitchen] [name=name]').fill('Browser demo kitchen')
     page.locator('[data-form=create-kitchen] button').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
-    click(page,'add');page.locator('[name=name]').fill('Tomato');page.locator('[name=category]').select_option('produce');page.locator('[data-form=food] button.primary').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
-    click(page,'add');page.locator('[name=name]').fill('Egg');page.locator('[name=category]').select_option('dairy');page.locator('[data-form=food] button.primary').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
+    click(page,'add');page.locator('[name=name]').fill('Tomato');page.locator('[name=category]').select_option('produce');set_stock(page);page.locator('[data-form=food] button.primary').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
+    click(page,'add');page.locator('[name=name]').fill('Egg');page.locator('[name=category]').select_option('dairy');set_stock(page);page.locator('[data-form=food] button.primary').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
     page.screenshot(path=str(artifacts/'kitchen-desktop.png'),full_page=True)
     click(page,'category','[data-category=produce]');page.locator('[data-select]').check();click(page,'go','[data-path=kitchen]');click(page,'category','[data-category=dairy]');page.locator('[data-select]').check()
     click(page,'find-recipes');expect(page.locator('[data-form=ai-recipes]')).to_be_visible();expect(page.locator('[name=scope]')).to_have_value('selected');expect(page.locator('[name=count]')).to_have_value('2')

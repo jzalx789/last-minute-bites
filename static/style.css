@@ -1241,3 +1241,101 @@ details p {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.stock-quantity {
+  display: block;
+  color: var(--green);
+  font-weight: 650;
+  font-size: 0.95rem;
+  margin-top: 0.3rem;
+}
+.consume-item {
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+.consume-item > .check {
+  margin-bottom: 0.4rem;
+}
+.consume-item .hint {
+  margin: 0.3rem 0 0.75rem;
+  overflow-wrap: anywhere;
+}
+.consume-item label {
+  margin-bottom: 0.6rem;
+}
+.consume-remainder {
+  color: var(--green);
+  font-weight: 600;
+  margin: 0.5rem 0 0;
+}
+.recipe-stock {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 0.2rem;
+}
+.check input {
+  flex-shrink: 0;
+}
+.recipe-preferences {
+  margin: 0.5rem 0 1rem;
+}
+.recipe-preferences summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.5rem 0;
+}
+.recipe-preferences[open] summary {
+  margin-bottom: 0.5rem;
+}
+.shopping-list {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: white;
+  padding: 1.2rem;
+  margin: 1rem 0;
+}
+.shopping-list li {
+  margin-bottom: 0.8rem;
+}
+.shopping-list small {
+  display: block;
+  color: var(--muted);
+}
+@media (max-width: 400px) {
+  .recipe-controls .two-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .recipe-controls .recipe-dish-fields {
+    grid-template-columns: minmax(0, 1fr) 86px;
+  }
+}
+.large .recipe-controls .two-fields {
+  grid-template-columns: minmax(0, 1fr);
+}
+#used-picker {
+  padding: 0;
+  overflow: hidden;
+}
+#used-picker form {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 32px);
+  padding: 1.25rem;
+}
+#used-picker h2,
+#used-note,
+#used-error,
+#used-picker .actions {
+  flex-shrink: 0;
+}
+#used-foods {
+  overflow: auto;
+  min-height: 0;
+  padding-right: 0.2rem;
+}
+#used-picker .actions {
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+}

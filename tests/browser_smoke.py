@@ -32,6 +32,13 @@ def register(page, base, email):
     expect(page.locator('h1')).to_have_text('Make room for good food.')
 
 
+def set_stock(page, quantity=1, unit='pcs', purchased_date=None):
+    page.locator('[data-form=food] [name=quantity]').fill(str(quantity))
+    page.locator('[data-form=food] [name=unit]').select_option(unit)
+    if purchased_date is not None:
+        page.locator('[data-form=food] [name=purchased_date]').fill(purchased_date)
+
+
 def request(page, path, data):
     return page.evaluate('async ([path,data]) => {const s=await (await fetch("/api/state")).json(); const r=await fetch("/api/"+path,{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-Token":s.csrf},body:JSON.stringify(data)});return {status:r.status, body:await r.json()};}', [path,data])
 

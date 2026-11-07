@@ -40,6 +40,60 @@ export const ingredients = {
   oil: ["oil", "cooking oil", "食油", "油"],
   salt: ["salt", "鹽"],
 };
+export const units = [
+  "pcs",
+  "g",
+  "kg",
+  "ml",
+  "l",
+  "pack",
+  "box",
+  "bottle",
+  "portion",
+];
+// Calculate stock in thousandths to avoid floating-point subtraction drift.
+export function quantityTicks(value) {
+  check(
+    typeof value === "number" &&
+      Number.isFinite(value) &&
+      value > 0 &&
+      value <= 1000000,
+    "invalid_quantity",
+  );
+  const ticks = Math.round(value * 1000);
+  check(
+    ticks > 0 && Math.abs(value * 1000 - ticks) < 0.000001,
+    "invalid_quantity",
+  );
+  return ticks;
+}
+export function consumeFood(food, amount, all = false, at = Date.now()) {
+  check(food.status === "active", "food_used", 409);
+  const known = typeof food.quantity === "number" && food.quantity > 0;
+  check(all === true || known, "quantity_required");
+  const before = known ? quantityTicks(food.quantity) : null;
+  const consumed = all === true ? before : quantityTicks(amount);
+  check(before === null || consumed <= before, "insufficient_quantity", 409);
+  const remaining = before === null ? null : (before - consumed) / 1000;
+  const used = all === true || remaining === 0;
+  return {
+    ...food,
+    quantity: remaining,
+    status: used ? "used" : "active",
+    restore_quantity: used ? (known ? food.quantity : null) : null,
+    last_consumption: {
+      quantity: consumed === null ? null : consumed / 1000,
+      unit: food.unit ?? null,
+      at,
+    },
+  };
+}
+export function restoreFood(food) {
+  check(food.status === "used", "conflict", 409);
+  const quantity = food.restore_quantity ?? null;
+  if (quantity !== null) quantityTicks(quantity);
+  return { ...food, quantity, status: "active", restore_quantity: null };
+}
 export const defaults = {
   language: "en",
   text_size: "standard",
@@ -107,7 +161,14 @@ export function validateFood(data) {
     location: data.location ?? "other",
     note: data.note ?? "",
     ingredient: data.ingredient ?? "",
+    quantity: data.quantity ?? null,
+    unit: data.unit ?? "pcs",
+    purchased_date: data.purchased_date || null,
   };
+  if (food.quantity !== null)
+    food.quantity = quantityTicks(food.quantity) / 1000;
+  check(units.includes(food.unit), "invalid_quantity");
+  if (food.purchased_date !== null) calendarDate(food.purchased_date);
   check(
     categories.includes(food.category) &&
       ["fridge", "freezer", "pantry", "other"].includes(food.location),
@@ -146,6 +207,9 @@ export function validateFood(data) {
 }
 export const eligible = (food, today) =>
   food.status === "active" &&
+  (food.quantity === null ||
+    food.quantity === undefined ||
+    food.quantity > 0) &&
   !(
     food.date_kind === "use_by" &&
     food.effective_date &&
