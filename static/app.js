@@ -997,6 +997,8 @@ function selectionBar() {
 }
 function render(keepScroll = false) {
   if (!state) return;
+  const wasAuth = document.documentElement.classList.contains("auth-screen");
+  document.documentElement.classList.toggle("auth-screen", !state.user);
   const scrollTop = keepScroll ? $("#main")?.scrollTop || 0 : 0;
   document.documentElement.lang = language();
   document.documentElement.classList.toggle(
@@ -1026,6 +1028,8 @@ function render(keepScroll = false) {
   if (page === "reminders") loadPushStatus();
   if (page === "recipes") displayRecipes(arg);
   if ($("#main")) $("#main").scrollTop = scrollTop;
+  fitViewport();
+  if (wasAuth && state.user) window.scrollTo(0, 0);
   if (
     page === "recipes" &&
     state.user &&
@@ -1616,7 +1620,7 @@ function reminders() {
   return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form><section id="push-panel" class="push-panel" aria-label="${E(t("push_title"))}">${pushPanelHTML()}</section></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 1.0</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 1.1</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
 async function confirmAction(title, message, typed = false) {
   const dialog = $("#confirm");
@@ -2531,12 +2535,21 @@ async function recognizePhoto(file) {
 }
 
 function fitViewport() {
-  if (window.visualViewport && Math.abs(window.visualViewport.scale - 1) < 0.01)
+  // Safari can pan the visual viewport when focusing an input. Resizing a
+  // nested, clipped auth scroller at the same time can push the form offscreen.
+  // Logged-out forms use native document scrolling instead of a pinned app shell.
+  if (
+    state?.user &&
+    window.visualViewport &&
+    Math.abs(window.visualViewport.scale - 1) < 0.01
+  )
     app.style.height = Math.round(window.visualViewport.height) + "px";
   else app.style.height = "";
   document.documentElement.style.setProperty(
     "--visible-height",
-    app.style.height || "100dvh",
+    window.visualViewport && Math.abs(window.visualViewport.scale - 1) < 0.01
+      ? Math.round(window.visualViewport.height) + "px"
+      : "100dvh",
   );
 }
 window.visualViewport?.addEventListener("resize", fitViewport);

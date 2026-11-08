@@ -35,6 +35,24 @@ body {
   grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
 }
+/* Let Safari scroll the sign-in/register document naturally with its keyboard.
+   The pinned shell and inner scroller remain for signed-in inventory pages. */
+html.auth-screen,
+html.auth-screen body {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+}
+html.auth-screen #app {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: block;
+  overflow: visible;
+}
+html.auth-screen main {
+  overflow: visible;
+}
 button,
 input,
 select,

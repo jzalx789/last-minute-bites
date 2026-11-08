@@ -186,7 +186,7 @@ export class KitchenStore extends DurableObject {
         if (url.pathname === "/healthz") {
           this.one("SELECT COUNT(*) AS count FROM users");
           return respond(
-            { status: "ok", version: "1.0", storage: "persistent-sqlite" },
+            { status: "ok", version: "1.1", storage: "persistent-sqlite" },
             200,
             null,
             secure,

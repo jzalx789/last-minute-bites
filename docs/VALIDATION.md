@@ -142,3 +142,14 @@ python3 tests/mobile_acceptance.py
 - 正式 Worker 已部署 1.0，GitHub Actions `42487816383` 成功，發布紀錄確認 `schedule: */5 * * * *`。真實 HTTPS 的 `push/config` 回報 web-push 與穩定公開 key；私有金鑰留在原 Durable Object，沒有要求新 Token／服務帳戶或修改原資料庫綁定。正式觸發時間可由授權 API 的 schedule.last_run 觀察，驗證結果保留在忽略的 artifacts/push/live-readiness.json。
 
 採用標準 Web Crypto、現有 Worker／Durable Object 與瀏覽器內建推播服務；沒有新增付費服務、對外公開排程觸發 API，或自動替使用者授權通知。鎖定畫面不包含食材名稱／份量，通知點擊只開同源 App；原帳戶、食材、批次及模型服務沿用。沒有製作問卷或正式 user guide。
+
+
+## Web Prototype 1.1（2026-11-08，香港時間）
+
+使用者提供的 8 秒影片顯示：註冊頁點選電郵、Safari 鍵盤彈出後，表單滑出可見範圍並出現大塊空白；影片未顯示送出註冊。診斷及修正針對 iPhone 輸入時的頁面捲動：未登入的表單改用原生文件捲動，移除固定高度與內層裁切；visualViewport resize 不再將登入／註冊頁壓縮。登入後回到既有固定 App shell，保留底部導覽及對話框的鍵盤尺寸處理。沒有修改密碼驗證、帳戶資料或註冊 API。
+
+- `auth_keyboard_browser.py` 在 Chromium／WebKit 通過：以縮小及平移的 visual viewport 事件模擬鍵盤，登入／註冊文件不被裁切；390／320px 短 viewport 可逐一聚焦電郵、密碼及確認密碼，保留全部輸入；顯示密碼、真正送出註冊並建立冰箱、登出後重新登入及底部導覽恢復均通過。
+- 鍵盤事件是測試注入，瀏覽器是真實引擎；沒有宣稱實際 iPhone 原生鍵盤已驗收。使用者仍需在更新頁面後於原裝置確認。
+- 原有 WebKit 網站、手機佈局及通知介面回歸通過；CareSync／私有 gateway 123 項及語法檢查通過。登入／共享／庫存／推播與排程維持既有資料及行為。
+
+使用者影片及擷取影格只在私人工作區／忽略的 artifacts，未加入 Git、部署檔案或原始碼包；自動測試使用新建合成帳戶。首頁截圖的版面要求保留，本次只修正未登入表單的鍵盤與捲動。
