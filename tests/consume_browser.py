@@ -15,6 +15,8 @@ with sync_playwright() as p:
  ids=[]
  for food in [dict(name='番茄',ingredient='tomato',quantity=4,unit='pcs'),dict(name='雞蛋',ingredient='egg'),dict(name='三文魚',quantity=1,unit='pcs')]:
   result=request(page,'food/create',dict(date_source='unknown',**food));assert result['status']==200;ids.append(result['body']['id'])
+ # Direct API seeding does not refresh the open page; load the committed state explicitly.
+ page.reload();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
  navigate(page,'category/all');expect(page.locator('.food-row')).to_have_count(3)
  for box in page.locator('[data-select]').all():box.check()
  click(page,'batch-used');expect(page.locator('#used-picker')).to_be_visible();expect(page.locator('#used-foods input[type=checkbox]')).to_have_count(0)
