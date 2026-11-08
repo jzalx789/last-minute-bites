@@ -9,29 +9,41 @@ export class FoodAI extends WorkerEntrypoint {
       ...new Set([...(input.priority_ids || []), ...input.selected]),
     ];
     const recipes = Array.from({ length: input.count }, (_, i) => {
-      const id = choices[i % choices.length],
-        food = input.foods.find((f) => f.id === id);
+      const group = input.use_all
+        ? choices.filter((_, j) => j % input.count === i)
+        : [choices[i % choices.length]];
+      if (!group.length && choices.length)
+        group.push(choices[i % choices.length]);
+      let title = (zh ? "測試菜式" : "Test dish") + " " + (i + 1);
+      if (input.exclude_titles) {
+        let n = 1;
+        do {
+          title = (zh ? "替換菜式" : "Alternative dish") + " " + n++;
+        } while (input.exclude_titles.includes(title));
+      }
+      const kinds = ["main", "vegetable", "soup", "cold"].filter(
+        (k) => !(input.excluded_kinds || []).includes(k),
+      );
       return {
-        title: (zh ? "測試菜式" : "Test dish") + " " + (i + 1),
+        title,
         kind: ["auto", "mixed"].includes(input.style)
-          ? i
-            ? "vegetable"
-            : "main"
+          ? kinds[i % kinds.length]
           : input.style,
         minutes: 15,
         servings: input.servings ?? 2,
-        uses: food
-          ? [
-              {
-                food_id: input.preference === "__test_invalid__" ? 999999 : id,
-                quantity:
-                  typeof food.quantity === "number"
-                    ? Math.floor((food.quantity / input.count) * 1000) / 1000
-                    : null,
-                amount: zh ? "建議用量" : "suggested amount",
-              },
-            ]
-          : [],
+        uses: group
+          .filter((id) => input.foods.some((f) => f.id === id))
+          .map((id) => {
+            const food = input.foods.find((f) => f.id === id);
+            return {
+              food_id: input.preference === "__test_invalid__" ? 999999 : id,
+              quantity:
+                typeof food.quantity === "number"
+                  ? Math.floor((food.quantity / input.count) * 1000) / 1000
+                  : null,
+              amount: zh ? "建議用量" : "suggested amount",
+            };
+          }),
         additional:
           input.mode === "plan"
             ? [

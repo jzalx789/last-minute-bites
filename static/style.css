@@ -1496,3 +1496,94 @@ details p {
   border-radius: 10px;
   font-size: 0.85rem;
 }
+
+#recipe-foods {
+  margin-bottom: 1.2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+#recipe-foods h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.food-count {
+  background: var(--pale);
+  color: var(--green);
+  border-radius: 1rem;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.9rem;
+}
+.recipe-food-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0.7rem 0;
+}
+.recipe-food-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  flex: 1 1 230px;
+  max-width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--pale);
+  padding: 0.45rem 0.5rem 0.45rem 0.75rem;
+}
+.recipe-food-chip span,
+.recipe-food-choices button span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.recipe-food-chip small,
+.recipe-food-choices small {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+.recipe-food-chip button {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 1.3rem;
+  padding: 0.3rem;
+}
+.recipe-food-picker summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.6rem 0;
+  color: var(--green);
+}
+.recipe-food-picker[open] > label {
+  margin: 0.3rem 0 0.6rem;
+}
+.recipe-food-choices {
+  max-height: 15rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  gap: 0.4rem;
+}
+.recipe-food-choices button {
+  display: flex;
+  justify-content: space-between;
+  text-align: left;
+  gap: 0.5rem;
+  width: 100%;
+}
+.recipe-card .actions {
+  flex-wrap: wrap;
+}
+.recipe-used {
+  overflow-wrap: anywhere;
+}

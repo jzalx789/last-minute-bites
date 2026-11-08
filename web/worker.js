@@ -14,6 +14,9 @@ import {
   matchesAvoid,
   RECIPE_MODES,
   priorityFoodIds,
+  RECIPE_COUNTS,
+  replacementInput,
+  mergeReplacement,
 } from "./ai.js";
 import {
   Problem,
@@ -160,9 +163,11 @@ export class KitchenStore extends DurableObject {
     if (new URL(request.url).pathname === "/api/food/classify")
       return this.classifyFetch(request);
     if (
-      ["/api/recipes/generate", "/api/food/recognize"].includes(
-        new URL(request.url).pathname,
-      )
+      [
+        "/api/recipes/generate",
+        "/api/recipes/replace",
+        "/api/food/recognize",
+      ].includes(new URL(request.url).pathname)
     )
       return this.aiFetch(request);
     // Serializes the short crypto/transaction boundary as well as reads. SQLite
@@ -176,7 +181,7 @@ export class KitchenStore extends DurableObject {
         if (url.pathname === "/healthz") {
           this.one("SELECT COUNT(*) AS count FROM users");
           return respond(
-            { status: "ok", version: "0.8", storage: "persistent-sqlite" },
+            { status: "ok", version: "0.9", storage: "persistent-sqlite" },
             200,
             null,
             secure,
@@ -549,6 +554,7 @@ export class KitchenStore extends DurableObject {
   }
   async aiFetch(request) {
     const image = new URL(request.url).pathname === "/api/food/recognize",
+      replacing = new URL(request.url).pathname === "/api/recipes/replace",
       secure = new URL(request.url).protocol === "https:";
     let busyKey,
       busyOwned = false;
@@ -559,14 +565,50 @@ export class KitchenStore extends DurableObject {
           kid = auth.member.kitchen_id;
         check(this.env.FOOD_AI, image ? "photo_failed" : "ai_unavailable", 503);
         const input = { language: auth.preferences.language };
-        let fingerprint, cacheKey;
+        let fingerprint, cacheKey, replacement, fullInput;
         if (image) input.image = validatePhoto(auth.data.image);
         else {
           const allFoods = this.foods(kid, todayIn(auth.preferences.timezone))
             .filter((f) => f.eligible)
             .sort((a, b) => a.id - b.id);
+          if (replacing) {
+            const generationId = text(auth.data.generation_id, 100);
+            const row = this.one(
+              "SELECT data FROM recipe_generations WHERE id=? AND user_id=? AND kitchen_id=?",
+              generationId,
+              uid,
+              kid,
+            );
+            check(row, "not_found", 404);
+            const generation = JSON.parse(row.data);
+            const latest = this.one(
+              "SELECT id FROM recipe_generations WHERE user_id=? AND kitchen_id=? ORDER BY created DESC LIMIT 1",
+              uid,
+              kid,
+            );
+            check(
+              latest?.id === generation.id &&
+                generation.language === auth.preferences.language &&
+                JSON.stringify(generation.versions) ===
+                  JSON.stringify(
+                    Object.fromEntries(allFoods.map((f) => [f.id, f.version])),
+                  ),
+              "generation_stale",
+              409,
+            );
+            integer(auth.data.recipe_id, 1, 4);
+            replacement = { generation, recipeId: auth.data.recipe_id };
+            auth.data = {
+              ...generation.options,
+              selected: generation.selected,
+              regenerate: true,
+            };
+          }
           const mode = auth.data.mode ?? "use_up";
           check(RECIPE_MODES.includes(mode));
+          const scope = auth.data.scope ?? "selected";
+          check(["selected", "all"].includes(scope));
+          auth.data.scope = scope;
           if (mode === "use_up") check(allFoods.length > 0, "no_food");
           check(allFoods.length <= 80, "invalid_input");
           const servings = auth.data.servings ?? 2,
@@ -580,7 +622,7 @@ export class KitchenStore extends DurableObject {
           const foods = allFoods.filter((f) => !matchesAvoid(f, terms));
           if (mode === "use_up") check(foods.length > 0, "preference_conflict");
           check(STYLES.includes(auth.data.style ?? "auto"));
-          check([1, 2].includes(auth.data.count ?? 2));
+          check(RECIPE_COUNTS.includes(auth.data.count ?? 2));
           const selected =
             auth.data.scope === "all"
               ? foods.map((f) => f.id)
@@ -591,7 +633,13 @@ export class KitchenStore extends DurableObject {
               selected.every(Number.isSafeInteger),
           );
           const valid = selected.filter((id) => foods.some((f) => f.id === id));
-          if (mode === "use_up" || auth.data.scope === "selected")
+          if (auth.data.use_all === true)
+            check(
+              valid.length <= 20 * (auth.data.count ?? 2),
+              "split_foods",
+              400,
+            );
+          if (mode === "use_up")
             check(
               valid.length > 0,
               terms.length ? "preference_conflict" : "no_food",
@@ -599,18 +647,22 @@ export class KitchenStore extends DurableObject {
           const preference = auth.data.preference ?? "";
           check(typeof preference === "string" && preference.length <= 120);
           Object.assign(input, {
-            foods: foods.map((f) => ({
-              id: f.id,
-              name: f.name,
-              category: f.category,
-              location: f.location,
-              quantity: f.quantity,
-              unit: f.unit,
-              purchased_date: f.purchased_date,
-              effective_date: f.effective_date,
-              date_source: f.date_source,
-              date_kind: f.date_kind,
-            })),
+            foods: foods
+              .filter(
+                (f) => auth.data.scope !== "selected" || valid.includes(f.id),
+              )
+              .map((f) => ({
+                id: f.id,
+                name: f.name,
+                category: f.category,
+                location: f.location,
+                quantity: f.quantity,
+                unit: f.unit,
+                purchased_date: f.purchased_date,
+                effective_date: f.effective_date,
+                date_source: f.date_source,
+                date_kind: f.date_kind,
+              })),
             selected: [...new Set(valid)],
             style: auth.data.style ?? "auto",
             count: auth.data.count ?? 2,
@@ -620,7 +672,10 @@ export class KitchenStore extends DurableObject {
             max_minutes: maxMinutes,
             avoid,
             mode,
-            require_selected: auth.data.scope === "selected",
+            scope,
+            require_selected: scope === "selected" && valid.length > 0,
+            use_all: auth.data.use_all === true,
+            exact_count: auth.data.exact_count === true,
             priority_ids:
               mode === "use_up"
                 ? priorityFoodIds(
@@ -631,6 +686,17 @@ export class KitchenStore extends DurableObject {
                 : [],
           });
           fingerprint = JSON.stringify(allFoods.map((f) => [f.id, f.version]));
+          if (replacement) {
+            fullInput = { ...input };
+            Object.assign(
+              input,
+              replacementInput(
+                fullInput,
+                replacement.generation,
+                replacement.recipeId,
+              ),
+            );
+          }
           cacheKey = await sha(JSON.stringify({ input, fingerprint }));
           if (!auth.data.regenerate) {
             const cached = this.one(
@@ -655,6 +721,8 @@ export class KitchenStore extends DurableObject {
           input,
           fingerprint,
           cacheKey,
+          replacement,
+          fullInput,
         };
       });
       if (snapshot.cached)
@@ -700,6 +768,13 @@ export class KitchenStore extends DurableObject {
           output = image
             ? validateRecognition(result.data)
             : validateRecipes(result.data, snapshot.input);
+          if (snapshot.replacement)
+            output = mergeReplacement(
+              output,
+              snapshot.fullInput,
+              snapshot.replacement.generation,
+              snapshot.replacement.recipeId,
+            );
         } catch (failure) {
           const error = new Problem(502, "ai_invalid");
           error.reason = failure.code;
@@ -736,6 +811,7 @@ export class KitchenStore extends DurableObject {
           "generation_stale",
           409,
         );
+        const planInput = snapshot.fullInput || snapshot.input;
         const generation = {
           id: crypto.randomUUID(),
           created: Date.now(),
@@ -744,18 +820,20 @@ export class KitchenStore extends DurableObject {
           model: result.model,
           repair_reason: result.repair_reason ?? null,
           recipes: output,
-          selected: snapshot.input.selected,
+          selected: planInput.selected,
           versions: Object.fromEntries(current.map((f) => [f.id, f.version])),
           options: {
-            mode: snapshot.input.mode,
-            style: snapshot.input.style,
-            count: snapshot.input.count,
-            scope: snapshot.input.require_selected ? "selected" : "all",
-            servings: snapshot.input.servings,
-            portion: snapshot.input.portion,
-            max_minutes: snapshot.input.max_minutes,
-            avoid: snapshot.input.avoid,
-            preference: snapshot.input.preference,
+            mode: planInput.mode,
+            style: planInput.style,
+            count: planInput.count,
+            scope: planInput.scope,
+            servings: planInput.servings,
+            portion: planInput.portion,
+            max_minutes: planInput.max_minutes,
+            avoid: planInput.avoid,
+            preference: planInput.preference,
+            use_all: planInput.use_all,
+            exact_count: planInput.exact_count,
           },
         };
         this.transaction(() => {

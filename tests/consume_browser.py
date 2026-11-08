@@ -31,7 +31,9 @@ with sync_playwright() as p:
  if base.startswith('http://127.0.0.1:'):
   # Fresh recipe quantities are prefilled; skipping one ingredient requires one tap.
   navigate(page,'recipes');page.locator('[name=scope]').select_option('all');page.locator('[name=count]').select_option('1');page.locator('[data-form=ai-recipes] button.primary').click();expect(page.locator('.recipe-card')).to_have_count(1);before=read_state(page)['foods'];click(page,'cooked-recipe');expect(page.locator('[data-consume-amount]').first).not_to_have_value('');assert read_state(page)['foods']==before
-  page.locator('[data-consume-reset]').first.click();expect(page.locator('[data-consume-amount]').first).to_have_value('');page.locator('#used-confirm').click();expect(page.locator('#used-error')).to_contain_text('Enter an amount');page.locator('#used-cancel').click();assert read_state(page)['foods']==before
+  page.locator('[data-consume-reset]').first.click();expect(page.locator('[data-consume-amount]').first).to_have_value('');# A recipe can now cover every selected ingredient, so clear all remaining presets.
+  for reset in page.locator('[data-consume-reset]').all()[1:]:reset.click()
+  page.locator('#used-confirm').click();expect(page.locator('#used-error')).to_contain_text('Enter an amount');page.locator('#used-cancel').click();assert read_state(page)['foods']==before
  # Responsive controls also work with large text and keyboard-sized viewports.
  navigate(page,'preferences');page.locator('[name=text_size]').select_option('large');page.locator('[name=language]').select_option('zh-Hant');page.locator('[data-form=preferences] button').click();expect(page.locator('h1')).to_have_text('個人偏好')
  for width,height in [(320,480),(390,844),(1365,900)]:

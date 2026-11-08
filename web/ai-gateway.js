@@ -97,7 +97,7 @@ export class FoodAI extends WorkerEntrypoint {
       !Array.isArray(input.foods) ||
       (input.foods.length < 1 && input.mode !== "plan") ||
       input.foods.length > 80 ||
-      ![1, 2].includes(input.count)
+      ![1, 2, 3, 4].includes(input.count)
     )
       return { error: "ai_invalid" };
     const foods = input.foods.map((f) => ({
@@ -129,7 +129,12 @@ export class FoodAI extends WorkerEntrypoint {
         }),
       },
     ];
-    let result = await completion(this.env, messages, 2600, 30000);
+    let result = await completion(
+      this.env,
+      messages,
+      input.count > 2 ? 4600 : 2600,
+      45000,
+    );
     if (result.error && result.error !== "ai_invalid") return result;
     let reason = result.reason;
     if (!result.error) {
@@ -147,9 +152,14 @@ export class FoodAI extends WorkerEntrypoint {
     // One bounded model correction. Invalid drafts are never shown or deducted.
     messages.push({
       role: "user",
-      content: `Correct the response. Validation failed: ${reason || "schema"}. Return complete concise JSON with 2–5 practical steps per dish. Keep the requested diners and time limit. Across ALL dishes, never exceed any batch quantity. In use_up mode additional must be empty, use priority_ids, and never assume oil/salt. Use EXACT inventory units; do not convert unknown pack sizes. In plan mode list all missing purchases. Follow every original constraint.`,
+      content: `Correct the response. Validation failed: ${reason || "schema"}. Return complete concise JSON with 2–5 practical steps per dish. Obey exact dish count, selected-ID coverage, exclude_titles and excluded_kinds when supplied. Keep the requested diners and time limit. Across ALL dishes, never exceed any batch quantity. In use_up mode additional must be empty, use priority_ids, and never assume oil/salt. Use EXACT inventory units; do not convert unknown pack sizes. In plan mode list all missing purchases. Follow every original constraint.`,
     });
-    result = await completion(this.env, messages, 3000, 30000);
+    result = await completion(
+      this.env,
+      messages,
+      input.count > 2 ? 5000 : 3000,
+      45000,
+    );
     if (result.error) return result;
     try {
       validateRecipes(result.data, normalized);

@@ -1,4 +1,4 @@
-# Last Minute Bites — Web Prototype 0.8
+# Last Minute Bites — Web Prototype 0.9
 
 **網站：https://last-minute-bites-demo.jzalx789.workers.dev**
 
@@ -14,9 +14,12 @@
 - 自動分類：輸入中英文名稱即可套用建議類別，常見食物使用本機規則；陌生名稱在離開名稱欄位或儲存時交由 DeepSeek 判斷，打字中的規則查詢不呼叫模型。仍可自行更改類別。
 - 非食物防護：前後端攔截明顯非食物，不能用自行送出分類或確認欄位繞過；不明確名稱需先取得伺服器判斷，再確認是食物／飲品。模型不可用時明示需要確認，既有明顯非食物標記警告並排除食譜、不自動刪除。
 - 照片辨識：選取照片後縮小並轉為 JPEG，DeepSeek 建議名稱及類別，排除非食物及低信心候選；使用者選取候選後自動套用分類，確認才儲存，不猜到期日、份量或新鮮程度。
-- DeepSeek 動態生成 1–2 道食譜，可選涼菜、湯、主食、肉類、蔬菜或搭配菜式；設定 1–12 人、小／一般／大食量、時間上限、不想使用的食材及口味／飲食偏好。
+- 食譜頁直接顯示這次選用的食材、剩餘份量及購買批次，可在頁內搜尋、添加和移除，庫存不受影響。移除全部後不會擅自改用所有庫存；也可在設計一餐時不選庫存、只規劃採購。依飲食偏好排除的食物會另外標明。
+- 可將所選食材分配到 1–4 道獨立菜式，顯示每道使用的食材及建議用量。「這組菜式用齊所有選用食材」開啟時，後端檢查每一個所選批次都有被使用；可取消此選項，允許留下不適合的食材。
+- 不喜歡其中一道可單獨「換一道」，沿用原組合的人數／偏好並保留其他菜式；替換會先扣留其他菜式建議用量，再驗證整餐不超量及不重複舊名稱。失敗保留原食譜，庫存或設定變動則須重新生成。重新載入會還原已儲存的選擇及設定。
+- DeepSeek 動態生成 1–4 道食譜，可選涼菜、湯、主食、肉類、蔬菜或搭配菜式；設定 1–12 人、小／一般／大食量、時間上限、不想使用的食材及口味／飲食偏好。
 - 「清庫存」只用現有庫存，優先較近到期批次，不添購；「設計一餐」可加入新食材，以採購／準備清單列出每道菜所缺份量，也可從空庫存規劃。每道菜均按所選人數設計，兩道菜的庫存用量合計不可超過同一批現存量。
-- 只有明確按下生成才呼叫模型；瀏覽及背景同步不觸發生成。保留個人最近結果，庫存變動後顯示需要更新。
+- 食譜只有明確按下生成或「換一道」才呼叫模型；瀏覽及背景同步不觸發生成。保留個人最近結果，庫存變動後顯示需要更新。
 - 煮完後由使用者選批次及填寫實際消耗量；單純查看或生成食譜不扣庫存。採購清單不會自動建立食物，買好後須新增實際份量。
 - 自行決定／開封後：可留空而不設固定日期，或填預計吃完日作自訂提醒；支援補填、修改、清除及共享。提醒日不視作包裝食用期限，過了提醒日仍由使用者判斷；清庫存排序及食譜輸入保留日期來源。
 - 包裝日期／生產日＋期限／未知日期、日曆月尾及閏年計算、Use by／Best before、QR 邀請及雙語偏好。
@@ -41,7 +44,7 @@ web/node_modules/.bin/wrangler dev --config tests/fixtures/food-ai/wrangler.json
 web/node_modules/.bin/wrangler dev --config web/wrangler.test.jsonc --port 8790
 ```
 
-然後執行 `LMB_WEB_BASE_URL=http://127.0.0.1:8790 python3 tests/web_api_contract.py`、`python3 tests/ai_api_contract.py`、`python3 tests/stock_api_contract.py`、`python3 tests/stock_browser.py`、`python3 tests/consume_browser.py`、`python3 tests/classification_api.py`、`python3 tests/classification_browser.py`、`python3 tests/personal_dates_browser.py`、`python3 tests/user_fixes_browser.py` 及同網址的 `tests/web_browser.py`。`LMB_WEB_ENGINE=webkit` 可切換引擎。CI 不花費模型額度。`tests/live_ai_browser.py` 需明確設定 `LMB_LIVE_AI=1`、正式網址及經檢視的測試食物照片才驗證四個真實 DeepSeek 流程（辨識、4 人大食量設計、清庫存、空庫存採購計劃）；每次食譜及格式不合的名稱分類最多可再修正一次；不會為不確定的判斷重試至肯定。`tests/live_classification.py` 需明確設定 `LMB_LIVE_FOOD=1`、正式網址、食物照片與非食物圖片，才驗證真實名稱／影像分類。驗證紀錄見 [docs/VALIDATION.md](docs/VALIDATION.md)。
+然後執行 `LMB_WEB_BASE_URL=http://127.0.0.1:8790 python3 tests/web_api_contract.py`、`python3 tests/ai_api_contract.py`、`python3 tests/stock_api_contract.py`、`python3 tests/stock_browser.py`、`python3 tests/consume_browser.py`、`python3 tests/classification_api.py`、`python3 tests/classification_browser.py`、`python3 tests/personal_dates_browser.py`、`python3 tests/recipe_builder_api.py`、`python3 tests/recipe_builder_browser.py`、`python3 tests/user_fixes_browser.py` 及同網址的 `tests/web_browser.py`。`LMB_WEB_ENGINE=webkit` 可切換引擎。CI 不花費模型額度。`tests/live_ai_browser.py` 需明確設定 `LMB_LIVE_AI=1`、正式網址及經檢視的測試食物照片才驗證四個真實 DeepSeek 流程（辨識、4 人大食量設計、清庫存、空庫存採購計劃）；每次食譜及格式不合的名稱分類最多可再修正一次；不會為不確定的判斷重試至肯定。`tests/live_classification.py` 需明確設定 `LMB_LIVE_FOOD=1`、正式網址、食物照片與非食物圖片，才驗證真實名稱／影像分類。`tests/live_recipe_builder.py` 需明確設定 `LMB_LIVE_RECIPES=1` 才驗證正式模型的 4 道菜及單道替換。驗證紀錄見 [docs/VALIDATION.md](docs/VALIDATION.md)。
 
 ## 部署結構
 
