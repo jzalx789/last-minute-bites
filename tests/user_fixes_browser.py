@@ -62,8 +62,17 @@ with tempfile.TemporaryDirectory() as directory,sync_playwright() as p:
     page.locator('[name=name]').fill('Unsaved draft');page.locator('[data-form=food] button.primary').scroll_into_view_if_needed()
     point=page.locator('[data-form=food] button.primary').bounding_box();assert point['y']+point['height'] <= page.locator('.app-dock').bounding_box()['y']+1
     expect(page.locator('[name=name]')).to_have_value('Unsaved draft')
+    # Folding/unfolding and split-window resize preserve the same live draft.
+    page.locator('[name=quantity]').fill('6');note=page.locator('[name=note]');note.fill('Keep this draft')
+    note.evaluate('(e)=>e.setSelectionRange(4,4)')
+    for width,height in [(344,882),(717,512),(540,720)]:
+        page.set_viewport_size({'width':width,'height':height})
+        expect(page.locator('[name=name]')).to_have_value('Unsaved draft')
+        expect(page.locator('[name=quantity]')).to_have_value('6')
+        expect(note).to_have_value('Keep this draft');expect(note).to_be_focused()
+        assert note.evaluate('(e)=>e.selectionStart===4')
     # Keyboard-size viewports, large text, landscape, and ordinary phone/desktop sizes.
-    for width,height in [(320,480),(360,640),(390,844),(844,390),(768,1024),(1365,900)]:
+    for width,height in [(280,653),(320,480),(360,640),(390,844),(540,720),(717,512),(844,390),(768,1024),(1365,900)]:
         page.set_viewport_size({'width':width,'height':height})
         for route in ['kitchen','category/all','food','recipes','settings','shared','preferences','reminders','help']:
             navigate(page,route);expect(page.locator('#main')).to_be_visible()
@@ -87,7 +96,11 @@ with tempfile.TemporaryDirectory() as directory,sync_playwright() as p:
         assert page.locator('#used-foods').evaluate('(e)=>e.clientHeight>=30')
         assert page.locator('#used-confirm').evaluate('(e)=>e.getBoundingClientRect().bottom<=innerHeight+1')
         page.locator('#used-cancel').click();click(page,'clear-selection')
-    page.set_viewport_size({'width':360,'height':640})
+    page.set_viewport_size({'width':280,'height':653})
+    for route in ['recipes','food','category/all','shared']:
+        navigate(page,route);expect(page.locator('#main')).to_be_visible()
+        assert page.locator('#main').evaluate('(e)=>e.scrollWidth<=e.clientWidth+1'),('large narrow cover screen',route)
+    page.set_viewport_size({'width':360,'height':640});navigate(page,'category/all')
     page.screenshot(path=str(artifacts/'phone-large-inventory.png'))
     navigate(page,'food');page.locator('[data-form=food] button.primary').scroll_into_view_if_needed();page.screenshot(path=str(artifacts/'phone-food-form-bottom.png'))
     assert errors==[],errors
