@@ -109,6 +109,8 @@ export class FoodAI extends WorkerEntrypoint {
       unit: f.unit ?? "pcs",
       purchased_date: f.purchased_date ?? null,
       effective_date: f.effective_date ?? null,
+      date_source: f.date_source ?? "unknown",
+      date_kind: f.date_kind ?? "unspecified",
     }));
     const normalized = {
       ...input,

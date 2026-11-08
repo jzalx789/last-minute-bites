@@ -291,6 +291,9 @@ const groups = [
   [
     "dry",
     [
+      "薯片",
+      "potato chips",
+      "crisps",
       "意粉",
       "意大利麵",
       "意大利面",

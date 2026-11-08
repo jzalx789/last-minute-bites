@@ -27,3 +27,15 @@ test('password hashing is salted and verifies without storing plaintext',async()
   assert.notEqual(a,b);assert.equal(a.includes('unit-test-password'),false);
   assert.equal(await verifyPassword('unit-test-password',a),true);assert.equal(await verifyPassword('wrong-password',a),false);
 });
+
+test('personal dates are optional reminders and never acquire package expiry semantics',()=>{
+  const input={name:'薯片',date_source:'personal',date_kind:'use_by',production_date:'2024-01-01',shelf_life:3,shelf_unit:'days'};
+  for(const value of ['',null,undefined]){
+    const food=validateFood({...input,effective_date:value});
+    assert.equal(food.effective_date,null);assert.equal(food.date_kind,'unspecified');assert.equal(food.production_date,null);assert.equal(food.shelf_life,null);
+  }
+  const food=validateFood({...input,effective_date:'2000-01-01'});
+  assert.equal(food.effective_date,'2000-01-01');assert.equal(food.date_kind,'unspecified');assert.equal(eligible({...food,status:'active'},'2026-11-08'),true);
+  assert.throws(()=>validateFood({...input,effective_date:'2026-02-30'}));
+  assert.equal(validateFood({...food,date_source:'unknown'}).effective_date,null);
+});

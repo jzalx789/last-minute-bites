@@ -192,7 +192,7 @@ export function validateFood(data) {
   food.note = food.note.trim();
   check(food.ingredient === "" || Object.hasOwn(ingredients, food.ingredient));
   const source = data.date_source;
-  check(["printed", "production", "unknown"].includes(source));
+  check(["printed", "production", "personal", "unknown"].includes(source));
   Object.assign(food, {
     date_source: source,
     date_kind: "unspecified",
@@ -201,7 +201,10 @@ export function validateFood(data) {
     shelf_life: null,
     shelf_unit: null,
   });
-  if (source !== "unknown") {
+  if (source === "personal") {
+    if (data.effective_date)
+      food.effective_date = calendarDate(data.effective_date);
+  } else if (source !== "unknown") {
     check(["use_by", "best_before", "unspecified"].includes(data.date_kind));
     food.date_kind = data.date_kind;
     if (source === "printed")

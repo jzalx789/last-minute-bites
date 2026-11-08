@@ -106,6 +106,15 @@ const words = {
   printed: ["Printed date", "包裝日期"],
   production: ["Production date + shelf life", "生產日期＋保存期限"],
   no_date: ["No date / not sure", "沒有日期／不確定"],
+  personal_date_source: ["Decide myself / after opening", "自行決定／開封後"],
+  personal_date: ["Planned finish date (optional)", "預計吃完日（選填）"],
+  personal_hint: [
+    "Set a reminder date, or leave it blank and judge the food’s condition yourself.",
+    "可設定預計吃完日，或留空，按食物實際狀態自行判斷。",
+  ],
+  personal_undated: ["Self-managed, no fixed date", "自行判斷，未設日期"],
+  personal_reminder: ["Personal reminder", "自訂提醒日"],
+  past_personal: ["Past your reminder date", "已過自訂提醒日"],
   use_by: ["Use by", "此日期或之前食用"],
   best_before: ["Best before", "此日期前最佳"],
   unspecified: ["Unspecified label", "標示不明"],
@@ -828,6 +837,14 @@ const daysUntil = (v) =>
   Math.round((Date.parse(v) - Date.parse(state.today)) / 86400000);
 function foodStatus(f) {
   if (f.status === "used") return t("used");
+  if (f.date_source === "personal")
+    return t(
+      !f.effective_date
+        ? "personal_undated"
+        : f.effective_date < state.today
+          ? "past_personal"
+          : "personal_reminder",
+    );
   if (!f.effective_date) return t("unknown");
   if (f.effective_date < state.today)
     return t(
@@ -840,7 +857,7 @@ function foodStatus(f) {
   return t(f.date_kind);
 }
 const dateLine = (f) =>
-  `${t(f.date_source === "unknown" ? "no_date" : f.date_source)} · ${foodStatus(f)}${f.effective_date ? " · " + dateText(f.effective_date) : ""}`;
+  `${t(f.date_source === "unknown" ? "no_date" : f.date_source === "personal" ? "personal_date_source" : f.date_source)} · ${foodStatus(f)}${f.effective_date ? " · " + dateText(f.effective_date) : ""}`;
 function selectionBar() {
   if (
     !selection.size ||
@@ -922,7 +939,7 @@ function reminderBanner() {
         .slice(0, 3)
         .map(
           (f) =>
-            `${E(f.name)}: ${E(t(f.date_kind))} ${E(dateText(f.effective_date))}`,
+            `${E(f.name)}: ${E(t(f.date_source === "personal" ? "personal_reminder" : f.date_kind))} ${E(dateText(f.effective_date))}`,
         )
         .join("; ")}</span><small>${E(t("due_hint"))}</small></aside>`
     : "";
@@ -1015,7 +1032,7 @@ function foodForm(id) {
       ingredient: "",
     };
   calculation = f?.date_source === "production" ? f.effective_date : null;
-  return `<div class="narrow">${back()}<h1>${E(t(f ? "edit" : "add"))}</h1>${!f ? `<section class="photo-panel"><label class="photo-upload">${E(t("photo"))}<input type="file" id="food-photo" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment"></label><p class="hint">${E(t("photo_hint"))}</p><div id="photo-results">${photoCandidates.length ? photoCandidateHTML() : ""}</div><p id="photo-error" class="error" role="alert"></p></section>` : ""}<form data-form="food" data-id="${f?.id || ""}" data-version="${f?.version || ""}">${field("name", t("name"), v.name, "text", 'required maxlength="120" autocomplete="off"')}<div id="food-classification" class="food-classification" role="status" aria-live="polite"></div><label class="check food-confirmation" id="food-confirmation" hidden><input type="checkbox" name="food_confirmed" ${v.food_verification?.confirmed ? "checked" : ""}>${E(t("food_confirm_label"))}</label><p class="hint">${E(t("batch_note"))}</p><div class="two-fields">${field("quantity", t("quantity"), v.quantity ?? "", "number", `required min="0.001" max="1000000" step="0.001" inputmode="decimal"`)}<label>${E(t("unit"))}<select name="unit">${quantityUnits.map((unit) => option(unit, t("unit_" + unit), v.unit || "pcs")).join("")}</select></label></div>${field("purchased_date", t("purchased_date"), f ? f.purchased_date || "" : state.today, "date")}<label>${E(t("date_information"))}<select name="date_source">${["unknown", "printed", "production"].map((k) => option(k, t(k === "unknown" ? "no_date" : k), v.date_source)).join("")}</select></label><div id="dated-fields" ${v.date_source === "unknown" ? "hidden" : ""}>${select("date_kind", t("label_type"), ["unspecified", "use_by", "best_before"], v.date_kind)}<div id="printed-fields" ${v.date_source !== "printed" ? "hidden" : ""}>${field("effective_date", t("date"), v.effective_date || "", "date")}</div><div id="production-fields" ${v.date_source !== "production" ? "hidden" : ""}>${field("production_date", t("production_date"), v.production_date || "", "date")}<div class="two-fields">${field("shelf_life", t("shelf_life"), v.shelf_life || "", "number", 'min="1" max="10000" step="1"')}${select("shelf_unit", t("shelf_life"), ["days", "months", "years"], v.shelf_unit || "days")}</div>${button("calculate", t("calculate"))}<p id="calculation-result" role="status">${calculation ? E(t("reference") + ": " + dateText(calculation)) : ""}</p><label class="check"><input type="checkbox" name="date_confirmed" ${calculation ? "checked" : ""}>${E(t("confirm_date"))}</label><details><summary>${E(t("calc_explanation"))}</summary><p>${E(t("calc_note"))}</p></details></div></div><div class="two-fields">${select("category", t("category"), cats, v.category)}${select("location", t("location"), ["fridge", "freezer", "pantry", "other"], v.location)}</div><input type="hidden" name="ingredient" value="${E(v.ingredient)}"><label>${E(t("note"))}<textarea name="note" maxlength="1000" rows="3">${E(v.note)}</textarea></label>${formError()}<div class="actions"><button class="primary" ${f?.status === "used" ? "disabled" : ""}>${E(t(f ? "save" : "add"))}</button>${button("go", t("cancel"), "", 'data-path="kitchen"')}</div>${f ? `<div class="record-actions">${f.status === "active" ? button("mark-used", t("consume")) : ""}${button("delete-food", t("delete"), "danger")}${button("reload-record", t("reload_record"), "quiet")}</div>` : ""}</form></div>`;
+  return `<div class="narrow">${back()}<h1>${E(t(f ? "edit" : "add"))}</h1>${!f ? `<section class="photo-panel"><label class="photo-upload">${E(t("photo"))}<input type="file" id="food-photo" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment"></label><p class="hint">${E(t("photo_hint"))}</p><div id="photo-results">${photoCandidates.length ? photoCandidateHTML() : ""}</div><p id="photo-error" class="error" role="alert"></p></section>` : ""}<form data-form="food" data-id="${f?.id || ""}" data-version="${f?.version || ""}">${field("name", t("name"), v.name, "text", 'required maxlength="120" autocomplete="off"')}<div id="food-classification" class="food-classification" role="status" aria-live="polite"></div><label class="check food-confirmation" id="food-confirmation" hidden><input type="checkbox" name="food_confirmed" ${v.food_verification?.confirmed ? "checked" : ""}>${E(t("food_confirm_label"))}</label><p class="hint">${E(t("batch_note"))}</p><div class="two-fields">${field("quantity", t("quantity"), v.quantity ?? "", "number", `required min="0.001" max="1000000" step="0.001" inputmode="decimal"`)}<label>${E(t("unit"))}<select name="unit">${quantityUnits.map((unit) => option(unit, t("unit_" + unit), v.unit || "pcs")).join("")}</select></label></div>${field("purchased_date", t("purchased_date"), f ? f.purchased_date || "" : state.today, "date")}<label>${E(t("date_information"))}<select name="date_source">${["unknown", "printed", "production", "personal"].map((k) => option(k, t(k === "unknown" ? "no_date" : k === "personal" ? "personal_date_source" : k), v.date_source)).join("")}</select></label><div id="dated-fields" ${v.date_source === "unknown" ? "hidden" : ""}><div id="package-label">${select("date_kind", t("label_type"), ["unspecified", "use_by", "best_before"], v.date_kind)}</div><div id="printed-fields" ${!["printed", "personal"].includes(v.date_source) ? "hidden" : ""}><label><span id="food-date-label">${E(t(v.date_source === "personal" ? "personal_date" : "date"))}</span><input type="date" name="effective_date" value="${E(v.effective_date || "")}"></label><p class="hint" id="personal-date-hint" ${v.date_source !== "personal" ? "hidden" : ""}>${E(t("personal_hint"))}</p></div><div id="production-fields" ${v.date_source !== "production" ? "hidden" : ""}>${field("production_date", t("production_date"), v.production_date || "", "date")}<div class="two-fields">${field("shelf_life", t("shelf_life"), v.shelf_life || "", "number", 'min="1" max="10000" step="1"')}${select("shelf_unit", t("shelf_life"), ["days", "months", "years"], v.shelf_unit || "days")}</div>${button("calculate", t("calculate"))}<p id="calculation-result" role="status">${calculation ? E(t("reference") + ": " + dateText(calculation)) : ""}</p><label class="check"><input type="checkbox" name="date_confirmed" ${calculation ? "checked" : ""}>${E(t("confirm_date"))}</label><details><summary>${E(t("calc_explanation"))}</summary><p>${E(t("calc_note"))}</p></details></div></div><div class="two-fields">${select("category", t("category"), cats, v.category)}${select("location", t("location"), ["fridge", "freezer", "pantry", "other"], v.location)}</div><input type="hidden" name="ingredient" value="${E(v.ingredient)}"><label>${E(t("note"))}<textarea name="note" maxlength="1000" rows="3">${E(v.note)}</textarea></label>${formError()}<div class="actions"><button class="primary" ${f?.status === "used" ? "disabled" : ""}>${E(t(f ? "save" : "add"))}</button>${button("go", t("cancel"), "", 'data-path="kitchen"')}</div>${f ? `<div class="record-actions">${f.status === "active" ? button("mark-used", t("consume")) : ""}${button("delete-food", t("delete"), "danger")}${button("reload-record", t("reload_record"), "quiet")}</div>` : ""}</form></div>`;
 }
 function bindFoodForm() {
   const form = $('[data-form="food"]');
@@ -1024,11 +1041,16 @@ function bindFoodForm() {
   function fields() {
     const s = form.elements.date_source.value;
     $("#dated-fields").hidden = s === "unknown";
-    $("#printed-fields").hidden = s !== "printed";
+    $("#printed-fields").hidden = !["printed", "personal"].includes(s);
+    $("#package-label").hidden = s === "personal";
+    $("#personal-date-hint").hidden = s !== "personal";
+    $("#food-date-label").textContent = t(
+      s === "personal" ? "personal_date" : "date",
+    );
     $("#production-fields").hidden = s !== "production";
     form.elements.effective_date.required = s === "printed";
-    form.elements.effective_date.disabled = s !== "printed";
-    form.elements.date_kind.disabled = s === "unknown";
+    form.elements.effective_date.disabled = !["printed", "personal"].includes(s);
+    form.elements.date_kind.disabled = ["unknown", "personal"].includes(s);
     form.elements.date_confirmed.disabled = s !== "production";
     for (const k of ["production_date", "shelf_life", "shelf_unit"]) {
       form.elements[k].required = s === "production";
@@ -1302,7 +1324,7 @@ function reminders() {
   return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.7</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.8</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
 async function confirmAction(title, message, typed = false) {
   const dialog = $("#confirm");
