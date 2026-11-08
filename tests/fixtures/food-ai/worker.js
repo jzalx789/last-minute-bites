@@ -52,6 +52,51 @@ export class FoodAI extends WorkerEntrypoint {
     });
     return { provider: "test-fixture", model: "test-only", data: { recipes } };
   }
+  async classify(input) {
+    if (input.name === "Delayed Skyr") {
+      await new Promise((r) => setTimeout(r, 700));
+      return {
+        provider: "test-fixture",
+        data: {
+          status: "food",
+          confidence: "high",
+          category: "dairy",
+          ingredient: "",
+        },
+      };
+    }
+    if (input.name === "Skyr")
+      return {
+        provider: "test-fixture",
+        data: {
+          status: "food",
+          confidence: "high",
+          category: "dairy",
+          ingredient: "",
+        },
+      };
+    if (input.name === "榫卯夾具")
+      return {
+        provider: "test-fixture",
+        data: {
+          status: "non_food",
+          confidence: "high",
+          category: "other",
+          ingredient: "",
+        },
+      };
+    if (input.name === "Unavailable food")
+      return { provider: "test-fixture", error: "ai_unavailable" };
+    return {
+      provider: "test-fixture",
+      data: {
+        status: "uncertain",
+        confidence: "low",
+        category: "other",
+        ingredient: "",
+      },
+    };
+  }
   async recognize(input) {
     return {
       provider: "test-fixture",

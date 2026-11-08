@@ -1467,3 +1467,32 @@ details p {
     grid-template-columns: minmax(0, 1fr) auto auto;
   }
 }
+.food-classification {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  min-height: 1.8rem;
+  margin: -0.2rem 0 0.8rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+}
+.food-classification:empty {
+  display: none;
+}
+.classification-ok {
+  color: var(--green);
+  background: var(--pale);
+}
+.classification-pending {
+  color: var(--muted);
+  background: #f3f5f3;
+}
+.classification-error {
+  color: #8b2b20;
+  background: #fff0ec;
+}
+.food-confirmation {
+  background: #fff8e7;
+  padding: 0.7rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+}

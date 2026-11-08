@@ -436,6 +436,33 @@ Object.assign(words, {
     "Each purchase keeps its own quantity and date.",
     "每次購買會分開記錄份量與期限。",
   ],
+  classification_required: [
+    "Please identify this name again before saving.",
+    "請重新辨識名稱後再儲存。",
+  ],
+  checking_food: ["Identifying food…", "正在辨識食物…"],
+  auto_category: ["Auto category", "自動分類"],
+  manual_category: ["Category", "分類"],
+  not_food: [
+    "This looks like a non-food item. Check the name or photo.",
+    "這看起來不是食物，請檢查名稱或照片。",
+  ],
+  food_confirmation_required: [
+    "The name is unclear. Confirm it is food before saving.",
+    "名稱不夠明確，請確認這是食物後再儲存。",
+  ],
+  food_confirm_label: [
+    "I confirm this name refers to food or a drink.",
+    "我確認這個名稱是食物或飲品。",
+  ],
+  food_name_incomplete: [
+    "Finish the name to identify its category.",
+    "完成名稱後會自動辨識分類。",
+  ],
+  classification_unavailable: [
+    "Couldn't identify this name. Confirm it is food to continue.",
+    "暫時未能辨識此名稱，確認是食物後可繼續。",
+  ],
   usage_title: ["Update food", "更新食材"],
   usage_hint: [
     "Enter amounts used. Leave 0 to skip.",
@@ -972,7 +999,7 @@ function batchLine(food) {
   return `${t("batch")} #${food.id} · ${food.purchased_date ? t("purchased_date") + " " + dateText(food.purchased_date) : t("purchase_unknown")}`;
 }
 function foodRow(f) {
-  return `<article class="food-row" data-food-id="${f.id}"><label class="food-select"><input type="checkbox" data-select="${f.id}" ${selection.has(f.id) ? "checked" : ""} ${f.eligible ? "" : "disabled"} aria-label="${E(t("selected") + " " + f.name)}"><span><strong>${E(f.name)}</strong><span class="stock-quantity">${E(t("remaining"))}: ${E(amountText(f.quantity, f.unit))}</span><small class="batch-label">${E(batchLine(f))}</small><small class="${!f.eligible && f.status !== "used" ? "warning" : ""}">${E(dateLine(f))}</small><small>${E(t(f.category))} · ${E(t(f.location))}</small></span></label><div class="food-actions">${button("edit", t("edit"), "quiet", `data-id="${f.id}"`)}${f.status === "used" ? button("row-restore", t("restore"), "", 'data-id="' + f.id + '"') : button("row-used", t("consume"), "", 'data-id="' + f.id + '"')}${button("row-delete", t("remove_short"), "danger", `data-id="${f.id}"`)}</div></article>`;
+  return `<article class="food-row" data-food-id="${f.id}"><label class="food-select"><input type="checkbox" data-select="${f.id}" ${selection.has(f.id) ? "checked" : ""} ${f.eligible ? "" : "disabled"} aria-label="${E(t("selected") + " " + f.name)}"><span><strong>${E(f.name)}</strong><span class="stock-quantity">${E(t("remaining"))}: ${E(amountText(f.quantity, f.unit))}</span>${f.food_warning ? `<small class="warning">${E(t("not_food"))}</small>` : ""}<small class="batch-label">${E(batchLine(f))}</small><small class="${!f.eligible && f.status !== "used" ? "warning" : ""}">${E(dateLine(f))}</small><small>${E(t(f.category))} · ${E(t(f.location))}</small></span></label><div class="food-actions">${button("edit", t("edit"), "quiet", `data-id="${f.id}"`)}${f.status === "used" ? button("row-restore", t("restore"), "", 'data-id="' + f.id + '"') : f.food_warning ? "" : button("row-used", t("consume"), "", 'data-id="' + f.id + '"')}${button("row-delete", t("remove_short"), "danger", `data-id="${f.id}"`)}</div></article>`;
 }
 function foodForm(id) {
   const f = id ? state.foods.find((f) => f.id === Number(id)) : null;
@@ -988,7 +1015,7 @@ function foodForm(id) {
       ingredient: "",
     };
   calculation = f?.date_source === "production" ? f.effective_date : null;
-  return `<div class="narrow">${back()}<h1>${E(t(f ? "edit" : "add"))}</h1>${!f ? `<section class="photo-panel"><label class="photo-upload">${E(t("photo"))}<input type="file" id="food-photo" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment"></label><p class="hint">${E(t("photo_hint"))}</p><div id="photo-results">${photoCandidates.length ? photoCandidateHTML() : ""}</div><p id="photo-error" class="error" role="alert"></p></section>` : ""}<form data-form="food" data-id="${f?.id || ""}" data-version="${f?.version || ""}">${field("name", t("name"), v.name, "text", 'required maxlength="120" autocomplete="off"')}<p class="hint">${E(t("batch_note"))}</p><div class="two-fields">${field("quantity", t("quantity"), v.quantity ?? "", "number", `required min="0.001" max="1000000" step="0.001" inputmode="decimal"`)}<label>${E(t("unit"))}<select name="unit">${quantityUnits.map((unit) => option(unit, t("unit_" + unit), v.unit || "pcs")).join("")}</select></label></div>${field("purchased_date", t("purchased_date"), f ? f.purchased_date || "" : state.today, "date")}<label>${E(t("date_information"))}<select name="date_source">${["unknown", "printed", "production"].map((k) => option(k, t(k === "unknown" ? "no_date" : k), v.date_source)).join("")}</select></label><div id="dated-fields" ${v.date_source === "unknown" ? "hidden" : ""}>${select("date_kind", t("label_type"), ["unspecified", "use_by", "best_before"], v.date_kind)}<div id="printed-fields" ${v.date_source !== "printed" ? "hidden" : ""}>${field("effective_date", t("date"), v.effective_date || "", "date")}</div><div id="production-fields" ${v.date_source !== "production" ? "hidden" : ""}>${field("production_date", t("production_date"), v.production_date || "", "date")}<div class="two-fields">${field("shelf_life", t("shelf_life"), v.shelf_life || "", "number", 'min="1" max="10000" step="1"')}${select("shelf_unit", t("shelf_life"), ["days", "months", "years"], v.shelf_unit || "days")}</div>${button("calculate", t("calculate"))}<p id="calculation-result" role="status">${calculation ? E(t("reference") + ": " + dateText(calculation)) : ""}</p><label class="check"><input type="checkbox" name="date_confirmed" ${calculation ? "checked" : ""}>${E(t("confirm_date"))}</label><details><summary>${E(t("calc_explanation"))}</summary><p>${E(t("calc_note"))}</p></details></div></div><div class="two-fields">${select("category", t("category"), cats, v.category)}${select("location", t("location"), ["fridge", "freezer", "pantry", "other"], v.location)}</div><input type="hidden" name="ingredient" value="${E(v.ingredient)}"><label>${E(t("note"))}<textarea name="note" maxlength="1000" rows="3">${E(v.note)}</textarea></label>${formError()}<div class="actions"><button class="primary" ${f?.status === "used" ? "disabled" : ""}>${E(t(f ? "save" : "add"))}</button>${button("go", t("cancel"), "", 'data-path="kitchen"')}</div>${f ? `<div class="record-actions">${f.status === "active" ? button("mark-used", t("consume")) : ""}${button("delete-food", t("delete"), "danger")}${button("reload-record", t("reload_record"), "quiet")}</div>` : ""}</form></div>`;
+  return `<div class="narrow">${back()}<h1>${E(t(f ? "edit" : "add"))}</h1>${!f ? `<section class="photo-panel"><label class="photo-upload">${E(t("photo"))}<input type="file" id="food-photo" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment"></label><p class="hint">${E(t("photo_hint"))}</p><div id="photo-results">${photoCandidates.length ? photoCandidateHTML() : ""}</div><p id="photo-error" class="error" role="alert"></p></section>` : ""}<form data-form="food" data-id="${f?.id || ""}" data-version="${f?.version || ""}">${field("name", t("name"), v.name, "text", 'required maxlength="120" autocomplete="off"')}<div id="food-classification" class="food-classification" role="status" aria-live="polite"></div><label class="check food-confirmation" id="food-confirmation" hidden><input type="checkbox" name="food_confirmed" ${v.food_verification?.confirmed ? "checked" : ""}>${E(t("food_confirm_label"))}</label><p class="hint">${E(t("batch_note"))}</p><div class="two-fields">${field("quantity", t("quantity"), v.quantity ?? "", "number", `required min="0.001" max="1000000" step="0.001" inputmode="decimal"`)}<label>${E(t("unit"))}<select name="unit">${quantityUnits.map((unit) => option(unit, t("unit_" + unit), v.unit || "pcs")).join("")}</select></label></div>${field("purchased_date", t("purchased_date"), f ? f.purchased_date || "" : state.today, "date")}<label>${E(t("date_information"))}<select name="date_source">${["unknown", "printed", "production"].map((k) => option(k, t(k === "unknown" ? "no_date" : k), v.date_source)).join("")}</select></label><div id="dated-fields" ${v.date_source === "unknown" ? "hidden" : ""}>${select("date_kind", t("label_type"), ["unspecified", "use_by", "best_before"], v.date_kind)}<div id="printed-fields" ${v.date_source !== "printed" ? "hidden" : ""}>${field("effective_date", t("date"), v.effective_date || "", "date")}</div><div id="production-fields" ${v.date_source !== "production" ? "hidden" : ""}>${field("production_date", t("production_date"), v.production_date || "", "date")}<div class="two-fields">${field("shelf_life", t("shelf_life"), v.shelf_life || "", "number", 'min="1" max="10000" step="1"')}${select("shelf_unit", t("shelf_life"), ["days", "months", "years"], v.shelf_unit || "days")}</div>${button("calculate", t("calculate"))}<p id="calculation-result" role="status">${calculation ? E(t("reference") + ": " + dateText(calculation)) : ""}</p><label class="check"><input type="checkbox" name="date_confirmed" ${calculation ? "checked" : ""}>${E(t("confirm_date"))}</label><details><summary>${E(t("calc_explanation"))}</summary><p>${E(t("calc_note"))}</p></details></div></div><div class="two-fields">${select("category", t("category"), cats, v.category)}${select("location", t("location"), ["fridge", "freezer", "pantry", "other"], v.location)}</div><input type="hidden" name="ingredient" value="${E(v.ingredient)}"><label>${E(t("note"))}<textarea name="note" maxlength="1000" rows="3">${E(v.note)}</textarea></label>${formError()}<div class="actions"><button class="primary" ${f?.status === "used" ? "disabled" : ""}>${E(t(f ? "save" : "add"))}</button>${button("go", t("cancel"), "", 'data-path="kitchen"')}</div>${f ? `<div class="record-actions">${f.status === "active" ? button("mark-used", t("consume")) : ""}${button("delete-food", t("delete"), "danger")}${button("reload-record", t("reload_record"), "quiet")}</div>` : ""}</form></div>`;
 }
 function bindFoodForm() {
   const form = $('[data-form="food"]');
@@ -1014,6 +1041,7 @@ function bindFoodForm() {
     $("#calculation-result").textContent = "";
   }
   fields();
+  bindFoodClassification(form);
   form.elements.date_source.addEventListener("change", () => {
     fields();
     invalidate();
@@ -1031,6 +1059,145 @@ function bindFoodForm() {
       if (aliases.includes(n)) form.elements.ingredient.value = k;
   });
 }
+function bindFoodClassification(form) {
+  const entries = new Map(),
+    status = $("#food-classification"),
+    confirmation = $("#food-confirmation"),
+    nameInput = form.elements.name,
+    submit = $("button.primary", form),
+    uid = state.user.id,
+    kid = state.kitchen.id;
+  let timer,
+    sequence = 0;
+  if (
+    state.foods.find((f) => String(f.id) === form.dataset.id)?.category_mode ===
+    "manual"
+  )
+    form.dataset.categoryManual = "true";
+  const key = () =>
+    nameInput.value.normalize("NFKC").toLowerCase().trim().replace(/\s+/g, " ");
+  const draw = (assessment, aiChecked) => {
+    const known = assessment.status === "food",
+      blocked = assessment.status === "non_food",
+      uncertain =
+        !known && !blocked && (aiChecked || assessment.source !== "rules");
+    form.dataset.foodStatus = blocked
+      ? "non_food"
+      : known
+        ? "food"
+        : "uncertain";
+    status.className =
+      "food-classification " +
+      (blocked
+        ? "classification-error"
+        : known
+          ? "classification-ok"
+          : "classification-pending");
+    if (known) {
+      if (form.dataset.categoryManual !== "true")
+        form.elements.category.value = assessment.category;
+      if (assessment.ingredient)
+        form.elements.ingredient.value = assessment.ingredient;
+      status.textContent = `${t(form.dataset.categoryManual === "true" ? "manual_category" : "auto_category")}: ${t(form.elements.category.value)}`;
+    } else
+      status.textContent = t(
+        blocked
+          ? "not_food"
+          : uncertain
+            ? assessment.source === "unavailable"
+              ? "classification_unavailable"
+              : "food_confirmation_required"
+            : "food_name_incomplete",
+      );
+    confirmation.hidden = !uncertain;
+    form.elements.food_confirmed.required = uncertain;
+    // A pending submit is already disabled by the form submit handler.
+    if (blocked) submit.disabled = true;
+    else if (!form.dataset.classifyingSubmit) submit.disabled = false;
+  };
+  form.clearFoodAssessment = () => entries.delete(key());
+  form.classifyName = async function (allowAI = false) {
+    if (!form.isConnected) return;
+    const name = nameInput.value.trim(),
+      nameKey = key(),
+      seq = ++sequence;
+    if (!name) {
+      status.textContent = "";
+      form.dataset.foodStatus = "uncertain";
+      return;
+    }
+    let entry = entries.get(nameKey);
+    if (entry?.promise && allowAI && !entry.aiRequested) {
+      await entry.promise;
+      return form.classifyName(allowAI);
+    }
+    if (
+      !entry ||
+      (!entry.promise &&
+        entry.assessment?.status === "uncertain" &&
+        allowAI &&
+        !entry.aiChecked)
+    ) {
+      entry = { aiRequested: allowAI };
+      entries.set(nameKey, entry);
+      status.className = "food-classification classification-pending";
+      status.textContent = t("checking_food");
+      entry.promise = api("food/classify", { name, allow_ai: allowAI })
+        .then((result) => {
+          entry.assessment = result.assessment;
+          entry.aiChecked = allowAI;
+          return entry.assessment;
+        })
+        .catch(() => {
+          entry.assessment = {
+            status: "uncertain",
+            category: "other",
+            ingredient: "",
+            source: "unavailable",
+          };
+          entry.aiChecked = true;
+          return entry.assessment;
+        })
+        .finally(() => {
+          entry.promise = null;
+        });
+    }
+    const assessment = entry.promise ? await entry.promise : entry.assessment;
+    if (
+      seq === sequence &&
+      form.isConnected &&
+      key() === nameKey &&
+      state.user?.id === uid &&
+      state.kitchen?.id === kid
+    )
+      draw(assessment, entry.aiChecked);
+    return assessment;
+  };
+  nameInput.addEventListener("input", () => {
+    clearTimeout(timer);
+    sequence++;
+    form.elements.category.value = "other";
+    form.dataset.categoryManual = "false";
+    form.dataset.foodStatus = "uncertain";
+    form.elements.food_confirmed.checked = false;
+    form.elements.food_confirmed.required = false;
+    confirmation.hidden = true;
+    submit.disabled = false;
+    status.textContent = nameInput.value.trim() ? t("checking_food") : "";
+    timer = setTimeout(() => form.classifyName(false), 650);
+  });
+  nameInput.addEventListener("blur", () => {
+    clearTimeout(timer);
+    form.classifyName(true);
+  });
+  form.elements.category.addEventListener("change", () => {
+    form.dataset.categoryManual = "true";
+    const entry = entries.get(key());
+    if (entry?.assessment) draw(entry.assessment, entry.aiChecked);
+  });
+  if (nameInput.value.trim()) form.classifyName(true);
+}
+
 function recipesPage(id) {
   if (id)
     return `<div class="narrow"><div id="recipe-content" aria-live="polite"></div></div>`;
@@ -1135,7 +1302,7 @@ function reminders() {
   return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.6</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.7</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
 async function confirmAction(title, message, typed = false) {
   const dialog = $("#confirm");
@@ -1168,6 +1335,9 @@ function foodData(form) {
   data.request_id = form.dataset.requestId;
   data.shelf_life = Number(data.shelf_life);
   data.quantity = data.quantity === "" ? null : Number(data.quantity);
+  data.category_mode =
+    form.dataset.categoryManual === "true" ? "manual" : "auto";
+  data.food_confirmed = !!form.elements.food_confirmed?.checked;
   data.date_confirmed = form.elements.date_confirmed.checked && !!calculation;
   if (form.dataset.id) {
     data.id = Number(form.dataset.id);
@@ -1252,6 +1422,17 @@ document.addEventListener("submit", async (event) => {
         render();
         break;
       case "food":
+        form.dataset.classifyingSubmit = "true";
+        await form.classifyName(true);
+        if (form.dataset.foodStatus === "non_food")
+          throw Object.assign(new Error(), { code: "not_food" });
+        if (
+          form.dataset.foodStatus !== "food" &&
+          !form.elements.food_confirmed.checked
+        )
+          throw Object.assign(new Error(), {
+            code: "food_confirmation_required",
+          });
         await api(
           form.dataset.id ? "food/update" : "food/create",
           foodData(form),
@@ -1282,13 +1463,16 @@ document.addEventListener("submit", async (event) => {
         break;
     }
   } catch (err) {
+    if (err.code === "classification_required") form.clearFoodAssessment?.();
     recipeBusy = false;
     error.textContent = errorText(err);
     if (form.dataset.form === "ai-recipes") displayRecipes();
     if (["no_kitchen", "unauthorized"].includes(err.code))
       await refresh().catch(() => {});
   } finally {
-    submit.disabled = false;
+    delete form.dataset.classifyingSubmit;
+    submit.disabled =
+      form.dataset.form === "food" && form.dataset.foodStatus === "non_food";
   }
 });
 document.addEventListener("click", async (event) => {
@@ -1336,6 +1520,8 @@ document.addEventListener("click", async (event) => {
         form.elements.name.value = item.name;
         form.elements.category.value = item.category || "other";
         form.elements.ingredient.value = item.ingredient || "";
+        form.elements.name.dispatchEvent(new Event("input", { bubbles: true }));
+        form.classifyName(false);
         form.elements.name.focus();
         break;
       }

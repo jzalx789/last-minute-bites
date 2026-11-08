@@ -1,5 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
 import {
+  classifyFoodName,
+  foodNameKey,
+  validateFoodAssessment,
+} from "./food-classifier.js";
+import {
   STYLES,
   validateRecipes,
   validatePhoto,
@@ -32,6 +37,7 @@ import {
 } from "./domain.js";
 
 const SCHEMA = `
+CREATE TABLE IF NOT EXISTS food_assessments(user_id INTEGER NOT NULL,kitchen_id INTEGER NOT NULL,name_key TEXT NOT NULL,data TEXT NOT NULL,created REAL NOT NULL,PRIMARY KEY(user_id,kitchen_id,name_key));
 CREATE TABLE IF NOT EXISTS recipe_generations(id TEXT PRIMARY KEY,user_id INTEGER NOT NULL,kitchen_id INTEGER NOT NULL,cache_key TEXT NOT NULL,data TEXT NOT NULL,created REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS ai_usage(day TEXT NOT NULL,kind TEXT NOT NULL,user_id INTEGER NOT NULL,count INTEGER NOT NULL,PRIMARY KEY(day,kind,user_id));
 PRAGMA foreign_keys=ON;
@@ -142,11 +148,17 @@ export class KitchenStore extends DurableObject {
           status: r.status,
         };
         f.eligible = eligible(f, today);
+        if (classifyFoodName(f.name).status === "non_food") {
+          f.eligible = false;
+          f.food_warning = "not_food";
+        }
         return f;
       },
     );
   }
   async fetch(request) {
+    if (new URL(request.url).pathname === "/api/food/classify")
+      return this.classifyFetch(request);
     if (
       ["/api/recipes/generate", "/api/food/recognize"].includes(
         new URL(request.url).pathname,
@@ -164,7 +176,7 @@ export class KitchenStore extends DurableObject {
         if (url.pathname === "/healthz") {
           this.one("SELECT COUNT(*) AS count FROM users");
           return respond(
-            { status: "ok", version: "0.6", storage: "persistent-sqlite" },
+            { status: "ok", version: "0.7", storage: "persistent-sqlite" },
             200,
             null,
             secure,
@@ -259,6 +271,204 @@ export class KitchenStore extends DurableObject {
     }
     return result.value;
   }
+  assessment(uid, kid, name) {
+    const local = classifyFoodName(name);
+    if (local.status !== "uncertain") return local;
+    const row = this.one(
+      "SELECT data,created FROM food_assessments WHERE user_id=? AND kitchen_id=? AND name_key=? AND created>?",
+      uid,
+      kid,
+      foodNameKey(name),
+      Date.now() - 86400000,
+    );
+    if (!row) return local;
+    const result = JSON.parse(row.data);
+    return result.source === "unavailable" && row.created < Date.now() - 60000
+      ? local
+      : result;
+  }
+  saveAssessment(uid, kid, name, value) {
+    this.sql.exec(
+      "INSERT INTO food_assessments VALUES(?,?,?,?,?) ON CONFLICT(user_id,kitchen_id,name_key) DO UPDATE SET data=excluded.data,created=excluded.created",
+      uid,
+      kid,
+      foodNameKey(name),
+      JSON.stringify(value),
+      Date.now(),
+    );
+    this.sql.exec(
+      "DELETE FROM food_assessments WHERE created<?",
+      Date.now() - 86400000,
+    );
+  }
+  checkedFood(data, uid, kid, previous = null) {
+    const name = text(data.name),
+      key = foodNameKey(name),
+      assessment = this.assessment(uid, kid, name);
+    check(assessment.status !== "non_food", "not_food", 422);
+    const alreadyConfirmed =
+      previous?.food_verification?.name_key === key &&
+      previous.food_verification.confirmed;
+    check(
+      assessment.status !== "uncertain" ||
+        assessment.source !== "rules" ||
+        alreadyConfirmed,
+      "classification_required",
+      422,
+    );
+    check(
+      assessment.status === "food" ||
+        data.food_confirmed === true ||
+        alreadyConfirmed,
+      "food_confirmation_required",
+      422,
+    );
+    const category =
+      data.category_mode === "manual"
+        ? data.category
+        : assessment.status === "food"
+          ? assessment.category
+          : (data.category ?? "other");
+    return {
+      ...validateFood({
+        ...data,
+        category,
+        ingredient: assessment.ingredient || data.ingredient || "",
+      }),
+      category_mode: data.category_mode === "manual" ? "manual" : "auto",
+      food_verification: {
+        name_key: key,
+        confirmed: assessment.status !== "food",
+        source: assessment.source,
+      },
+    };
+  }
+  async classifyFetch(request) {
+    const secure = new URL(request.url).protocol === "https:";
+    let busyKey,
+      owned = false;
+    try {
+      const snapshot = await this.locked(async () => {
+        const { session, member, preferences, data } = await this.aiAuth(
+            request,
+            16384,
+          ),
+          name = text(data.name),
+          uid = session.user_id,
+          kid = member.kitchen_id;
+        this.rate("classify_lookup:" + uid, 90);
+        const known = this.assessment(uid, kid, name);
+        if (known.status !== "uncertain" || known.source !== "rules")
+          return { known };
+        if (data.allow_ai === false) return { known };
+        if (!this.env.FOOD_AI || foodNameKey(name).length < 2) {
+          const fallback = {
+            ...known,
+            source: this.env.FOOD_AI ? "unresolved" : "unavailable",
+          };
+          this.saveAssessment(uid, kid, name, fallback);
+          return { known: fallback };
+        }
+        busyKey = uid + ":classify:" + foodNameKey(name);
+        check(!this.aiBusy.has(busyKey), "ai_busy", 429);
+        try {
+          this.consumeAI(uid, "classify");
+        } catch (error) {
+          if (!(error instanceof Problem) || error.status !== 429) throw error;
+          const fallback = { ...known, source: "unavailable" };
+          this.saveAssessment(uid, kid, name, fallback);
+          return { known: fallback };
+        }
+        this.aiBusy.add(busyKey);
+        owned = true;
+        return {
+          name,
+          uid,
+          kid,
+          token: session.token,
+          language: preferences.language,
+        };
+      });
+      if (snapshot.known)
+        return respond({ assessment: snapshot.known }, 200, null, secure);
+      let assessment,
+        failureReason = "service_unavailable";
+      try {
+        const result = await this.env.FOOD_AI.classify({
+          name: snapshot.name,
+          language: snapshot.language,
+        });
+        if (result?.error) {
+          const reasons = new Set([
+            "output_truncated",
+            "output_incomplete",
+            "invalid_json",
+            "invalid_assessment",
+          ]);
+          failureReason = reasons.has(result.reason)
+            ? result.reason
+            : "provider_unavailable";
+          throw Error("unavailable");
+        }
+        failureReason = "invalid_assessment";
+        assessment = validateFoodAssessment(result.data);
+        if (result.provider === "test-fixture")
+          assessment.source = "test-fixture";
+      } catch {
+        assessment = {
+          status: "uncertain",
+          category: "other",
+          ingredient: "",
+          source: "unavailable",
+          reason: failureReason,
+        };
+      }
+      return await this.locked(() => {
+        check(
+          this.one(
+            "SELECT 1 FROM sessions WHERE token=? AND user_id=? AND expires>?",
+            snapshot.token,
+            snapshot.uid,
+            Date.now(),
+          ),
+          "unauthorized",
+          401,
+        );
+        check(
+          this.one(
+            "SELECT 1 FROM memberships WHERE user_id=? AND kitchen_id=?",
+            snapshot.uid,
+            snapshot.kid,
+          ),
+          "no_kitchen",
+          403,
+        );
+        this.saveAssessment(
+          snapshot.uid,
+          snapshot.kid,
+          snapshot.name,
+          assessment,
+        );
+        return respond({ assessment }, 200, null, secure);
+      });
+    } catch (error) {
+      return respond(
+        {
+          error: {
+            code:
+              error instanceof Problem
+                ? error.code
+                : "classification_unavailable",
+          },
+        },
+        error instanceof Problem ? error.status : 503,
+        null,
+        secure,
+      );
+    } finally {
+      if (owned) this.aiBusy.delete(busyKey);
+    }
+  }
   async aiAuth(request, maxBytes) {
     check(request.method === "POST", "not_found", 404);
     const url = new URL(request.url),
@@ -313,8 +523,8 @@ export class KitchenStore extends DurableObject {
   consumeAI(uid, kind) {
     this.rate(kind + ":" + uid, 6);
     const day = todayIn("Asia/Hong_Kong"),
-      limit = kind === "image" ? 12 : 24,
-      globalLimit = kind === "image" ? 60 : 150;
+      limit = kind === "image" ? 12 : kind === "classify" ? 40 : 24,
+      globalLimit = kind === "image" ? 60 : kind === "classify" ? 200 : 150;
     this.transaction(() => {
       const count =
           this.one(
@@ -493,13 +703,21 @@ export class KitchenStore extends DurableObject {
           error.reason = failure.code;
           throw error;
         }
-        if (image)
+        if (image) {
+          for (const candidate of output)
+            this.saveAssessment(snapshot.uid, snapshot.kid, candidate.name, {
+              status: "food",
+              category: candidate.category,
+              ingredient: candidate.ingredient,
+              source: "photo",
+            });
           return respond(
             { foods: output, provider: result.provider, model: result.model },
             200,
             null,
             secure,
           );
+        }
         const prefs = JSON.parse(
             this.one(
               "SELECT data FROM user_preferences WHERE user_id=?",
@@ -728,9 +946,10 @@ export class KitchenStore extends DurableObject {
       bodyHash = null,
       codeHash = null;
     if (path === "/api/food/create") {
-      this.member();
-      food = validateFood(data);
-      bodyHash = await sha(JSON.stringify(food));
+      const membership = this.member();
+      food = this.checkedFood(data, uid, membership.kitchen_id);
+      const { food_verification, ...content } = food;
+      bodyHash = await sha(JSON.stringify(content));
     }
     if (["/api/invitation/preview", "/api/invitation/accept"].includes(path)) {
       check(
@@ -1021,7 +1240,7 @@ export class KitchenStore extends DurableObject {
           const previous = JSON.parse(row.data);
           const updated = {
             ...previous,
-            ...validateFood({ ...previous, ...data }),
+            ...this.checkedFood({ ...previous, ...data }, uid, kid, previous),
           };
           this.sql.exec(
             "UPDATE food_items SET data=?,version=version+1 WHERE id=?",

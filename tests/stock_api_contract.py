@@ -40,7 +40,7 @@ owner.post('food/consume',dict(items=[dict(inline,initial_quantity=6,unit='pcs',
 assert current(owner,inline['id'])['quantity']==4 and current(owner,inline['id'])['unit']=='pcs'
 owner.post('food/consume',dict(items=[dict(id=inline['id'],version=2,initial_quantity=99,unit='pcs',quantity=1)],confirmed=True),409)
 assert current(owner,inline['id'])['quantity']==4
-rollback=owner.food(name='Inline rollback')
+rollback=owner.food(name='Rollback tomato')
 owner.post('food/consume',dict(items=[dict(rollback,initial_quantity=6,unit='pcs',quantity=2),dict(id=b['id'],version=999,quantity=1)],confirmed=True),409)
 assert current(owner,rollback['id'])['quantity'] is None
 # Old client whole-use path preserves known quantities and restoration metadata too.

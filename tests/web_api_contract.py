@@ -53,7 +53,7 @@ def run(base):
     editor.post('food/delete',dict(id=food['id'],version=food['version'],confirmed=True),409)
     latest=next(f for f in owner.state()['foods'] if f['id']==food['id'])
     with ThreadPoolExecutor(2) as pool:
-        outcomes=list(pool.map(lambda pair:pair[0].request('food/update',dict(latest,name=pair[1]))[0],[(owner,'Concurrent owner edit'),(editor,'Concurrent editor edit')]))
+        outcomes=list(pool.map(lambda pair:pair[0].request('food/update',dict(latest,name=pair[1]))[0],[(owner,'Concurrent owner egg'),(editor,'Concurrent editor egg')]))
     assert sorted(outcomes)==[200,409]
     # Calendar validation on the actual Worker, not only pure helper tests.
     for source,amount,unit,result in [('2024-02-29',1,'years','2025-02-28'),('2023-01-31',1,'months','2023-02-28'),('2024-02-28',1,'days','2024-02-29')]:
@@ -63,7 +63,7 @@ def run(base):
     # Request replay protection is per account and content.
     request_id=str(uuid.uuid4());body=dict(name='Tomato',ingredient='tomato',date_source='unknown',request_id=request_id)
     tomato=owner.post('food/create',body);assert owner.post('food/create',body)==tomato
-    owner.post('food/create',dict(body,name='changed payload'),409)
+    owner.post('food/create',dict(body,name='Changed tomato'),409)
     owner.post('food/create',dict(name='Old rice',ingredient='rice',date_source='printed',date_kind='use_by',effective_date='2000-01-01'))
     quality=owner.post('food/create',dict(name='Oil',ingredient='oil',date_source='printed',date_kind='best_before',effective_date='2000-01-01'))
     foods=owner.state()['foods'];old=next(f for f in foods if f['name']=='Old rice')
@@ -80,8 +80,9 @@ def run(base):
     assert owner.state()['preferences']['language']=='zh-Hant' and editor.state()['preferences']['language']=='en'
     owner.post('preferences',dict(reminders='false'),400)
     injected='<img src=x onerror="alert(1)">'
-    owner.post('food/create',dict(name=injected,date_source='unknown',note='<script>bad()</script>'))
-    assert any(f['name']==injected for f in editor.state()['foods'])
+    owner.post('food/create',dict(name=injected,date_source='unknown',food_confirmed=True),422)
+    owner.post('food/create',dict(name='Tomato',date_source='unknown',note='<script>bad()</script>'))
+    assert any(f['note']=='<script>bad()</script>' for f in editor.state()['foods'])
     # Rotation, revocation and re-join are server enforced.
     newcode=owner.post('invitation/replace')['code']
     owner.post('member/remove',dict(user_id=eid,confirmed=True))

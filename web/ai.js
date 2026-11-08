@@ -7,6 +7,7 @@ import {
   ingredients,
   quantityTicks,
 } from "./domain.js";
+import { classifyFoodName } from "./food-classifier.js";
 export const STYLES = [
   "auto",
   "mixed",
@@ -234,16 +235,37 @@ export function validateRecognition(raw) {
   for (const candidate of raw.foods) {
     const name = text(candidate.name, 120),
       key = name.toLowerCase();
+    const local = classifyFoodName(name);
+    if (
+      local.status === "non_food" ||
+      candidate.is_food === false ||
+      ["low", "medium"].includes(candidate.confidence)
+    )
+      continue;
+    if (
+      local.status !== "food" &&
+      !(
+        candidate.is_food === true &&
+        candidate.confidence === "high" &&
+        categories.includes(candidate.category)
+      )
+    )
+      continue;
     if (seen.has(key)) continue;
     seen.add(key);
     foods.push({
       name,
-      category: categories.includes(candidate.category)
-        ? candidate.category
-        : "other",
-      ingredient: Object.hasOwn(ingredients, candidate.ingredient)
-        ? candidate.ingredient
-        : "",
+      category:
+        local.status === "food"
+          ? local.category
+          : categories.includes(candidate.category)
+            ? candidate.category
+            : "other",
+      ingredient:
+        local.ingredient ||
+        (Object.hasOwn(ingredients, candidate.ingredient)
+          ? candidate.ingredient
+          : ""),
     });
   }
   return foods;
