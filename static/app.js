@@ -345,6 +345,13 @@ const words = {
   ],
   due: ["Date reminders", "日期提醒"],
   due_short: ["Dates", "日期提醒"],
+  overdue_title: ["Past-date warning", "日期已過，請立即檢查"],
+  overdue_critical: ["Use-by expired — do not eat", "已過食用期限，請勿食用"],
+  overdue_review: ["Review", "查看處理"],
+  overdue_filter: ["Past-date food", "已過日期的食物"],
+  overdue_quality: ["Best-before is a quality date; check condition and storage.", "最佳食用日期屬品質標示；請檢查狀態及儲存情況。"],
+  overdue_personal: ["Your planned date has passed; reassess the food’s condition.", "已過你設定的提醒日；請重新評估食物狀態。"],
+  overdue_reference: ["Check the package label and storage before deciding what to do.", "請先確認包裝標示及儲存情況，再決定如何處理。"],
   due_hint: [
     "Based on entered dates; check the label type.",
     "依據所輸入日期，請留意標示類型。",
@@ -1065,6 +1072,36 @@ function categoryButton(key, svg, cls = "") {
   ).length;
   return `<button data-action="category" data-category="${key}" class="fridge-category ${cls}">${icon(svg)}<span>${E(t(key))}<small>${count} ${E(t("items"))}</small></span><span class="chevron" aria-hidden="true">›</span></button>`;
 }
+function pastDate(food) {
+  return (
+    food.status === "active" && !food.food_warning &&
+    (food.quantity == null || food.quantity > 0) &&
+    !!food.effective_date && food.effective_date < state.today
+  );
+}
+function expiredUseBy(food) {
+  return pastDate(food) && food.date_source !== "personal" && food.date_kind === "use_by";
+}
+function expiryAlert() {
+  const foods = state.foods.filter(pastDate).sort((a, b) =>
+    Number(expiredUseBy(b)) - Number(expiredUseBy(a)) ||
+    a.effective_date.localeCompare(b.effective_date),
+  );
+  if (!foods.length) {
+    expiryAlert.signature = "";
+    return "";
+  }
+  // Routine shared-inventory refreshes must not repeatedly interrupt screen readers.
+  const signature = JSON.stringify([state.user.id, state.kitchen.id,
+    foods.map((f) => [f.id, f.name, f.effective_date, f.date_source, f.date_kind])]);
+  const announce = expiryAlert.signature !== signature;
+  expiryAlert.signature = signature;
+  const first = foods[0];
+  const message = expiredUseBy(first) ? "overdue_critical"
+    : first.date_source === "personal" ? "overdue_personal"
+    : first.date_kind === "best_before" ? "overdue_quality" : "overdue_reference";
+  return `<aside class="expiry-alert" role="${announce ? "alert" : "region"}" aria-label="${E(t("overdue_title"))}"><div class="expiry-heading"><strong><span aria-hidden="true">⚠</span> ${E(t("overdue_title"))} <span class="expiry-count">${foods.length}</span></strong>${button("review-overdue", t("overdue_review"), "expiry-review")}</div><p><b>${E(first.name)}</b> · ${E(dateText(first.effective_date))}${foods.length > 1 ? ` · +${foods.length - 1}` : ""}</p><small>${E(t(message))}</small></aside>`;
+}
 function reminderBanner() {
   if (!state.preferences.reminders) return "";
   const foods = state.foods
@@ -1087,7 +1124,7 @@ function reminderBanner() {
     : "";
 }
 function kitchen() {
-  return `<section class="page-heading kitchen-heading kitchen-overview"><div><p class="kitchen-label"><span class="kitchen-name" title="${E(state.kitchen.name)}">${E(state.kitchen.name)}</span><span class="role">${E(t(state.kitchen.role))}</span></p><h1 class="sr-only">${E(t("kitchen_intro"))}</h1></div></section><div class="kitchen-toolbar"><div class="switcher">${button("view-categories", t("categories"), view === "categories" ? "chosen" : "")}${button("view-first", t("use_first"), view === "use_first" ? "chosen" : "")}</div>${button("category", t("all"), "quiet", 'data-category="all"')}</div>${reminderBanner()}${
+  return `<section class="page-heading kitchen-heading kitchen-overview"><div><p class="kitchen-label"><span class="kitchen-name" title="${E(state.kitchen.name)}">${E(state.kitchen.name)}</span><span class="role">${E(t(state.kitchen.role))}</span></p><h1 class="sr-only">${E(t("kitchen_intro"))}</h1></div></section><div class="kitchen-toolbar"><div class="switcher">${button("view-categories", t("categories"), view === "categories" ? "chosen" : "")}${button("view-first", t("use_first"), view === "use_first" ? "chosen" : "")}</div>${button("category", t("all"), "quiet", 'data-category="all"')}</div>${expiryAlert()}${reminderBanner()}${
     view === "categories"
       ? `<div class="kitchen-illustration"><section class="fridge" aria-label="${E(t("fridge"))}"><div class="fridge-top"><span>Last Minute Bites</span><span class="fridge-hinge"></span></div><div class="fridge-shelves">${categoryButton("produce", "leaf")}${categoryButton("dairy", "egg")}${categoryButton("protein", "fish")}${categoryButton("cooked", "bowl")}</div><div class="freezer-drawer">${categoryButton("freezer", "snow")}</div></section><aside class="pantry-rack"><div class="rack-top">${icon("jar")}${icon("jar")}${icon("jar")}</div>${categoryButton("condiments", "jar", "rack-category")}${categoryButton("dryother", "bag", "dry-category")}</aside></div>`
       : foodList(
@@ -1097,13 +1134,14 @@ function kitchen() {
   }`;
 }
 function categoryPage(key) {
-  return `${back()}<section class="page-heading kitchen-heading"><h1>${E(key === "all" ? t("inventory") : t(key))}</h1></section><div class="list-tools"><label class="search-label"><span>${E(t("search"))}</span><input type="search" id="search" value="${E(search)}"></label><label>${E(t("inventory"))}<select id="inventory-status"><option value="active" ${inventoryStatus === "active" ? "selected" : ""}>${E(t("active_food"))}</option><option value="used" ${inventoryStatus === "used" ? "selected" : ""}>${E(t("used_food"))}</option></select></label></div><div id="food-list">${filteredList(key)}</div>`;
+  return `${back()}<section class="page-heading kitchen-heading"><h1>${E(key === "all" ? t("inventory") : t(key))}</h1></section>${expiryAlert()}<div class="list-tools"><label class="search-label"><span>${E(t("search"))}</span><input type="search" id="search" value="${E(search)}"></label><label>${E(t("inventory"))}<select id="inventory-status"><option value="active" ${inventoryStatus === "active" ? "selected" : ""}>${E(t("active_food"))}</option><option value="overdue" ${inventoryStatus === "overdue" ? "selected" : ""}>${E(t("overdue_filter"))}</option><option value="used" ${inventoryStatus === "used" ? "selected" : ""}>${E(t("used_food"))}</option></select></label></div><div id="food-list">${filteredList(key)}</div>`;
 }
 function filteredList(key) {
   return foodList(
     state.foods.filter(
       (f) =>
-        f.status === inventoryStatus &&
+        f.status === (inventoryStatus === "overdue" ? "active" : inventoryStatus) &&
+        (inventoryStatus !== "overdue" || pastDate(f)) &&
         (key === "all" ||
           (key === "freezer"
             ? f.location === "freezer"
@@ -1158,7 +1196,7 @@ function batchLine(food) {
   return `${t("batch")} #${food.id} · ${food.purchased_date ? t("purchased_date") + " " + dateText(food.purchased_date) : t("purchase_unknown")}`;
 }
 function foodRow(f) {
-  return `<article class="food-row" data-food-id="${f.id}"><label class="food-select"><input type="checkbox" data-select="${f.id}" ${selection.has(f.id) ? "checked" : ""} ${f.eligible ? "" : "disabled"} aria-label="${E(t("selected") + " " + f.name)}"><span><strong>${E(f.name)}</strong><span class="stock-quantity">${E(t("remaining"))}: ${E(amountText(f.quantity, f.unit))}</span>${f.food_warning ? `<small class="warning">${E(t("not_food"))}</small>` : ""}<small class="batch-label">${E(batchLine(f))}</small><small class="${!f.eligible && f.status !== "used" ? "warning" : ""}">${E(dateLine(f))}</small><small>${E(t(f.category))} · ${E(t(f.location))}</small></span></label><div class="food-actions">${button("edit", t("edit"), "quiet", `data-id="${f.id}"`)}${f.status === "used" ? button("row-restore", t("restore"), "", 'data-id="' + f.id + '"') : f.food_warning ? "" : button("row-used", t("consume"), "", 'data-id="' + f.id + '"')}${button("row-delete", t("remove_short"), "danger", `data-id="${f.id}"`)}</div></article>`;
+  return `<article class="food-row${pastDate(f) ? " past-date-row" : ""}${expiredUseBy(f) ? " expired-use-by" : ""}" data-food-id="${f.id}"><label class="food-select"><input type="checkbox" data-select="${f.id}" ${selection.has(f.id) ? "checked" : ""} ${f.eligible ? "" : "disabled"} aria-label="${E(t("selected") + " " + f.name)}"><span><strong>${E(f.name)}</strong><span class="stock-quantity">${E(t("remaining"))}: ${E(amountText(f.quantity, f.unit))}</span>${f.food_warning ? `<small class="warning">${E(t("not_food"))}</small>` : ""}<small class="batch-label">${E(batchLine(f))}</small><small class="${!f.eligible && f.status !== "used" ? "warning" : ""}">${E(dateLine(f))}${expiredUseBy(f) ? ` · ${E(t("overdue_critical"))}` : ""}</small><small>${E(t(f.category))} · ${E(t(f.location))}</small></span></label><div class="food-actions">${button("edit", t("edit"), "quiet", `data-id="${f.id}"`)}${f.status === "used" ? button("row-restore", t("restore"), "", 'data-id="' + f.id + '"') : f.food_warning ? "" : button("row-used", t("consume"), "", 'data-id="' + f.id + '"')}${button("row-delete", t("remove_short"), "danger", `data-id="${f.id}"`)}</div></article>`;
 }
 function foodForm(id) {
   const f = id ? state.foods.find((f) => f.id === Number(id)) : null;
@@ -1898,6 +1936,11 @@ document.addEventListener("click", async (event) => {
       case "category":
         search = "";
         go("category/" + b.dataset.category);
+        break;
+      case "review-overdue":
+        inventoryStatus = "overdue";
+        search = "";
+        go("category/all");
         break;
       case "add":
         foodForm.category = b.dataset.category;

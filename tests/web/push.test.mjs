@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createECDH,hkdfSync,createDecipheriv,createPublicKey,verify} from 'node:crypto';
 import {base64url,fromBase64url,encryptPush,createVapidKeys,pushRequest,pushEndpoint,validateSubscription,deliverPush} from '../../web/web-push.js';
-import {reminderPlan} from '../../web/push-service.js';
+import {reminderPlan,PushService} from '../../web/push-service.js';
 const b64=(s)=>Buffer.from(s,'base64url');
 const endpoint='https://fcm.googleapis.com/fcm/send/synthetic-protocol-test';
 test('aes128gcm reproduces the exact published RFC 8291 example',async()=>{
@@ -40,4 +40,35 @@ test('reminders use account-local dates, only active dated food and the configur
 test('delivery never follows push-provider redirects and honours Retry-After without exposing responses',async t=>{
  t.mock.method(globalThis,'fetch',async(url,options)=>{assert.equal(options.redirect,'error');assert.equal(url,endpoint);return new Response('no provider body is returned',{status:429,headers:{'Retry-After':'900'}});});
  assert.deepEqual(await deliverPush({endpoint,headers:{},body:new Uint8Array([1])}),{status:429,retryAfter:900});
+});
+
+test('overdue reminders exclude used/empty/non-food rows and use the account-local date',()=>{
+ const prefs={timezone:'Asia/Hong_Kong',reminders:true,reminder_days:3},when=Date.UTC(2026,10,8,1);
+ const foods=[
+  {status:'active',quantity:1,date_source:'printed',date_kind:'use_by',effective_date:'2026-11-07'},
+  {status:'active',quantity:1,date_source:'personal',effective_date:'2026-11-07'},
+  {status:'active',quantity:0,effective_date:'2026-11-07'},
+  {status:'used',quantity:1,effective_date:'2026-11-07'},
+  {status:'active',food_warning:'not_food',effective_date:'2026-11-07'},
+  {status:'active',effective_date:null},{status:'active',effective_date:'invalid'},
+  {status:'active',effective_date:'2026-11-08'}];
+ const plan=reminderPlan(foods,prefs,when);assert.deepEqual(plan.overdue,foods.slice(0,2));assert.equal(plan.due.length,1);
+ assert.equal(reminderPlan(foods,{...prefs,reminders:false},when).inWindow,false);
+});
+test('urgent push distinguishes use-by from personal/quality dates without disclosing inventory',()=>{
+ const service=new PushService(null,{});
+ assert.match(service.payload('en',false,'expired').body,/Do not eat/);
+ assert.match(service.payload('zh-Hant',false,'expired').body,/請勿食用/);
+ assert.doesNotMatch(service.payload('en',false,'overdue').body,/Do not eat|unsafe/);
+ assert.match(service.payload('zh-Hant',false,'overdue').body,/檢查標示/);
+ assert.match(service.payload('en',true,'expired').body,/Push is connected/);
+ for(const kind of ['expired','overdue','upcoming'])assert.equal(service.payload('en',false,kind).url,'/#kitchen');
+});
+
+test('expired use-by deliveries request high provider urgency without changing consent',async t=>{
+ const service=new PushService(null,{PUBLIC_ORIGIN:'https://last-minute-bites-demo.jzalx789.workers.dev'});
+ const ua=createECDH('prime256v1');ua.generateKeys();
+ const row={data:JSON.stringify({endpoint,keys:{p256dh:base64url(ua.getPublicKey()),auth:base64url(new Uint8Array(16))}})};
+ t.mock.method(globalThis,'fetch',async(url,options)=>{assert.equal(url,endpoint);assert.equal(options.headers.Urgency,'high');return new Response('',{status:201});});
+ assert.equal((await service.send(row,await createVapidKeys(),'en',false,'expired')).status,201);
 });

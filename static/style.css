@@ -1835,3 +1835,61 @@ details p {
     flex-basis: auto;
   }
 }
+
+.expiry-alert {
+  border: 1px solid #d79289;
+  border-left: 4px solid #ae3029;
+  border-radius: 10px;
+  background: #fff0ed;
+  color: #8d211b;
+  padding: 0.4rem 0.65rem 0.55rem;
+  margin-bottom: 0.65rem;
+}
+.expiry-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.expiry-heading strong {
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+.expiry-review {
+  flex-shrink: 0;
+  color: #8d211b;
+  border-color: #d79289;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.8rem;
+}
+.expiry-alert p {
+  margin: 0.1rem 0 0;
+  font-size: 0.8rem;
+}
+.expiry-alert small {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+.expiry-count {
+  display: inline-block;
+  white-space: nowrap;
+  border-radius: 1rem;
+  background: #f5d5cf;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.75rem;
+}
+.past-date-row {
+  border-left: 4px solid #b66a1b;
+  background: #fffaf1;
+}
+.expired-use-by {
+  border-color: #d79289;
+  border-left-color: #ae3029;
+  background: #fff0ed;
+}
+.expired-use-by .food-select .warning {
+  color: #8d211b !important;
+  font-weight: 650;
+}

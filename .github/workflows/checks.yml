@@ -45,6 +45,7 @@ jobs:
           python tests/consume_browser.py
           python tests/classification_browser.py
           python tests/personal_dates_browser.py
+          python tests/expiry_alert_browser.py
           python tests/recipe_builder_browser.py
           python tests/push_browser.py
           python tests/push_service_worker.py
@@ -54,4 +55,5 @@ jobs:
           LMB_WEB_ENGINE=webkit python tests/consume_browser.py
           LMB_WEB_ENGINE=webkit python tests/classification_browser.py
           LMB_WEB_ENGINE=webkit python tests/personal_dates_browser.py
+          LMB_WEB_ENGINE=webkit python tests/expiry_alert_browser.py
           LMB_WEB_ENGINE=webkit python tests/recipe_builder_browser.py

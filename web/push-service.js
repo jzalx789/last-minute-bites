@@ -25,21 +25,19 @@ export function reminderPlan(foods, prefs, when = Date.now()) {
       .map((p) => [p.type, p.value]),
   );
   const day = `${parts.year}-${parts.month}-${parts.day}`;
-  const due = foods.filter((f) => {
-    if (
-      f.status !== "active" ||
-      f.food_warning ||
-      (f.quantity !== null && f.quantity !== undefined && f.quantity <= 0) ||
-      !f.effective_date
-    )
-      return false;
+  const active = foods.filter((f) => f.status === "active" && !f.food_warning &&
+    (f.quantity == null || f.quantity > 0) && f.effective_date &&
+    Number.isFinite(Date.parse(f.effective_date)));
+  const overdue = active.filter((f) => f.effective_date < day);
+  const due = active.filter((f) => {
     const days = (Date.parse(f.effective_date) - Date.parse(day)) / 86400000;
-    return Number.isFinite(days) && days >= 0 && days <= prefs.reminder_days;
+    return days >= 0 && days <= prefs.reminder_days;
   });
   return {
     day,
     inWindow: prefs.reminders === true && parts.hour === "09",
     due,
+    overdue,
   };
 }
 export class PushService {
@@ -173,29 +171,33 @@ export class PushService {
       language: auth.preferences.language,
     };
   }
-  payload(language, test = false) {
+  payload(language, test = false, kind = "upcoming") {
     return {
-      title: "Last Minute Bites",
-      body:
-        language === "zh-Hant"
-          ? test
-            ? "推播已成功連接。之後可收到食材日期提醒。"
-            : "你的食材日期有新的提醒，開啟 App 查看。"
-          : test
-            ? "Push is connected. Food date reminders can now reach this device."
-            : "You have food date reminders. Open the app to view them.",
+      title: kind === "expired" && !test
+        ? language === "zh-Hant" ? "過期警告 · Last Minute Bites" : "Use-by warning · Last Minute Bites"
+        : "Last Minute Bites",
+      body: language === "zh-Hant"
+        ? test ? "推播已成功連接。之後可收到食材日期提醒。"
+          : kind === "expired" ? "有食材已超過食用期限，請勿食用。開啟 App 查看並處理。"
+          : kind === "overdue" ? "有食物日期已過，請立即開啟 App 檢查標示及處理。"
+          : "你的食材日期有新的提醒，開啟 App 查看。"
+        : test ? "Push is connected. Food date reminders can now reach this device."
+          : kind === "expired" ? "Some food is past its use-by date. Do not eat it. Open the app to review."
+          : kind === "overdue" ? "Some food dates have passed. Open the app to check labels and review."
+          : "You have food date reminders. Open the app to view them.",
       url: "/#kitchen",
       tag: test ? "lmb-push-test" : "lmb-food-dates",
     };
   }
-  async send(row, keys, language, test = false) {
+  async send(row, keys, language, test = false, kind = "upcoming") {
     const request = await pushRequest(
       JSON.parse(row.data),
-      this.payload(language, test),
+      this.payload(language, test, kind),
       keys,
       this.env.PUBLIC_ORIGIN ||
         "https://last-minute-bites-demo.jzalx789.workers.dev",
     );
+    if (!test && kind === "expired") request.headers.Urgency = "high";
     return deliverPush(request, this.env.PUSH_TRANSPORT);
   }
   finish(row, result, when, day = null) {
@@ -273,7 +275,7 @@ export class PushService {
           );
           if (
             !plan.inWindow ||
-            !plan.due.length ||
+            !(plan.due.length || plan.overdue.length) ||
             row.last_sent_day === plan.day
           )
             continue;
@@ -316,19 +318,23 @@ export class PushService {
                   prefs,
                   when,
                 );
-              if (!plan.inWindow || !plan.due.length) {
+              if (!plan.inWindow || !(plan.due.length || plan.overdue.length)) {
                 s.sql.exec(
                   "UPDATE push_subscriptions SET lease_until=0 WHERE id=?",
                   row.id,
                 );
                 return false;
               }
-              return prefs.language;
+              return {
+                language: prefs.language,
+                kind: plan.overdue.some((f) => f.date_source !== "personal" && f.date_kind === "use_by")
+                  ? "expired" : plan.overdue.length ? "overdue" : "upcoming",
+              };
             });
             if (!allowed) return;
             let result;
             try {
-              result = await this.send(row, keys, allowed);
+              result = await this.send(row, keys, allowed.language, false, allowed.kind);
             } catch {
               result = { status: 0 };
             }

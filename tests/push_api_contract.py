@@ -46,4 +46,13 @@ editor=subscription();b.post('push/subscribe',dict(subscription=editor));cid=b.s
 a.post('push/unsubscribe',dict(endpoint=sub['endpoint']));assert not a.post('push/status',dict(endpoint=sub['endpoint']))['subscribed']
 a.post('push/subscribe',dict(subscription=sub));a.post('logout');a.post('login',dict(email='push-a'+suffix+'@example.test',password='test-password-123'));assert not a.post('push/status',dict(endpoint=sub['endpoint']))['subscribed']
 assert a.request('push/schedule',{})[0]==404
+# A past-date-only kitchen still receives its scheduled warning, then stops after removal.
+c=Client(base);c.register('push-overdue-'+suffix+'@example.test');c.post('kitchen/create',dict(name='Past dates only'))
+yesterday=(datetime.date.fromisoformat(day)-datetime.timedelta(days=1)).isoformat()
+past_food=c.food(name='Milk',quantity=1,unit='pcs',date_source='printed',date_kind='use_by',effective_date=yesterday)
+expired_sub=subscription();c.post('push/subscribe',dict(subscription=expired_sub));run_schedule(clock+1200000)
+assert c.post('push/status',dict(endpoint=expired_sub['endpoint']))['last_sent_at']==clock+1200000
+c.post('food/batch',dict(action='delete',items=[dict(id=past_food['id'],version=past_food['version'])],confirmed=True))
+clean_sub=subscription();c.post('push/subscribe',dict(subscription=clean_sub));run_schedule(clock+86400000)
+assert c.post('push/status',dict(endpoint=clean_sub['endpoint']))['last_sent_at'] is None
 print('PASS: stable public VAPID key, authenticated consent/subscriptions, scoped status/disable/test, CSRF and endpoint/key validation, encrypted test transport, real cron handler/time zone, daily deduplication, preferences, expired endpoints, retries/rate limits, revocation and logout; food unchanged. Transport is test-only, not a real phone delivery.')
