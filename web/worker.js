@@ -27,6 +27,7 @@ import {
   passwordHash,
   verifyPassword,
   consumeFood,
+  applyConsumption,
   restoreFood,
 } from "./domain.js";
 
@@ -163,7 +164,7 @@ export class KitchenStore extends DurableObject {
         if (url.pathname === "/healthz") {
           this.one("SELECT COUNT(*) AS count FROM users");
           return respond(
-            { status: "ok", version: "0.5", storage: "persistent-sqlite" },
+            { status: "ok", version: "0.6", storage: "persistent-sqlite" },
             200,
             null,
             secure,
@@ -847,10 +848,9 @@ export class KitchenStore extends DurableObject {
           check(row, "food_not_found", 404);
           check(row.version === item.version, "conflict", 409);
           check(item.all === undefined || typeof item.all === "boolean");
-          const food = consumeFood(
+          const food = applyConsumption(
             { ...JSON.parse(row.data), status: row.status },
-            item.quantity,
-            item.all === true,
+            item,
           );
           return { row, food };
         });

@@ -38,5 +38,7 @@ jobs:
           python tests/web_browser.py
           python tests/user_fixes_browser.py
           python tests/stock_browser.py
+          python tests/consume_browser.py
           LMB_WEB_ENGINE=webkit python tests/user_fixes_browser.py
           LMB_WEB_ENGINE=webkit python tests/stock_browser.py
+          LMB_WEB_ENGINE=webkit python tests/consume_browser.py

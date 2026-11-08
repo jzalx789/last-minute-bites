@@ -42,7 +42,7 @@ with sync_playwright() as p:
     # Confirm an actual partial amount; never deduct the model suggestion automatically.
     before=read_state(page)['foods']
     click(page,'cooked-recipe');expect(page.locator('#used-picker')).to_be_visible();row=page.locator('.consume-item').first;food_id=int(row.get_attribute('data-id'));food=next(f for f in before if f['id']==food_id);used=min(1,food['quantity']/2)
-    row.locator('[data-consume-select]').check();row.locator('[data-consume-amount]').fill(str(used));page.locator('#used-confirm').click();expect(page.locator('#used-picker')).not_to_be_visible()
+    row.locator('[data-consume-amount]').fill(str(used));page.locator('#used-confirm').click();expect(page.locator('#used-picker')).not_to_be_visible()
     after=read_state(page)['foods'];assert all(f['status']=='active' for f in after)
     assert next(f for f in after if f['id']==food_id)['quantity']==food['quantity']-used
     assert all(f['quantity']==next(a for a in after if a['id']==f['id'])['quantity'] for f in before if f['id']!=food_id)

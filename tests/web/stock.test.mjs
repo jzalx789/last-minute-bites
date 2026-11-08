@@ -41,3 +41,12 @@ test('priority follows upcoming expiry before purchase date; meal planning can u
  assert.equal(validateRecipes({recipes:[recipe]},{foods:[],selected:[],mode:'plan',style:'auto',count:1,servings:4})[0].uses.length,0);
  assert.throws(()=>validateRecipes({recipes:[recipe]},{foods:[],selected:[],mode:'use_up',style:'auto',count:1,servings:4}));
 });
+
+test('unknown stock can be set and consumed together without replacing a known quantity',async()=>{
+ const {applyConsumption}=await import('../../web/domain.js');
+ const legacy={...validateFood({name:'Egg',date_source:'unknown'}),status:'active'};
+ const result=applyConsumption(legacy,{initial_quantity:6,unit:'pcs',quantity:2});
+ assert.equal(result.quantity,4);assert.equal(result.unit,'pcs');assert.equal(result.status,'active');assert.equal(legacy.quantity,null);
+ assert.throws(()=>applyConsumption(result,{initial_quantity:20,unit:'pcs',quantity:1}),/quantity_already_set/);
+ for(const item of [{initial_quantity:0,quantity:1},{initial_quantity:1,quantity:2},{initial_quantity:6,unit:'bad',quantity:2}])assert.throws(()=>applyConsumption(legacy,item));
+});

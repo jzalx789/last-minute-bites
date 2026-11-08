@@ -34,6 +34,15 @@ assert current(owner,a['id'])['quantity']==3 # restores only the last deduction,
 legacy=owner.food(name='Legacy tofu',ingredient='tofu');assert current(owner,legacy['id'])['quantity'] is None
 consume(owner,current(owner,legacy['id']),1,expected=400)
 consume(owner,current(owner,legacy['id']),all=True)
+# Inline legacy quantity setup is a single atomic consumption; it cannot replace known stock.
+inline=owner.food(name='Inline egg',ingredient='egg')
+owner.post('food/consume',dict(items=[dict(inline,initial_quantity=6,unit='pcs',quantity=2)],confirmed=True))
+assert current(owner,inline['id'])['quantity']==4 and current(owner,inline['id'])['unit']=='pcs'
+owner.post('food/consume',dict(items=[dict(id=inline['id'],version=2,initial_quantity=99,unit='pcs',quantity=1)],confirmed=True),409)
+assert current(owner,inline['id'])['quantity']==4
+rollback=owner.food(name='Inline rollback')
+owner.post('food/consume',dict(items=[dict(rollback,initial_quantity=6,unit='pcs',quantity=2),dict(id=b['id'],version=999,quantity=1)],confirmed=True),409)
+assert current(owner,rollback['id'])['quantity'] is None
 # Old client whole-use path preserves known quantities and restoration metadata too.
 owner.post('food/used',dict(id=b['id'],version=current(owner,b['id'])['version'],confirmed=True));used=current(owner,b['id']);assert used['quantity']==0 and used['restore_quantity']==10
 owner.post('food/batch',dict(action='restore',items=[dict(id=used['id'],version=used['version'])],confirmed=True))

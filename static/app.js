@@ -436,6 +436,28 @@ Object.assign(words, {
     "Each purchase keeps its own quantity and date.",
     "每次購買會分開記錄份量與期限。",
   ],
+  usage_title: ["Update food", "更新食材"],
+  usage_hint: [
+    "Enter amounts used. Leave 0 to skip.",
+    "填寫實際用量，0 代表不扣除。",
+  ],
+  usage_recipe_hint: [
+    "Recipe amounts are filled in. Adjust or clear anything you didn't use.",
+    "已帶入食譜用量，可修改或清空未用的食材。",
+  ],
+  all_short: ["All", "全部"],
+  left_short: ["Left", "餘下"],
+  bought_short: ["Bought", "購入"],
+  skip_food: ["Skip this food", "不扣除此食材"],
+  save_usage: ["Confirm", "確認"],
+  usage_empty: ["Enter an amount or tap All.", "請輸入用量，或按「全部」。"],
+  set_stock_here: ["Set quantity here", "在這裡補填份量"],
+  stock_before: ["Amount before use", "使用前數量"],
+  stock_before_example: ["e.g. 6", "例如 6"],
+  enter_stock_before: [
+    "Enter the amount before use below.",
+    "請在下方補填使用前數量。",
+  ],
   consume: ["Use some", "記錄消耗"],
   consume_title: ["How much did you use?", "這次用了多少？"],
   consume_hint: [
@@ -1113,7 +1135,7 @@ function reminders() {
   return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.5</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.6</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
 async function confirmAction(title, message, typed = false) {
   const dialog = $("#confirm");
@@ -1412,7 +1434,7 @@ document.addEventListener("click", async (event) => {
           const food = state.foods.find(
             (item) => item.id === Number(f.dataset.id),
           );
-          if (food) await consumeFoods([food], true);
+          if (food) await consumeFoods([food]);
           break;
         }
         if (
@@ -1544,6 +1566,7 @@ async function poll() {
   try {
     const p = route()[0] || "kitchen",
       draw =
+        !!state.kitchen &&
         ["kitchen", "category"].includes(p) &&
         !document.activeElement?.matches("input,textarea,select") &&
         !$("#confirm").open &&
@@ -1554,6 +1577,7 @@ async function poll() {
     offline = true;
     const p = route()[0] || "kitchen";
     if (
+      state.kitchen &&
       ["kitchen", "category"].includes(p) &&
       !document.activeElement?.matches("input")
     )
@@ -1576,7 +1600,7 @@ function updateDock() {
 }
 async function manageFoods(foods, action) {
   if (!foods.length) return;
-  if (action === "used") return consumeFoods(foods, true);
+  if (action === "used") return consumeFoods(foods);
   if (action === "restore") {
     if (
       !(await confirmAction(
@@ -1615,11 +1639,17 @@ async function manageFoods(foods, action) {
 }
 async function chooseUsedFoods(recipe) {
   const ids = new Set(recipe.uses.map((f) => f.food_id));
+  const suggested = new Map(
+    recipe.uses
+      .filter((use) => typeof use.quantity === "number")
+      .map((use) => [use.food_id, use]),
+  );
   return consumeFoods(
     state.foods.filter((f) => ids.has(f.id) && f.status === "active"),
+    suggested,
   );
 }
-async function consumeFoods(foods, direct = false) {
+async function consumeFoods(foods, suggested = new Map()) {
   if (!foods.length) {
     notify(t("none"));
     return;
@@ -1627,69 +1657,163 @@ async function consumeFoods(foods, direct = false) {
   const dialog = $("#used-picker"),
     form = $("form", dialog);
   if (dialog.open) return;
-  $("#used-title").textContent = t("consume_title");
-  $("#used-note").textContent = t("consume_hint");
+  form.noValidate = true;
+  $("#used-title").textContent = t("usage_title");
+  $("#used-note").textContent = t(
+    suggested.size ? "usage_recipe_hint" : "usage_hint",
+  );
+  const duplicates = new Map();
+  for (const f of foods)
+    duplicates.set(f.name, (duplicates.get(f.name) || 0) + 1);
   $("#used-foods").innerHTML = foods
     .map((f) => {
       const known = typeof f.quantity === "number" && f.quantity > 0;
-      return `<section class="consume-item" data-id="${f.id}"><label class="check"><input type="checkbox" data-consume-select value="${f.id}" ${direct ? "checked" : ""}><strong>${E(f.name)}</strong></label><p class="hint">${E(batchLine(f))}<br>${E(t("remaining"))}: ${E(amountText(f.quantity, f.unit))} · ${E(dateLine(f))}</p>${known ? `<label>${E(t("consumed_amount"))} (${E(t("unit_" + f.unit))})<input type="number" data-consume-amount min="0.001" max="${f.quantity}" step="0.001" inputmode="decimal" placeholder="0"></label>` : `<p class="hint">${E(t("quantity_required"))}</p>`}<label class="check"><input type="checkbox" data-consume-all>${E(t("use_all"))}</label><p class="consume-remainder" aria-live="polite"></p></section>`;
+      const recommendation = suggested.get(f.id);
+      const preset =
+        known &&
+        recommendation?.unit === f.unit &&
+        recommendation.quantity <= f.quantity &&
+        f.version === recipeResult?.versions[f.id]
+          ? recommendation.quantity
+          : "";
+      const detail = [
+        typeof f.quantity === "number"
+          ? `${t("left_short")} ${amountText(f.quantity, f.unit)}`
+          : t("quantity_unknown"),
+        f.effective_date ? dateText(f.effective_date) : "",
+        duplicates.get(f.name) > 1
+          ? f.purchased_date
+            ? `${t("bought_short")} ${dateText(f.purchased_date)}`
+            : `${t("batch")} #${f.id}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      return `<section class="consume-item" data-id="${f.id}"><div class="consume-main"><div class="consume-info"><div class="consume-name"><strong>${E(f.name)}</strong><button type="button" class="consume-reset" data-consume-reset aria-label="${E(t("skip_food") + ": " + f.name)}" title="${E(t("skip_food"))}">×</button></div><small>${E(detail)}</small></div><div class="consume-control"><label class="consume-input-label"><span class="sr-only">${E(f.name + ": " + t("consumed_amount"))}</span><input type="number" data-consume-amount min="0" max="${known ? f.quantity : 1000000}" step="0.001" inputmode="decimal" placeholder="0" value="${preset}"></label><span class="consume-unit">${E(known ? t("unit_" + f.unit) : t("unit_" + (f.unit || "pcs")))}</span><button type="button" data-consume-all>${E(t("all_short"))}</button></div></div>${known ? "" : `<details class="consume-setup"><summary>${E(t("set_stock_here"))}</summary><div class="consume-before-fields"><label>${E(t("stock_before"))}<input type="number" data-consume-before min="0.001" max="1000000" step="0.001" inputmode="decimal" placeholder="${E(t("stock_before_example"))}"></label><label>${E(t("unit"))}<select data-consume-unit>${quantityUnits.map((unit) => option(unit, t("unit_" + unit), f.unit || "pcs")).join("")}</select></label></div></details>`}<small class="consume-remainder" aria-live="polite"></small></section>`;
     })
     .join("");
   $("#used-cancel").textContent = t("cancel");
-  $("#used-confirm").textContent = t("confirm_consumption");
   $("#used-error").textContent = "";
-  const update = () => {
-    for (const row of dialog.querySelectorAll(".consume-item")) {
-      const f = foods.find((f) => f.id === Number(row.dataset.id));
-      const selected = $("[data-consume-select]", row).checked,
-        all = $("[data-consume-all]", row),
-        amount = $("[data-consume-amount]", row);
-      all.disabled = !selected;
-      if (amount) {
-        amount.disabled = !selected || all.checked;
-        amount.required = selected && !all.checked;
-      }
-      const consumed = all.checked
-        ? f.quantity
-        : amount?.value
-          ? Number(amount.value)
-          : 0;
-      const remaining =
-        typeof f.quantity === "number"
-          ? Math.round((f.quantity - consumed) * 1000) / 1000
-          : null;
-      $(".consume-remainder", row).textContent =
-        selected && (all.checked || amount?.value)
-          ? `${t("after_consumption")}: ${all.checked ? (typeof f.quantity === "number" ? amountText(0, f.unit) : t("used")) : remaining < 0 ? t("insufficient_quantity") : amountText(remaining, f.unit)}`
-          : "";
-    }
-  };
   let busy = false;
+  const available = (row, f) =>
+    typeof f.quantity === "number"
+      ? f.quantity
+      : $("[data-consume-before]", row)?.value
+        ? Number($("[data-consume-before]", row).value)
+        : null;
+  const active = (row) =>
+    row.dataset.all === "true" ||
+    $("[data-consume-amount]", row).validity.badInput ||
+    ($("[data-consume-amount]", row).value !== "" &&
+      Number($("[data-consume-amount]", row).value) !== 0);
+  const update = (event) => {
+    if (event?.target.matches("[data-consume-amount]"))
+      event.target.closest(".consume-item").dataset.all = "false";
+    let count = 0;
+    for (const row of dialog.querySelectorAll(".consume-item")) {
+      const f = foods.find((f) => f.id === Number(row.dataset.id)),
+        amount = $("[data-consume-amount]", row),
+        before = $("[data-consume-before]", row),
+        all = row.dataset.all === "true",
+        stock = available(row, f),
+        unit = $("[data-consume-unit]", row)?.value || f.unit || "pcs";
+      if (active(row)) count++;
+      amount.disabled = all && !(typeof stock === "number" && stock > 0);
+      if (all && typeof stock === "number" && stock > 0)
+        amount.value = String(stock);
+      amount.placeholder = all ? t("all_short") : "0";
+      amount.max =
+        typeof stock === "number" && stock > 0 ? String(stock) : "1000000";
+      $(".consume-unit", row).textContent = t("unit_" + unit);
+      $("[data-consume-all]", row).setAttribute(
+        "aria-pressed",
+        String(all || (stock > 0 && Number(amount.value) === stock)),
+      );
+      $("[data-consume-reset]", row).hidden = !active(row);
+      if (before) {
+        before.required = active(row) && !all;
+        if (active(row) && !all && stock === null)
+          $(".consume-setup", row).open = true;
+      }
+      const remainder = $(".consume-remainder", row),
+        left =
+          typeof stock === "number"
+            ? Math.round(
+                (stock - (all ? stock : Number(amount.value || 0))) * 1000,
+              ) / 1000
+            : null;
+      remainder.textContent = !active(row)
+        ? ""
+        : all && stock === null
+          ? t("used")
+          : left === null
+            ? t("enter_stock_before")
+            : left < 0
+              ? t("insufficient_quantity")
+              : `${t("left_short")} ${amountText(left, unit)}`;
+    }
+    const confirmText = count
+      ? `${t("save_usage")} (${count})`
+      : t("save_usage");
+    // Safari can cancel a click if blur/change replaces the button's text node.
+    if ($("#used-confirm").textContent !== confirmText)
+      $("#used-confirm").textContent = confirmText;
+  };
+  const clickRow = (event) => {
+    const allButton = event.target.closest("[data-consume-all]"),
+      reset = event.target.closest("[data-consume-reset]");
+    if ((!allButton && !reset) || busy) return;
+    const row = event.target.closest(".consume-item"),
+      f = foods.find((f) => f.id === Number(row.dataset.id)),
+      amount = $("[data-consume-amount]", row),
+      stock = available(row, f);
+    if (reset) {
+      row.dataset.all = "false";
+      amount.value = "";
+    } else {
+      row.dataset.all = "true";
+      amount.value = stock > 0 ? String(stock) : "";
+      const before = $("[data-consume-before]", row);
+      if (before && !before.checkValidity()) before.value = "";
+    }
+    update();
+  };
   const submit = async (event) => {
     if (event.submitter?.value !== "confirm") return;
     event.preventDefault();
     if (busy) return;
-    const picked = [...dialog.querySelectorAll(".consume-item")].filter(
-      (row) => $("[data-consume-select]", row).checked,
-    );
-    const error = $("#used-error");
+    const picked = [...dialog.querySelectorAll(".consume-item")].filter(active),
+      error = $("#used-error");
     error.textContent = "";
     if (!picked.length) {
-      error.textContent = t("choose_consumption");
+      error.textContent = t("usage_empty");
       return;
     }
-    const items = picked.map((row) => {
-      const f = foods.find((f) => f.id === Number(row.dataset.id));
-      return {
+    const items = [];
+    for (const row of picked) {
+      const f = foods.find((f) => f.id === Number(row.dataset.id)),
+        amount = $("[data-consume-amount]", row),
+        before = $("[data-consume-before]", row),
+        all = row.dataset.all === "true";
+      if (!all && (!amount.reportValidity() || Number(amount.value) <= 0))
+        return;
+      if (
+        before &&
+        ((before.value && !before.reportValidity()) ||
+          (!all && !before.reportValidity()))
+      )
+        return;
+      const item = {
         id: f.id,
         version: f.version,
-        all: $("[data-consume-all]", row).checked,
-        quantity: Number($("[data-consume-amount]", row)?.value || 0),
+        quantity: Number(amount.value || 0),
+        all,
       };
-    });
-    if (items.some((item) => !item.all && !item.quantity)) {
-      error.textContent = t("quantity_required");
-      return;
+      if (before?.value) {
+        item.initial_quantity = Number(before.value);
+        item.unit = $("[data-consume-unit]", row).value;
+      }
+      items.push(item);
     }
     busy = true;
     $("#used-confirm").disabled = true;
@@ -1701,8 +1825,11 @@ async function consumeFoods(foods, direct = false) {
       render();
       notify(t("saved"));
     } catch (err) {
-      error.textContent =
-        err.code === "conflict" ? t("consumption_conflict") : errorText(err);
+      error.textContent = ["conflict", "quantity_already_set"].includes(
+        err.code,
+      )
+        ? t("consumption_conflict")
+        : errorText(err);
       if (["no_kitchen", "unauthorized"].includes(err.code))
         await refresh(false).catch(() => {});
     } finally {
@@ -1717,6 +1844,7 @@ async function consumeFoods(foods, direct = false) {
   form.addEventListener("submit", submit);
   form.addEventListener("input", update);
   form.addEventListener("change", update);
+  form.addEventListener("click", clickRow);
   dialog.addEventListener("cancel", preventCancel);
   update();
   dialog.returnValue = "cancel";
@@ -1729,6 +1857,7 @@ async function consumeFoods(foods, direct = false) {
     form.removeEventListener("submit", submit);
     form.removeEventListener("input", update);
     form.removeEventListener("change", update);
+    form.removeEventListener("click", clickRow);
     dialog.removeEventListener("cancel", preventCancel);
   }
 }
@@ -1797,6 +1926,10 @@ function fitViewport() {
   if (window.visualViewport && Math.abs(window.visualViewport.scale - 1) < 0.01)
     app.style.height = Math.round(window.visualViewport.height) + "px";
   else app.style.height = "";
+  document.documentElement.style.setProperty(
+    "--visible-height",
+    app.style.height || "100dvh",
+  );
 }
 window.visualViewport?.addEventListener("resize", fitViewport);
 fitViewport();

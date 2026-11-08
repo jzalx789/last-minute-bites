@@ -94,6 +94,21 @@ export function restoreFood(food) {
   if (quantity !== null) quantityTicks(quantity);
   return { ...food, quantity, status: "active", restore_quantity: null };
 }
+export function applyConsumption(food, item) {
+  let current = food;
+  if (Object.hasOwn(item, "initial_quantity")) {
+    check(
+      food.quantity === null || food.quantity === undefined,
+      "quantity_already_set",
+      409,
+    );
+    const quantity = quantityTicks(item.initial_quantity) / 1000;
+    const unit = item.unit ?? food.unit ?? "pcs";
+    check(units.includes(unit), "invalid_quantity");
+    current = { ...food, quantity, unit };
+  }
+  return consumeFood(current, item.quantity, item.all === true);
+}
 export const defaults = {
   language: "en",
   text_size: "standard",

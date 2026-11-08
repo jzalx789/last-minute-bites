@@ -27,7 +27,7 @@ with tempfile.TemporaryDirectory() as directory,sync_playwright() as p:
     click(page,'add');page.locator('[name=name]').fill('Egg');page.locator('[name=category]').select_option('dairy');set_stock(page);page.locator('[data-form=food] button.primary').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
     navigate(page,'category/all');expect(page.locator('.food-row')).to_have_count(2)
     # Used-up is available directly on the inventory row, before any recipe.
-    egg=page.locator('.food-row').filter(has_text='Egg');egg.locator('[data-action=row-used]').click();page.locator('#used-foods [data-consume-all]').check();page.locator('#used-confirm').click();expect(page.locator('.food-row')).to_have_count(1)
+    egg=page.locator('.food-row').filter(has_text='Egg');egg.locator('[data-action=row-used]').click();page.locator('#used-foods [data-consume-all]').click();page.locator('#used-confirm').click();expect(page.locator('.food-row')).to_have_count(1)
     page.locator('#inventory-status').select_option('used');expect(page.locator('.food-row')).to_have_count(1);click(page,'row-restore');confirm(page);expect(page.locator('.food-row')).to_have_count(0)
     page.locator('#inventory-status').select_option('active');expect(page.locator('.food-row')).to_have_count(2)
     # Delete can be cancelled or confirmed without opening a food form/recipe.
@@ -42,7 +42,7 @@ with tempfile.TemporaryDirectory() as directory,sync_playwright() as p:
     # A rejected provider response keeps both the previous result and the controls.
     page.locator('.recipe-preferences summary').click();page.locator('[name=preference]').fill('__test_invalid__');page.locator('[data-form=ai-recipes] button.primary').click()
     expect(page.locator('[data-form=ai-recipes] .error')).not_to_be_empty();expect(page.locator('.recipe-card')).to_have_count(2);expect(page.locator('[data-form=ai-recipes] button.primary')).to_be_enabled()
-    click(page,'recipe-detail');expect(page.locator('.recipe-detail')).to_be_visible();click(page,'cooked-recipe');expect(page.locator('#used-picker')).to_be_visible();page.locator('#used-foods [data-consume-select]').first.check();page.locator('#used-foods [data-consume-all]').first.check();page.locator('#used-confirm').click();expect(page.locator('#used-picker')).not_to_be_visible()
+    click(page,'recipe-detail');expect(page.locator('.recipe-detail')).to_be_visible();click(page,'cooked-recipe');expect(page.locator('#used-picker')).to_be_visible();page.locator('#used-foods [data-consume-all]').first.click();page.locator('#used-confirm').click();expect(page.locator('#used-picker')).not_to_be_visible()
     navigate(page,'category/all');expect(page.locator('.food-row')).to_have_count(0)
     # Current and used records have distinct, clear places.
     page.locator('#inventory-status').select_option('used');expect(page.locator('.food-row')).to_have_count(1)

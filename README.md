@@ -1,4 +1,4 @@
-# Last Minute Bites — Web Prototype 0.5
+# Last Minute Bites — Web Prototype 0.6
 
 **網站：https://last-minute-bites-demo.jzalx789.workers.dev**
 
@@ -9,6 +9,7 @@
 - Email/password 登入、session cookie、CSRF、Owner／Editor 共用庫存、邀請及後端撤權。
 - 手機可捲動的主要內容區，底部導覽及選取操作不遮擋表單；支援窄屏、橫向及大字。
 - 我的食材：數量＋單位、購買日期與獨立批次。不同日期買的同名食物保留各自份量及期限；先列較早到期，期限相同再按購買日。
+- 快速消耗：每項直接輸入用量，0／空白代表略過，「全部」一按填好；不需勾選。舊食物可在同一視窗補填使用前數量及單位，與扣減一起確認。從食譜進入時，現有批次版本與單位相符才預填建議用量，可一按清除。
 - 消耗：填寫每批實際使用量，部分扣減保留剩餘，歸零才移到已用完。整批用完、刪除及復原也可獨立操作；復原只撤銷最後一次用完的份量。舊資料顯示「份量未設定」，不臆測數量。
 - 照片辨識：選取照片後縮小並轉為 JPEG，DeepSeek 建議食物名稱；使用者確認才儲存，不猜到期日、不自動新增。
 - DeepSeek 動態生成 1–2 道食譜，可選涼菜、湯、主食、肉類、蔬菜或搭配菜式；設定 1–12 人、小／一般／大食量、時間上限、不想使用的食材及口味／飲食偏好。
@@ -37,7 +38,7 @@ web/node_modules/.bin/wrangler dev --config tests/fixtures/food-ai/wrangler.json
 web/node_modules/.bin/wrangler dev --config web/wrangler.test.jsonc --port 8790
 ```
 
-然後執行 `LMB_WEB_BASE_URL=http://127.0.0.1:8790 python3 tests/web_api_contract.py`、`python3 tests/ai_api_contract.py`、`python3 tests/stock_api_contract.py`、`python3 tests/stock_browser.py`、`python3 tests/user_fixes_browser.py` 及同網址的 `tests/web_browser.py`。`LMB_WEB_ENGINE=webkit` 可切換引擎。CI 不花費模型額度。`tests/live_ai_browser.py` 需明確設定 `LMB_LIVE_AI=1`、正式網址及經檢視的測試食物照片才驗證四個真實 DeepSeek 流程（辨識、4 人大食量設計、清庫存、空庫存採購計劃）；每次食譜最多可再修正一次。驗證紀錄見 [docs/VALIDATION.md](docs/VALIDATION.md)。
+然後執行 `LMB_WEB_BASE_URL=http://127.0.0.1:8790 python3 tests/web_api_contract.py`、`python3 tests/ai_api_contract.py`、`python3 tests/stock_api_contract.py`、`python3 tests/stock_browser.py`、`python3 tests/consume_browser.py`、`python3 tests/user_fixes_browser.py` 及同網址的 `tests/web_browser.py`。`LMB_WEB_ENGINE=webkit` 可切換引擎。CI 不花費模型額度。`tests/live_ai_browser.py` 需明確設定 `LMB_LIVE_AI=1`、正式網址及經檢視的測試食物照片才驗證四個真實 DeepSeek 流程（辨識、4 人大食量設計、清庫存、空庫存採購計劃）；每次食譜最多可再修正一次。驗證紀錄見 [docs/VALIDATION.md](docs/VALIDATION.md)。
 
 ## 部署結構
 
