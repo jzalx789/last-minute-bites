@@ -2540,22 +2540,59 @@ async function recognizePhoto(file) {
 }
 
 function fitViewport() {
-  // Safari can pan the visual viewport when focusing an input. Resizing a
-  // nested, clipped auth scroller at the same time can push the form offscreen.
-  // Logged-out forms use native document scrolling instead of a pinned app shell.
-  if (
-    state?.user &&
-    window.visualViewport &&
-    Math.abs(window.visualViewport.scale - 1) < 0.01
-  )
-    app.style.height = Math.round(window.visualViewport.height) + "px";
-  else app.style.height = "";
+  const vv = window.visualViewport;
+  const unzoomed = vv && Math.abs(vv.scale - 1) < 0.01;
+  const height = unzoomed ? Math.round(vv.height) : window.innerHeight;
+  // Signed-in screens follow Safari's visual viewport, including its pan.
+  // Auth keeps native document scrolling so its keyboard cannot clip a form.
+  app.style.height = state?.user && unzoomed ? height + "px" : "";
   document.documentElement.style.setProperty(
     "--visible-height",
-    window.visualViewport && Math.abs(window.visualViewport.scale - 1) < 0.01
-      ? Math.round(window.visualViewport.height) + "px"
-      : "100dvh",
+    unzoomed ? height + "px" : "100dvh",
+  );
+  document.documentElement.style.setProperty(
+    "--visible-top",
+    unzoomed ? Math.round(vv.offsetTop) + "px" : "0px",
+  );
+  const active = document.activeElement;
+  const editing = active?.matches(
+    "input:not([type=checkbox]):not([type=radio]),textarea,select",
+  );
+  document.documentElement.classList.toggle(
+    "keyboard-open",
+    !!(
+      state?.user &&
+      editing &&
+      (height < document.documentElement.clientHeight - 120 || height <= 480)
+    ),
   );
 }
-window.visualViewport?.addEventListener("resize", fitViewport);
+function revealFocusedField() {
+  if (!state?.user) return;
+  const field = document.activeElement;
+  if (!field?.matches("input,textarea,select")) return;
+  const scroller =
+    field.closest("#used-foods") || field.closest("dialog") || $("#main");
+  if (!scroller?.contains(field)) return;
+  const bounds = scroller.getBoundingClientRect();
+  const rect = field.getBoundingClientRect();
+  const inset = Math.min(8, Math.max(0, (bounds.height - rect.height) / 2));
+  const top = bounds.top + inset, bottom = bounds.bottom - inset;
+  // Scroll the field's own container; never move the document or recreate inputs.
+  if (rect.height > bottom - top) {
+    if (rect.top < top || rect.top >= bottom) scroller.scrollTop += rect.top - top;
+  } else if (rect.bottom > bottom) scroller.scrollTop += rect.bottom - bottom;
+  else if (rect.top < top) scroller.scrollTop += rect.top - top;
+}
+function syncInputViewport() {
+  fitViewport();
+  requestAnimationFrame(revealFocusedField);
+}
+window.visualViewport?.addEventListener("resize", syncInputViewport);
+window.visualViewport?.addEventListener("scroll", fitViewport);
+window.addEventListener("resize", syncInputViewport);
+document.addEventListener("focusin", syncInputViewport);
+document.addEventListener("focusout", () =>
+  requestAnimationFrame(syncInputViewport),
+);
 fitViewport();

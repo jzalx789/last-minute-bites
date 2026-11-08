@@ -1,4 +1,4 @@
-"""Keyboard-sized and panned visual viewports must not clip Safari's auth document.
+"""Keyboard resize/pan must preserve auth scrolling and signed-in field positions.
 Viewport events are simulated; Chromium/WebKit are real, not physical iOS keyboards.
 """
 import os,sys,uuid
@@ -39,15 +39,32 @@ with sync_playwright() as p:
  with page.expect_response(lambda r:r.url.endswith('/api/register')) as response:page.locator('[data-form=auth] button.primary').click()
  assert response.value.status==200,response.value.json();expect(page.locator('[data-form=create-kitchen]')).to_be_visible();assert not page.locator('html').evaluate("e=>e.classList.contains('auth-screen')")
  page.evaluate('__keyboardViewport(null,null)');page.set_viewport_size({'width':390,'height':844});page.locator('[data-form=create-kitchen] [name=name]').fill('Keyboard regression kitchen');page.locator('[data-form=create-kitchen] button').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?');expect(page.locator('.app-dock')).to_be_visible();assert page.evaluate('scrollY===0')
+ # Signed-in forms follow a reduced and panned visual viewport without losing focus.
+ navigate(page,'food');expect(page.locator('[data-form=food]')).to_be_visible()
+ page.locator('[name=name]').fill('Tomato');page.locator('[name=quantity]').fill('6')
+ note=page.locator('[name=note]');note.fill('Keep this draft 雞蛋');note.evaluate('(e)=>e.setSelectionRange(4,4)')
+ for height,offset in [(310,180),(280,210),(320,0)]:
+  page.evaluate('([h,top])=>__keyboardViewport(h,top)',[height,offset])
+  page.wait_for_function("""() => {
+   const vv=visualViewport,a=document.querySelector('#app').getBoundingClientRect(),
+    m=document.querySelector('#main').getBoundingClientRect(),f=document.activeElement.getBoundingClientRect();
+   return Math.abs(a.top-vv.offsetTop)<1 && Math.abs(a.height-vv.height)<1 &&
+    f.top>=m.top && f.bottom<=m.bottom && a.bottom<=vv.offsetTop+vv.height+1;
+  }""")
+  expect(note).to_be_focused();expect(note).to_have_value('Keep this draft 雞蛋')
+  assert note.evaluate('(e)=>e.selectionStart===4')
+  expect(page.locator('[name=quantity]')).to_have_value('6')
+ page.evaluate('__keyboardViewport(null,null)')
+ page.wait_for_function("document.querySelector('#app').getBoundingClientRect().top===0 && !document.documentElement.classList.contains('keyboard-open')")
  # Confirmations with a text field must fit the keyboard's visible viewport too.
  navigate(page,'settings');click(page,'clear-kitchen');expect(page.locator('#confirm')).to_be_visible()
  page.locator('#confirm-input').fill('Unsubmitted confirmation')
- page.evaluate('__keyboardViewport(300,0)')
- assert page.locator('#confirm').evaluate('(e)=>{const r=e.getBoundingClientRect();return r.top>=0 && r.bottom<=300;}'), 'Confirmation extends behind keyboard'
+ page.evaluate('__keyboardViewport(300,120)')
+ assert page.locator('#confirm').evaluate('(e)=>{const r=e.getBoundingClientRect(),v=visualViewport;return r.top>=v.offsetTop && r.bottom<=v.offsetTop+v.height;}'), 'Confirmation extends behind keyboard'
  page.locator('#confirm-cancel').scroll_into_view_if_needed();page.locator('#confirm-cancel').click()
  assert read_state(page)['kitchen']['name']=='Keyboard regression kitchen'
  page.evaluate('__keyboardViewport(null,null)')
  navigate(page,'settings');click(page,'sign-out');expect(page.locator('[data-form=auth]')).to_be_visible();click(page,'auth-login');assert page.locator('html').evaluate("e=>e.classList.contains('auth-screen')")
  page.evaluate('__keyboardViewport(300,230)');page.set_viewport_size({'width':320,'height':360});page.locator('[name=email]').fill(email);page.locator('[name=password]').fill(password);page.locator('[data-form=auth] button.primary').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?');assert read_state(page)['kitchen']['name']=='Keyboard regression kitchen'
  page.evaluate('__keyboardViewport(null,null)');page.set_viewport_size({'width':390,'height':844});assert not errors,errors;b.close()
-print('PASS: register/sign-in remain native document scrollers under keyboard resize/pan events, short viewports and field focus changes; values, show-password, submit, setup, logout and returning dock remain functional. No physical iPhone keyboard claim.')
+print('PASS: register/sign-in remain native document scrollers under keyboard resize/pan events, short viewports and field focus changes; values, show-password, submit, setup, signed-in fields/caret, panned dialogs, logout and returning dock remain functional. No physical iPhone keyboard claim.')

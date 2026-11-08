@@ -24,6 +24,24 @@ with sync_playwright() as p:
  main=page.locator('#used-picker').bounding_box();assert page.locator('#used-confirm').bounding_box()['y']+page.locator('#used-confirm').bounding_box()['height'] <= main['y']+main['height']
  assert page.locator('#used-foods').evaluate('(e)=>e.scrollHeight<=e.clientHeight+1'),'Three ordinary rows should fit without internal scrolling'
  page.screenshot(path=str(artifacts/'compact-three-foods-phone.png'))
+ # A keyboard can pan the viewport after a lower batch row receives focus.
+ amount=rows.last.locator('[data-consume-amount]');amount.fill('0.5')
+ page.evaluate("""() => {
+  const vv=visualViewport;
+  Object.defineProperty(vv,'height',{value:300,configurable:true});
+  Object.defineProperty(vv,'offsetTop',{value:120,configurable:true});
+  vv.dispatchEvent(new Event('resize'));vv.dispatchEvent(new Event('scroll'));
+ }""")
+ page.wait_for_function("""() => {
+  const vv=visualViewport,d=document.querySelector('#used-picker').getBoundingClientRect(),
+   list=document.querySelector('#used-foods').getBoundingClientRect(),
+   f=document.activeElement.getBoundingClientRect(),b=document.querySelector('#used-confirm').getBoundingClientRect();
+  return d.top>=vv.offsetTop && d.bottom<=vv.offsetTop+vv.height &&
+   f.top>=list.top-1 && f.bottom<=list.bottom+1 && b.bottom<=vv.offsetTop+vv.height;
+ }""")
+ expect(amount).to_be_focused();expect(amount).to_have_value('0.5')
+ page.evaluate("() => {const vv=visualViewport;delete vv.height;delete vv.offsetTop;vv.dispatchEvent(new Event('resize'));vv.dispatchEvent(new Event('scroll'));}")
+
  egg=page.locator(f'.consume-item[data-id="{ids[1]}"]');egg.locator('[data-consume-amount]').fill('2');expect(egg.locator('.consume-setup')).to_have_attribute('open','');egg.locator('[data-consume-before]').fill('6');expect(egg.locator('.consume-remainder')).to_have_text('Left 4 pcs')
  # In-modal data is a draft until confirmed; cancel cannot alter a legacy record.
  page.locator('#used-cancel').click();assert next(f for f in read_state(page)['foods'] if f['id']==ids[1])['quantity'] is None

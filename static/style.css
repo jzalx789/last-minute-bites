@@ -29,6 +29,10 @@ body {
   overflow: hidden;
 }
 #app {
+  position: fixed;
+  top: var(--visible-top, 0px);
+  left: 0;
+  right: 0;
   height: 100vh;
   height: 100dvh;
   display: grid;
@@ -44,6 +48,7 @@ html.auth-screen body {
   overflow: visible;
 }
 html.auth-screen #app {
+  position: static;
   height: auto;
   min-height: 100vh;
   min-height: 100svh;
@@ -918,7 +923,7 @@ dialog {
 /* The layout viewport can stay tall while the on-screen keyboard is open. */
 dialog:not(#used-picker) {
   position: fixed;
-  top: calc(var(--visible-height, 100dvh) / 2);
+  top: calc(var(--visible-top, 0px) + var(--visible-height, 100dvh) / 2);
   bottom: auto;
   margin-block: 0;
   transform: translateY(-50%);
@@ -1460,6 +1465,12 @@ details p {
   grid-template-columns: minmax(0, 1fr);
 }
 #used-picker {
+  position: fixed;
+  top: calc(var(--visible-top, 0px) + var(--visible-height, 100dvh) / 2);
+  bottom: auto;
+  margin: 0 auto;
+  transform: translateY(-50%);
+  max-height: calc(var(--visible-height, 100dvh) - 24px);
   width: min(640px, calc(100vw - 24px));
   padding: 0;
   overflow: hidden;
@@ -1467,7 +1478,7 @@ details p {
 #used-picker form {
   display: flex;
   flex-direction: column;
-  max-height: calc(var(--visible-height, 100dvh) - 24px);
+  max-height: calc(var(--visible-height, 100dvh) - 26px);
   padding: 1rem;
 }
 #used-picker h2,
@@ -1502,7 +1513,8 @@ details p {
 }
 @media (max-width: 700px) {
   #used-picker {
-    top: 12px;
+    top: calc(var(--visible-top, 0px) + 12px);
+    transform: none;
     bottom: auto;
     margin: 0 auto;
   }
@@ -1705,4 +1717,14 @@ details p {
     flex-direction: row;
     gap: 0.3rem;
   }
+}
+
+/* Keep room for the focused field while the software keyboard is visible. */
+.keyboard-open .add-food-dock,
+.keyboard-open .selection {
+  display: none;
+}
+.keyboard-open main {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
 }
