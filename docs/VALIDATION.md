@@ -127,3 +127,18 @@ python3 tests/mobile_acceptance.py
 0.9 首次遠端 CI 在 WebKit 快速切換頁面的版面檢查讀到已被替換的節點，單獨的 bounding_box 回傳 None。改為等待可見版面，並在同一瀏覽器 task 讀取主內容及底部導覽的矩形，仍檢查原有 1px 容差；沒有放寬版面條件或修改產品功能。
 
 0.9 的消耗測試以 API 建立合成庫存後，現會先重新載入已提交狀態；避免把 5 秒背景同步與 5 秒畫面斷言的時限互相比較。食材筆數、實際扣減及取消不改資料的斷言均保留。
+
+
+## Web Prototype 1.0（2026-11-08，香港時間）
+
+新增 Web Push、使用者主動觸發的通知權限、此裝置啟用／停止及測試通知。伺服器 Cron 每 5 分鐘檢查帳戶本地上午 9 點的提醒窗口；依 1／3／7 天設定及有效日期發送通用提醒，未知日期、已用完及非食物不推播。每天每裝置去重，關閉 App 仍可由 Service Worker 處理；登出／登入到期／撤銷冰箱權限後停止。登入目前有效 7 天，到期後需再登入並啟用。
+
+- Worker 單元測試 27 項通過：完整重現 RFC 8291 發布的加密範例；以獨立 Node ECDH／HKDF／AES API 解密隨機生成的封包；驗證 ES256 VAPID 簽署、aud／sub／到期時間、服務 endpoint 白名單、P-256／auth 格式、本地時區／日期窗口、拒絕重新導向及 Retry-After。不是固定明文通知假裝加密。
+- 本機 `push_api_contract.py` 通過：穩定公開金鑰、私鑰不回傳、登入／CSRF、帳戶／裝置隔離、訂閱／停止／測試、真正 scheduled handler（Miniflare 以控制時間派發）、每天一次、關閉總提醒、失效端點刪除、重試／限流、撤權及登出。傳輸是明確標示的測試 RPC，不會向真實手機發送；食材紀錄保持一致。
+- `push_browser.py` 通過：不自動要求權限、明確允許／封鎖、啟用／測試／停止、重新載入、日期總開關暫停、iPhone 未安裝提示、320px 繁中大字。通知權限及 PushManager 訂閱是合成測試替身，後端仍為真正 Worker＋SQLite，傳輸為測試 RPC。
+- `push_service_worker.py` 使用真正 Chromium Service Worker 及已授權的測試 context，在 App 頁面關閉後，透過 CDP 注入 push event，成功由 Service Worker 顯示通知並從 getNotifications 讀回同一內容。這驗證背景處理，不是外部推播服務／實際手機收件的證明。
+- 實際嘗試本環境 Chromium PushManager 註冊，回傳 AbortError：Registration failed - permission denied；未捏造已取得真正端點、遠端送達或 iPhone 通知成功。使用者自己的裝置仍必須由本人允許通知，並以「發送測試通知」確認。
+- 原有 web API、個人日期及食譜建立／單道替換的本機流程通過；CareSync／私有 gateway 加入推播協定及日期窗口回歸後 123 項與語法檢查通過。沒有改用其他模型或為測試多做付費 AI 呼叫。
+- 正式 Worker 已部署 1.0，GitHub Actions `42487816383` 成功，發布紀錄確認 `schedule: */5 * * * *`。真實 HTTPS 的 `push/config` 回報 web-push 與穩定公開 key；私有金鑰留在原 Durable Object，沒有要求新 Token／服務帳戶或修改原資料庫綁定。正式觸發時間可由授權 API 的 schedule.last_run 觀察，驗證結果保留在忽略的 artifacts/push/live-readiness.json。
+
+採用標準 Web Crypto、現有 Worker／Durable Object 與瀏覽器內建推播服務；沒有新增付費服務、對外公開排程觸發 API，或自動替使用者授權通知。鎖定畫面不包含食材名稱／份量，通知點擊只開同源 App；原帳戶、食材、批次及模型服務沿用。沒有製作問卷或正式 user guide。

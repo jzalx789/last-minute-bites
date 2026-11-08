@@ -1587,3 +1587,18 @@ details p {
 .recipe-used {
   overflow-wrap: anywhere;
 }
+
+.push-panel {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+.push-panel h2 {
+  font-size: 1.25rem;
+}
+.push-panel .actions {
+  flex-wrap: wrap;
+}
+.push-panel #push-status {
+  overflow-wrap: anywhere;
+}

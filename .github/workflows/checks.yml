@@ -13,7 +13,7 @@ jobs:
           node-version: '24'
       - run: python -m unittest discover -s tests -v
       - run: npm ci --prefix web && npm --prefix web run check && npm --prefix web test
-      - run: node --check static/app.js && node --check static/mobile.js && node --check static/sw.js
+      - run: node --check static/app.js && node --check static/mobile.js && node --check static/sw.js && node --check static/notifications.js
       - run: pip install playwright==1.62.0 Pillow==13.0.0
       - run: python -m playwright install --with-deps chromium webkit
       - run: pip install --require-hashes -r requirements-deploy.txt
@@ -25,7 +25,7 @@ jobs:
           trap 'cat /tmp/lmb-test-ai.log /tmp/lmb-test-web.log 2>/dev/null || true' ERR
           nohup web/node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --inspector-port 9231 --config tests/fixtures/food-ai/wrangler.jsonc --port 8791 > /tmp/lmb-test-ai.log 2>&1 &
           curl --fail --max-time 2 --retry 30 --retry-all-errors --retry-delay 2 http://127.0.0.1:8791/
-          nohup web/node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --inspector-port 9230 --config web/wrangler.test.jsonc --port 8790 > /tmp/lmb-test-web.log 2>&1 &
+          nohup web/node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --inspector-port 9230 --config web/wrangler.test.jsonc --port 8790 --test-scheduled > /tmp/lmb-test-web.log 2>&1 &
           curl --fail --max-time 2 --retry 30 --retry-all-errors --retry-delay 2 http://127.0.0.1:8790/healthz
       - name: Web API and mobile browser acceptance
         env:
@@ -37,6 +37,7 @@ jobs:
           python tests/stock_api_contract.py
           python tests/classification_api.py
           python tests/recipe_builder_api.py
+          python tests/push_api_contract.py
           python tests/web_browser.py
           python tests/user_fixes_browser.py
           python tests/stock_browser.py
@@ -44,6 +45,8 @@ jobs:
           python tests/classification_browser.py
           python tests/personal_dates_browser.py
           python tests/recipe_builder_browser.py
+          python tests/push_browser.py
+          python tests/push_service_worker.py
           LMB_WEB_ENGINE=webkit python tests/user_fixes_browser.py
           LMB_WEB_ENGINE=webkit python tests/stock_browser.py
           LMB_WEB_ENGINE=webkit python tests/consume_browser.py

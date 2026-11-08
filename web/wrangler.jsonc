@@ -8,6 +8,8 @@
     "binding": "ASSETS",
     "run_worker_first": ["/api/*", "/healthz"],
   },
+  "triggers": {"crons": ["*/5 * * * *"]},
+  "vars": {"PUBLIC_ORIGIN": "https://last-minute-bites-demo.jzalx789.workers.dev"},
   "durable_objects": {
     "bindings": [{ "name": "KITCHENS", "class_name": "KitchenStore" }],
   },

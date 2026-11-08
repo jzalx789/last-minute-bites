@@ -136,3 +136,16 @@ export default {
     return new Response("test fixture only");
   },
 };
+
+export class PushTransport extends WorkerEntrypoint {
+  async send(input) {
+    return {
+      status: input.endpoint.includes("/gone-")
+        ? 410
+        : input.endpoint.includes("/retry-")
+          ? 429
+          : 201,
+      retryAfter: 3600,
+    };
+  }
+}

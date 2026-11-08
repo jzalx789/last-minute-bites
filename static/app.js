@@ -263,11 +263,85 @@ const words = {
   iso: ["YYYY-MM-DD", "年-月-日"],
   dmy: ["DD/MM/YYYY", "日/月/年"],
   mdy: ["MM/DD/YYYY", "月/日/年"],
-  enable_reminders: ["Show in-app date reminders", "顯示 App 內日期提醒"],
+  enable_reminders: ["Enable food date reminders", "啟用食材日期提醒"],
   remind_before: ["Remind before date", "日期前提醒"],
   reminder_note: [
-    "Reminders appear only while using this app. No email, push or background notifications. Unknown dates never trigger reminders. Sorting and use-by restrictions always remain active.",
-    "提醒只在使用本 App 時顯示，沒有電郵、推播或背景通知。未知日期不會提醒。優先排序與食用期限限制始終生效。",
+    "Dates appear in the app. Enable push below to receive reminders while the app is closed. Food without a date does not trigger reminders.",
+    "日期會在 App 內顯示；在下方啟用推播後，關閉 App 仍可收到提醒。沒有日期的食材不會觸發提醒。",
+  ],
+  push_last_failed: [
+    "The last delivery failed. Send a test notification to check the connection.",
+    "上次推播未成功，可發送測試通知確認連線。",
+  ],
+  push_title: ["Device notifications", "裝置推播通知"],
+  push_enable: ["Enable notifications", "啟用推播通知"],
+  push_disable: ["Stop notifications on this device", "停止此裝置推播"],
+  push_test: ["Send a test notification", "發送測試通知"],
+  push_refresh: ["Refresh notification status", "更新通知狀態"],
+  push_loading: ["Checking notification settings…", "正在檢查通知設定…"],
+  push_enabled: [
+    "Notifications are enabled on this device.",
+    "此裝置已啟用推播通知。",
+  ],
+  push_disabled: [
+    "Notifications are not enabled on this device.",
+    "此裝置尚未啟用推播通知。",
+  ],
+  push_schedule: [
+    "Daily around 9 AM in your account’s time zone",
+    "每天約上午 9 點，依帳戶時區",
+  ],
+  push_master_off: [
+    "Date reminders are off above; scheduled push is paused.",
+    "上方的日期提醒已關閉，排程推播已暫停。",
+  ],
+  push_test_sent: [
+    "Test sent. Check your device’s notification centre.",
+    "測試通知已發送，請查看裝置的通知中心。",
+  ],
+  push_install_first: [
+    "On iPhone or iPad: open this site in Safari, choose Share → Add to Home Screen, then enable notifications from the installed app.",
+    "iPhone／iPad：請用 Safari 開啟網站，按「分享 → 加入主畫面」，再從主畫面開啟 App 並啟用通知。",
+  ],
+  push_unsupported: [
+    "This browser does not support Web Push. Use a supported browser or the installed app.",
+    "此瀏覽器未支援推播，請使用支援的瀏覽器或已安裝的 App。",
+  ],
+  push_denied: [
+    "Notifications are blocked. Allow them in your browser or system settings, then refresh this status.",
+    "通知已被封鎖。請在瀏覽器或系統設定允許通知，再更新此處狀態。",
+  ],
+  push_permission_needed: [
+    "Choose Allow when the notification permission request appears.",
+    "通知權限視窗出現時，請選擇「允許」。",
+  ],
+  push_unavailable: [
+    "Could not connect to the push service. Try enabling notifications again.",
+    "暫時無法連接推播服務，請再試啟用通知。",
+  ],
+  push_failed: [
+    "The notification could not be sent. Your food records are unchanged.",
+    "暫時無法發送通知，食材紀錄沒有改變。",
+  ],
+  push_not_subscribed: [
+    "Enable notifications on this device first.",
+    "請先在此裝置啟用推播通知。",
+  ],
+  push_subscription_expired: [
+    "This notification subscription expired. Enable it again.",
+    "此裝置的推播訂閱已失效，請重新啟用。",
+  ],
+  push_limit: [
+    "Device limit reached. Stop notifications on an unused device first.",
+    "已達裝置數目上限，請先在不使用的裝置停止推播。",
+  ],
+  push_in_use: [
+    "This subscription belongs to another sign-in. Sign out there before enabling it here.",
+    "此裝置訂閱仍連結另一個登入，請先在該登入停止推播。",
+  ],
+  push_account_changed: [
+    "Your sign-in changed. Reopen notification settings.",
+    "登入已變更，請重新開啟通知設定。",
   ],
   due: ["Date reminders", "日期提醒"],
   due_hint: [
@@ -711,6 +785,8 @@ const defaultRecipeOptions = () => ({
   exact_count: true,
 });
 let recipeOptions = defaultRecipeOptions();
+let pushState = null,
+  pushSequence = 0;
 let recipeDraft = false,
   recipePickerOpen = false,
   recipeFoodSearch = "",
@@ -802,6 +878,8 @@ async function refresh(draw = true) {
     uid = next.user?.id ?? null,
     kid = next.kitchen?.id ?? null;
   if (uid !== lastUser) {
+    pushState = null;
+    pushSequence++;
     recipeOptions = defaultRecipeOptions();
     recipeDraft = false;
     recipePickerOpen = false;
@@ -823,6 +901,8 @@ async function refresh(draw = true) {
   }
   const lost = lastUser === uid && lastKitchen && lastKitchen !== kid;
   if (lost) {
+    pushState = null;
+    pushSequence++;
     recipeDraft = false;
     recipeOptions = defaultRecipeOptions();
     if ($("#confirm").open) $("#confirm").close("cancel");
@@ -943,6 +1023,7 @@ function render(keepScroll = false) {
   else content = kitchen();
   app.innerHTML = `<header class="topbar"><button class="brand" data-action="go" data-path="kitchen">${icon("leaf")}<span>Last Minute <b>Bites</b></span></button><div class="header-actions">${state.user ? button("go", t("settings"), "", 'data-path="settings"') : button("language", language() === "en" ? "繁體中文" : "English")}</div></header><main id="main" tabindex="-1">${offline ? `<p class="error">${E(t("offline"))} ${button("retry", t("retry"))}</p>` : ""}${content}</main>${state.user && state.kitchen ? `<footer class="app-dock">${selectionBar()}<nav class="bottom-nav" aria-label="${E(t("kitchen"))}"><button data-action="go" data-path="kitchen" ${page === "kitchen" ? 'aria-current="page"' : ""}>${icon("home")}${E(t("kitchen"))}</button><button data-action="go" data-path="category/all" ${page === "category" ? 'aria-current="page"' : ""}>${icon("bag")}${E(t("inventory"))}</button><button data-action="go" data-path="recipes" ${page === "recipes" ? 'aria-current="page"' : ""}>${icon("book")}${E(t("recipes"))}</button></nav></footer>` : ""}`;
   if (page === "food") bindFoodForm();
+  if (page === "reminders") loadPushStatus();
   if (page === "recipes") displayRecipes(arg);
   if ($("#main")) $("#main").scrollTop = scrollTop;
   if (
@@ -1488,12 +1569,54 @@ function preferences() {
   const p = state.preferences;
   return `<div class="narrow">${back("settings")}<h1>${E(t("preferences"))}</h1><form data-form="preferences"><label>${E(t("language"))}<select name="language">${option("en", "English", p.language)}${option("zh-Hant", "繁體中文", p.language)}</select></label>${select("text_size", t("text_size"), ["standard", "large"], p.text_size)}${select("default_view", t("default_view"), ["categories", "use_first"], p.default_view)}${select("date_format", t("date_format"), ["iso", "dmy", "mdy"], p.date_format)}<p class="hint">${E(t("timezone"))}: ${E(p.timezone)}</p>${formError()}<button class="primary">${E(t("save"))}</button></form></div>`;
 }
+
+function pushPanelHTML() {
+  const reason = pushState?.reason || window.LMBPush?.capability();
+  const denied = pushState?.permission === "denied";
+  const active = !!pushState?.subscribed && !denied && !reason;
+  return `<h2>${E(t("push_title"))}</h2><p id="push-status" role="status">${E(t(reason || (denied ? "push_denied" : active ? "push_enabled" : pushState ? "push_disabled" : "push_loading")))}</p><p class="hint">${E(t("push_schedule"))} · ${E(state.preferences.timezone)}</p>${!state.preferences.reminders ? `<p class="warning">${E(t("push_master_off"))}</p>` : ""}${pushState?.last_error ? `<p class="warning">${E(t("push_last_failed"))}</p>` : ""}<div class="actions">${!active ? button("enable-push", t("push_enable"), "primary", reason || denied ? "disabled" : "") : button("disable-push", t("push_disable"))}${button("test-push", t("push_test"), "", active ? "" : "disabled")}${button("refresh-push", t("push_refresh"), "quiet")}</div>`;
+}
+function drawPushPanel() {
+  const root = $("#push-panel");
+  if (root) root.innerHTML = pushPanelHTML();
+}
+function pushApiForUser() {
+  const uid = state.user?.id,
+    kid = state.kitchen?.id;
+  return (...args) => {
+    if (state.user?.id !== uid || state.kitchen?.id !== kid)
+      throw { code: "push_account_changed" };
+    return api(...args);
+  };
+}
+async function loadPushStatus() {
+  if (!$("#push-panel") || !state.user || !state.kitchen || !window.LMBPush)
+    return;
+  const seq = ++pushSequence,
+    uid = state.user.id,
+    kid = state.kitchen.id;
+  try {
+    const next = await LMBPush.status(pushApiForUser());
+    if (
+      seq === pushSequence &&
+      state.user?.id === uid &&
+      state.kitchen?.id === kid
+    ) {
+      pushState = next;
+      drawPushPanel();
+    }
+  } catch (error) {
+    if (seq === pushSequence && $("#push-status"))
+      $("#push-status").textContent = errorText(error);
+  }
+}
+
 function reminders() {
   const p = state.preferences;
-  return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form><section id="push-panel" class="push-panel" aria-label="${E(t("push_title"))}">${pushPanelHTML()}</section></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 0.9</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 1.0</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
 async function confirmAction(title, message, typed = false) {
   const dialog = $("#confirm");
@@ -1670,6 +1793,30 @@ document.addEventListener("click", async (event) => {
   b.disabled = true;
   try {
     switch (a) {
+      case "enable-push":
+      case "disable-push":
+      case "test-push":
+      case "refresh-push": {
+        const scoped = pushApiForUser();
+        try {
+          if (a === "enable-push") {
+            pushState = await LMBPush.enable(scoped);
+            notify(t("push_enabled"));
+          }
+          if (a === "disable-push") {
+            await LMBPush.disable(scoped);
+            pushState = null;
+            notify(t("push_disabled"));
+          }
+          if (a === "test-push") {
+            await LMBPush.test(scoped);
+            notify(t("push_test_sent"));
+          }
+        } finally {
+          await loadPushStatus();
+        }
+        break;
+      }
       case "scan-invite":
         await LMBMobile.startScanner();
         break;

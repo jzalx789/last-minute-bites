@@ -1,9 +1,10 @@
 /* Cache only the public app shell. Never store API results, accounts or kitchen data. */
-const CACHE = "lmb-shell-v09-1";
+const CACHE = "lmb-shell-v10-1";
 const SHELL = [
   "/",
   "/app.js",
   "/mobile.js",
+  "/notifications.js",
   "/style.css",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
@@ -13,7 +14,12 @@ const SHELL = [
   "/vendor/qrcode.js",
 ];
 self.addEventListener("install", (event) =>
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL))),
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((cache) => cache.addAll(SHELL))
+      .then(() => self.skipWaiting()),
+  ),
 );
 self.addEventListener("activate", (event) =>
   event.waitUntil(
@@ -45,5 +51,50 @@ self.addEventListener("fetch", (event) => {
         return response;
       })
       .catch(() => caches.match(url.pathname)),
+  );
+});
+
+self.addEventListener("push", (event) => {
+  event.waitUntil(
+    (async () => {
+      let data = {};
+      try {
+        data = event.data?.json() || {};
+      } catch {}
+      const title =
+        typeof data.title === "string"
+          ? data.title.slice(0, 80)
+          : "Last Minute Bites";
+      const body =
+        typeof data.body === "string"
+          ? data.body.slice(0, 300)
+          : "Open the app to view your food date reminders.";
+      await self.registration.showNotification(title, {
+        body,
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        tag: data.tag === "lmb-push-test" ? "lmb-push-test" : "lmb-food-dates",
+        data: { url: "/#kitchen" },
+      });
+    })(),
+  );
+});
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    (async () => {
+      const target = new URL("/#kitchen", self.location.origin).href;
+      const windows = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      const existing = windows.find(
+        (w) => new URL(w.url).origin === self.location.origin,
+      );
+      if (existing) {
+        await existing.navigate(target);
+        await existing.focus();
+      } else await self.clients.openWindow(target);
+    })(),
   );
 });

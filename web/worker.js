@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { PushService, PUSH_SCHEMA } from "./push-service.js";
 import {
   classifyFoodName,
   foodNameKey,
@@ -40,6 +41,7 @@ import {
 } from "./domain.js";
 
 const SCHEMA = `
+${PUSH_SCHEMA}
 CREATE TABLE IF NOT EXISTS food_assessments(user_id INTEGER NOT NULL,kitchen_id INTEGER NOT NULL,name_key TEXT NOT NULL,data TEXT NOT NULL,created REAL NOT NULL,PRIMARY KEY(user_id,kitchen_id,name_key));
 CREATE TABLE IF NOT EXISTS recipe_generations(id TEXT PRIMARY KEY,user_id INTEGER NOT NULL,kitchen_id INTEGER NOT NULL,cache_key TEXT NOT NULL,data TEXT NOT NULL,created REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS ai_usage(day TEXT NOT NULL,kind TEXT NOT NULL,user_id INTEGER NOT NULL,count INTEGER NOT NULL,PRIMARY KEY(day,kind,user_id));
@@ -80,6 +82,7 @@ export class KitchenStore extends DurableObject {
     this.sql = ctx.storage.sql;
     this.attempts = new Map();
     this.aiBusy = new Set();
+    this.pushService = new PushService(this, env);
     ctx.blockConcurrencyWhile(async () => {
       this.sql.exec(SCHEMA);
     });
@@ -160,6 +163,8 @@ export class KitchenStore extends DurableObject {
     );
   }
   async fetch(request) {
+    if (new URL(request.url).pathname === "/api/push/test")
+      return this.pushTestFetch(request);
     if (new URL(request.url).pathname === "/api/food/classify")
       return this.classifyFetch(request);
     if (
@@ -181,7 +186,7 @@ export class KitchenStore extends DurableObject {
         if (url.pathname === "/healthz") {
           this.one("SELECT COUNT(*) AS count FROM users");
           return respond(
-            { status: "ok", version: "0.9", storage: "persistent-sqlite" },
+            { status: "ok", version: "1.0", storage: "persistent-sqlite" },
             200,
             null,
             secure,
@@ -275,6 +280,54 @@ export class KitchenStore extends DurableObject {
       throw error;
     }
     return result.value;
+  }
+  async runPushSchedule(when) {
+    return this.pushService.scheduled(when);
+  }
+  async pushTestFetch(request) {
+    const secure = new URL(request.url).protocol === "https:";
+    try {
+      const snapshot = await this.locked(async () => {
+        const auth = await this.aiAuth(request, 16384);
+        this.rate("push_test:" + auth.session.user_id, 3);
+        return this.pushService.prepareTest(auth, auth.data);
+      });
+      const result = await this.pushService.send(
+        snapshot.row,
+        snapshot.keys,
+        snapshot.language,
+        true,
+      );
+      await this.locked(() =>
+        this.pushService.finish(snapshot.row, result, Date.now()),
+      );
+      check(
+        ![404, 410].includes(result.status),
+        "push_subscription_expired",
+        409,
+      );
+      check(result.status >= 200 && result.status < 300, "push_failed", 503);
+      return respond(
+        {
+          sent: true,
+          provider: this.env.PUSH_TRANSPORT ? "test-fixture" : "web-push",
+        },
+        200,
+        null,
+        secure,
+      );
+    } catch (error) {
+      return respond(
+        {
+          error: {
+            code: error instanceof Problem ? error.code : "push_failed",
+          },
+        },
+        error instanceof Problem ? error.status : 503,
+        null,
+        secure,
+      );
+    }
   }
   assessment(uid, kid, name) {
     const local = classifyFoodName(name);
@@ -936,6 +989,11 @@ export class KitchenStore extends DurableObject {
       }
       return state;
     }
+    if (request.method === "GET" && path === "/api/push/config") {
+      check(uid !== null, "unauthorized", 401);
+      this.member();
+      return this.pushService.config(this.prefs());
+    }
     check(request.method === "POST", "not_found", 404);
     if (["/api/register", "/api/login"].includes(path)) {
       this.rate(
@@ -995,6 +1053,7 @@ export class KitchenStore extends DurableObject {
         hash = await sha(value),
         previous = this.session.token;
       this.transaction(() => {
+        this.pushService.removeSession(previous);
         this.sql.exec("DELETE FROM sessions WHERE token=?", previous);
         this.sql.exec(
           "INSERT INTO sessions VALUES(?,?,?,?)",
@@ -1010,10 +1069,19 @@ export class KitchenStore extends DurableObject {
     }
     check(uid !== null, "unauthorized", 401);
     if (path === "/api/logout") {
+      this.pushService.removeSession(this.session.token);
       this.sql.exec("DELETE FROM sessions WHERE token=?", this.session.token);
       await this.newSession();
       return { ok: true, csrf: this.session.csrf };
     }
+    if (path === "/api/push/unsubscribe")
+      return this.pushService.unsubscribe(this.session, data);
+    if (path === "/api/push/subscribe") {
+      this.rate("push_subscribe:" + uid, 10);
+      return this.pushService.subscribe(this.session, this.member(), data);
+    }
+    if (path === "/api/push/status")
+      return this.pushService.status(this.session, this.member(), data);
     if (path === "/api/date/preview")
       return {
         effective_date: calculateDate(
@@ -1223,12 +1291,14 @@ export class KitchenStore extends DurableObject {
           "member_not_removable",
           403,
         );
+        this.pushService.removeMember(data.user_id, kid);
         return { ok: true };
       }
       if (path === "/api/kitchen/leave") {
         check(member.role === "editor", "owner_cannot_leave", 403);
         check(data.confirmed === true, "confirmation_required");
         this.sql.exec("DELETE FROM memberships WHERE user_id=?", uid);
+        this.pushService.removeMember(uid, kid);
         return { ok: true };
       }
       if (path === "/api/kitchen/clear") {
@@ -1337,6 +1407,12 @@ export class KitchenStore extends DurableObject {
 }
 
 export default {
+  async scheduled(controller, env, ctx) {
+    const job = env.KITCHENS.get(
+      env.KITCHENS.idFromName("shared-kitchens-v1"),
+    ).runPushSchedule(controller.scheduledTime);
+    ctx.waitUntil(job);
+  },
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
     if (path.startsWith("/api/") || path === "/healthz") {

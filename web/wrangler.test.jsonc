@@ -1,1 +1,49 @@
-{"name":"last-minute-bites-test","main":"worker.js","compatibility_date":"2026-09-15","assets":{"directory":"../static","binding":"ASSETS","run_worker_first":["/api/*","/healthz"]},"durable_objects":{"bindings":[{"name":"KITCHENS","class_name":"KitchenStore"}]},"migrations":[{"tag":"kitchen-v1","new_sqlite_classes":["KitchenStore"]}],"services":[{"binding":"FOOD_AI","service":"lmb-test-food-ai","entrypoint":"FoodAI"}]}
+{
+  "name": "last-minute-bites-test",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-15",
+  "assets": {
+    "directory": "../static",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*",
+      "/healthz"
+    ]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "KITCHENS",
+        "class_name": "KitchenStore"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "kitchen-v1",
+      "new_sqlite_classes": [
+        "KitchenStore"
+      ]
+    }
+  ],
+  "services": [
+    {
+      "binding": "FOOD_AI",
+      "service": "lmb-test-food-ai",
+      "entrypoint": "FoodAI"
+    },
+    {
+      "binding": "PUSH_TRANSPORT",
+      "service": "lmb-test-food-ai",
+      "entrypoint": "PushTransport"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "*/5 * * * *"
+    ]
+  },
+  "vars": {
+    "PUBLIC_ORIGIN": "https://last-minute-bites-demo.jzalx789.workers.dev"
+  }
+}
