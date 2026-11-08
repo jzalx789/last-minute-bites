@@ -19,7 +19,7 @@ KEYBOARD=r'''(()=>{
 })();'''
 with sync_playwright() as p:
  b=p.webkit.launch(executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE',p.webkit.executable_path),headless=True) if os.getenv('LMB_WEB_ENGINE')=='webkit' else p.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox'])
- context=b.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,extra_http_headers={'CF-Connecting-IP':'synthetic-auth-keyboard'});context.add_init_script(KEYBOARD);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+ context=b.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,extra_http_headers=({'CF-Connecting-IP':'synthetic-auth-keyboard'} if base.startswith('http://127.0.0.1:') else {}));context.add_init_script(KEYBOARD);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.goto(base);expect(page.locator('[data-form=auth]')).to_be_visible();click(page,'auth-register');expect(page.locator('[name=confirm_password]')).to_be_visible()
  email='keyboard-'+uuid.uuid4().hex[:10]+'@example.test';password='synthetic-keyboard-password'
  page.locator('[name=email]').fill(email)

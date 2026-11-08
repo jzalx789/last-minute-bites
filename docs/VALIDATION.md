@@ -153,3 +153,5 @@ python3 tests/mobile_acceptance.py
 - 原有 WebKit 網站、手機佈局及通知介面回歸通過；CareSync／私有 gateway 123 項及語法檢查通過。登入／共享／庫存／推播與排程維持既有資料及行為。
 
 使用者影片及擷取影格只在私人工作區／忽略的 artifacts，未加入 Git、部署檔案或原始碼包；自動測試使用新建合成帳戶。首頁截圖的版面要求保留，本次只修正未登入表單的鍵盤與捲動。
+
+1.1 正式 HTTPS 的 WebKit `auth_keyboard_browser.py` 亦通過完整註冊／建立冰箱／登出／登入。測試的 CF-Connecting-IP 隔離標頭只用於本機；正式驗收改用一般瀏覽器標頭，未調整網站 DNS 或略過 TLS。
