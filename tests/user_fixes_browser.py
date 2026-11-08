@@ -11,6 +11,16 @@ base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8790')
 assert base.startswith('http://127.0.0.1:'), 'Fixture browser tests require the local test-only service; use live_ai_browser.py for explicit real inference.'
 artifacts=Path(__file__).resolve().parents[1]/'artifacts/fixes';artifacts.mkdir(parents=True,exist_ok=True)
 errors=[];generations=[]
+
+def assert_dock_layout(page):
+    # Hash navigation and resize can replace the nodes between protocol calls.
+    # Read both rectangles in one browser task after a visible layout is ready.
+    page.wait_for_function("""() => {
+        const main=document.querySelector('#main'), dock=document.querySelector('.app-dock');
+        if (!main || !dock) return false;
+        const m=main.getBoundingClientRect(), d=dock.getBoundingClientRect();
+        return m.height>0 && d.height>0 && m.bottom<=d.top+1;
+    }""", timeout=5000)
 with tempfile.TemporaryDirectory() as directory,sync_playwright() as p:
     browser=p.webkit.launch(executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE',p.webkit.executable_path),headless=True) if os.getenv('LMB_WEB_ENGINE')=='webkit' else p.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox'])
     context=browser.new_context(viewport={'width':320,'height':568},is_mobile=True,has_touch=True)
@@ -35,7 +45,7 @@ with tempfile.TemporaryDirectory() as directory,sync_playwright() as p:
     egg.locator('[data-action=row-delete]').click();confirm(page);expect(page.locator('.food-row')).to_have_count(1)
     # Selection dock never overlays the scrolling main panel.
     page.locator('[data-select]').check();expect(page.locator('.selection')).to_be_visible()
-    assert page.locator('#main').bounding_box()['y']+page.locator('#main').bounding_box()['height'] <= page.locator('.app-dock').bounding_box()['y']+1
+    assert_dock_layout(page)
     click(page,'find-recipes');expect(page.locator('[data-form=ai-recipes]')).to_be_visible();assert len(generations)==0
     page.locator('[name=style]').select_option('mixed');page.locator('[name=count]').select_option('2');page.locator('[data-form=ai-recipes] button.primary').click();expect(page.locator('.recipe-card')).to_have_count(2,timeout=15000)
     page.wait_for_timeout(5300);assert len(generations)==1,'Polling unexpectedly made a paid AI generation request'
@@ -62,7 +72,7 @@ with tempfile.TemporaryDirectory() as directory,sync_playwright() as p:
                 page.screenshot(path=str(artifacts/'overflow-debug.png'))
                 print(page.locator('#main').evaluate('(e)=>({width:e.clientWidth,scroll:e.scrollWidth,children:[...e.querySelectorAll("*")].filter(c=>c.getBoundingClientRect().right>e.getBoundingClientRect().right+1).map(c=>({tag:c.tagName,classes:c.className,width:c.getBoundingClientRect().width,right:c.getBoundingClientRect().right,text:c.textContent.slice(0,90)}))})'))
                 raise AssertionError((width,height,route,'main overflow'))
-            main=page.locator('#main').bounding_box();dock=page.locator('.app-dock').bounding_box();assert main['y']+main['height']<=dock['y']+1,(width,height,route,'overlap')
+            assert_dock_layout(page)
     page.set_viewport_size({'width':360,'height':640});navigate(page,'preferences');page.locator('[name=text_size]').select_option('large');page.locator('[name=language]').select_option('zh-Hant');page.locator('[data-form=preferences] button').click();expect(page.locator('h1')).to_have_text('個人偏好')
     navigate(page,'category/all');expect(page.locator('.food-row')).to_have_count(1)
     assert page.locator('#main').evaluate('(e)=>e.scrollWidth<=e.clientWidth+1')
