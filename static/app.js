@@ -344,6 +344,7 @@ const words = {
     "登入已變更，請重新開啟通知設定。",
   ],
   due: ["Date reminders", "日期提醒"],
+  due_short: ["Dates", "日期提醒"],
   due_hint: [
     "Based on entered dates; check the label type.",
     "依據所輸入日期，請留意標示類型。",
@@ -1005,6 +1006,7 @@ function render(keepScroll = false) {
   const wasAuth = document.documentElement.classList.contains("auth-screen");
   document.documentElement.classList.toggle("auth-screen", !state.user);
   const scrollTop = keepScroll ? $("#main")?.scrollTop || 0 : 0;
+  const reminderOpen = $("#date-reminders")?.open || false;
   document.documentElement.lang = language();
   document.documentElement.classList.toggle(
     "large",
@@ -1029,6 +1031,7 @@ function render(keepScroll = false) {
   else if (page === "help") content = help();
   else content = kitchen();
   app.innerHTML = `<header class="topbar"><button class="brand" data-action="go" data-path="kitchen">${icon("leaf")}<span>Last Minute <b>Bites</b></span></button><div class="header-actions">${state.user ? button("go", t("settings"), "", 'data-path="settings"') : button("language", language() === "en" ? "繁體中文" : "English")}</div></header><main id="main" tabindex="-1">${offline ? `<p class="error">${E(t("offline"))} ${button("retry", t("retry"))}</p>` : ""}${content}</main>${state.user && state.kitchen ? `<footer class="app-dock">${selectionBar()}${addFoodDock()}<nav class="bottom-nav" aria-label="${E(t("kitchen"))}"><button data-action="go" data-path="kitchen" ${page === "kitchen" ? 'aria-current="page"' : ""}>${icon("home")}${E(t("kitchen"))}</button><button data-action="go" data-path="category/all" ${page === "category" ? 'aria-current="page"' : ""}>${icon("bag")}${E(t("inventory"))}</button><button data-action="go" data-path="recipes" ${page === "recipes" ? 'aria-current="page"' : ""}>${icon("book")}${E(t("recipes"))}</button></nav></footer>` : ""}`;
+  if ($("#date-reminders")) $("#date-reminders").open = reminderOpen;
   if (page === "food") bindFoodForm();
   if (page === "reminders") loadPushStatus();
   if (page === "recipes") displayRecipes(arg);
@@ -1074,17 +1077,17 @@ function reminderBanner() {
     )
     .sort((a, b) => a.effective_date.localeCompare(b.effective_date));
   return foods.length
-    ? `<aside class="reminder-banner"><strong>${E(t("due"))}</strong><span>${foods
+    ? `<details id="date-reminders" class="reminder-banner"><summary><strong>${E(t("due_short"))}<span class="reminder-count">${foods.length}</span></strong><span class="reminder-preview">${E(dateText(foods[0].effective_date))} · ${E(foods[0].name)}</span></summary><div class="reminder-details"><p>${foods
         .slice(0, 3)
         .map(
           (f) =>
             `${E(f.name)}: ${E(t(f.date_source === "personal" ? "personal_reminder" : f.date_kind))} ${E(dateText(f.effective_date))}`,
         )
-        .join("; ")}</span><small>${E(t("due_hint"))}</small></aside>`
+        .join("; ")}</p><small>${E(t("due_hint"))}</small></div></details>`
     : "";
 }
 function kitchen() {
-  return `<section class="page-heading kitchen-heading"><div><p class="kitchen-label">${E(state.kitchen.name)} <span class="role">${E(t(state.kitchen.role))}</span></p><h1>${E(t("kitchen_intro"))}</h1></div></section><div class="kitchen-toolbar"><div class="switcher">${button("view-categories", t("categories"), view === "categories" ? "chosen" : "")}${button("view-first", t("use_first"), view === "use_first" ? "chosen" : "")}</div>${button("category", t("all"), "quiet", 'data-category="all"')}</div>${reminderBanner()}${
+  return `<section class="page-heading kitchen-heading kitchen-overview"><div><p class="kitchen-label"><span class="kitchen-name" title="${E(state.kitchen.name)}">${E(state.kitchen.name)}</span><span class="role">${E(t(state.kitchen.role))}</span></p><h1 class="sr-only">${E(t("kitchen_intro"))}</h1></div></section><div class="kitchen-toolbar"><div class="switcher">${button("view-categories", t("categories"), view === "categories" ? "chosen" : "")}${button("view-first", t("use_first"), view === "use_first" ? "chosen" : "")}</div>${button("category", t("all"), "quiet", 'data-category="all"')}</div>${reminderBanner()}${
     view === "categories"
       ? `<div class="kitchen-illustration"><section class="fridge" aria-label="${E(t("fridge"))}"><div class="fridge-top"><span>Last Minute Bites</span><span class="fridge-hinge"></span></div><div class="fridge-shelves">${categoryButton("produce", "leaf")}${categoryButton("dairy", "egg")}${categoryButton("protein", "fish")}${categoryButton("cooked", "bowl")}</div><div class="freezer-drawer">${categoryButton("freezer", "snow")}</div></section><aside class="pantry-rack"><div class="rack-top">${icon("jar")}${icon("jar")}${icon("jar")}</div>${categoryButton("condiments", "jar", "rack-category")}${categoryButton("dryother", "bag", "dry-category")}</aside></div>`
       : foodList(

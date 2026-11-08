@@ -655,15 +655,58 @@ textarea {
   color: var(--muted);
 }
 .reminder-banner {
-  display: grid;
-  gap: 0.3rem;
   background: #fff4df;
   border: 1px solid #e8d1ac;
-  border-radius: 12px;
+  border-radius: 10px;
   color: var(--amber);
-  font-size: 0.85rem;
-  padding: 1rem;
-  margin-bottom: 1.3rem;
+  margin-bottom: 0.65rem;
+}
+.reminder-banner summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.4rem 0.6rem;
+  list-style: none;
+  font-size: 0.78rem;
+}
+.reminder-banner summary::-webkit-details-marker {
+  display: none;
+}
+.reminder-banner summary::after {
+  content: "⌄";
+  flex-shrink: 0;
+}
+.reminder-banner[open] summary::after {
+  transform: rotate(180deg);
+}
+.reminder-banner summary strong {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+.reminder-count {
+  background: #f1dfbc;
+  border-radius: 1rem;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.72rem;
+}
+.reminder-preview {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+.reminder-details {
+  padding: 0 0.65rem 0.65rem;
+  font-size: 0.8rem;
+}
+.reminder-details p {
+  margin: 0 0 0.35rem;
+  color: var(--amber);
 }
 .reminder-banner small {
   color: #745632;
@@ -1739,4 +1782,56 @@ details p {
 .keyboard-open main {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
+}
+
+/* Keep the kitchen overview subordinate to the food categories. */
+.kitchen-overview {
+  margin-bottom: 0.45rem;
+}
+.kitchen-overview > div {
+  width: 100%;
+}
+.kitchen-overview .kitchen-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+.kitchen-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kitchen-overview .role {
+  flex-shrink: 0;
+  margin-left: 0;
+  padding: 0.08rem 0.4rem;
+  font-size: 0.7rem;
+}
+.kitchen-toolbar {
+  flex-wrap: wrap;
+  margin-bottom: 0.65rem;
+}
+.kitchen-toolbar .switcher {
+  flex-shrink: 0;
+  padding: 2px;
+  gap: 2px;
+}
+.kitchen-toolbar .switcher button {
+  padding: 0.35rem 0.6rem;
+  white-space: nowrap;
+}
+
+.kitchen-toolbar > button {
+  margin-left: auto;
+  font-size: 0.82rem;
+  padding: 0.35rem 0.6rem;
+}
+@media (max-width: 400px) {
+  .large .kitchen-toolbar .switcher {
+    flex-basis: auto;
+  }
 }

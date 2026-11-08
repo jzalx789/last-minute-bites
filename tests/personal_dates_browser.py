@@ -17,6 +17,11 @@ with sync_playwright() as p:
  page.locator('[data-form=food] button.primary').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?');food=read_state(page)['foods'][0];assert food['date_source']=='personal' and food['effective_date'] is None and food['eligible']
  navigate(page,'category/all');expect(page.locator('.food-row')).to_contain_text('Self-managed, no fixed date')
  navigate(page,'food/'+str(food['id']));expect(page.locator('[name=date_source]')).to_have_value('personal');today=read_state(page)['today'];page.locator('[name=effective_date]').fill(today);page.locator('[data-form=food] button.primary').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?');expect(page.locator('.reminder-banner')).to_contain_text('Personal reminder')
+ expect(page.locator('.reminder-details')).not_to_be_visible()
+ page.locator('.reminder-banner summary').click();expect(page.locator('.reminder-details')).to_be_visible()
+ expect(page.locator('.reminder-details')).to_contain_text('Personal reminder')
+ click(page,'view-first');expect(page.locator('.reminder-details')).to_be_visible()
+ page.locator('.reminder-banner summary').click();expect(page.locator('.reminder-details')).not_to_be_visible()
  page.reload();expect(page.locator('h1')).to_have_text('What’s in your kitchen?');food=read_state(page)['foods'][0];assert food['effective_date']==today and food['date_kind']=='unspecified'
  navigate(page,'food/'+str(food['id']));page.locator('[name=effective_date]').fill('2000-01-01');page.locator('[data-form=food] button.primary').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?');navigate(page,'category/all');expect(page.locator('.food-row')).to_contain_text('Past your reminder date');assert read_state(page)['foods'][0]['eligible']
  # The user can clear an existing reminder without replacing it with a guessed date.
