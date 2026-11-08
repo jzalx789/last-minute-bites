@@ -138,6 +138,7 @@ p {
   max-width: 70ch;
 }
 main {
+  overflow-wrap: anywhere;
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
@@ -202,6 +203,9 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+.kitchen-heading > * {
+  min-width: 0;
 }
 .kitchen-heading h1 {
   margin-bottom: 0;
@@ -901,6 +905,7 @@ hr {
   height: 20px;
 }
 dialog {
+  overflow-wrap: anywhere;
   width: min(92vw, 520px);
   max-height: calc(100vh - 32px);
   max-height: calc(100dvh - 32px);
@@ -909,6 +914,15 @@ dialog {
   border-radius: 18px;
   color: var(--ink);
   overflow: auto;
+}
+/* The layout viewport can stay tall while the on-screen keyboard is open. */
+dialog:not(#used-picker) {
+  position: fixed;
+  top: calc(var(--visible-height, 100dvh) / 2);
+  bottom: auto;
+  margin-block: 0;
+  transform: translateY(-50%);
+  max-height: calc(var(--visible-height, 100dvh) - 32px);
 }
 dialog::backdrop {
   background: #173e2c66;
@@ -1647,4 +1661,48 @@ details p {
 }
 .push-panel #push-status {
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 400px) {
+  .large .kitchen-toolbar {
+    flex-wrap: wrap;
+  }
+  .large .kitchen-toolbar .switcher {
+    flex-basis: 100%;
+  }
+  .large .kitchen-toolbar .switcher button {
+    flex: 1;
+  }
+  .large .kitchen-toolbar > button {
+    margin-left: auto;
+  }
+}
+/* Leave inventory usable when landscape and large text share a short screen. */
+@media (min-width: 480px) and (max-height: 480px) {
+  .topbar {
+    padding-top: max(0.3rem, env(safe-area-inset-top));
+    padding-bottom: 0.3rem;
+  }
+  main {
+    padding-top: 0.6rem;
+    padding-bottom: 0.8rem;
+  }
+  .selection {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+  }
+  .large .selection-actions {
+    flex-basis: auto;
+  }
+  .add-food-dock {
+    padding-top: 0.25rem;
+    padding-bottom: 0.1rem;
+  }
+  .add-food-tile {
+    min-height: 44px;
+  }
+  .large .bottom-nav button {
+    flex-direction: row;
+    gap: 0.3rem;
+  }
 }

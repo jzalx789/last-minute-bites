@@ -26,7 +26,7 @@ with tempfile.TemporaryDirectory() as directory,sync_playwright() as p:
     context=browser.new_context(viewport={'width':320,'height':568},is_mobile=True,has_touch=True)
     page=context.new_page();page.on('pageerror',lambda error:errors.append(str(error)));page.on('request',lambda r:generations.append(r.url) if r.url.endswith('/api/recipes/generate') else None)
     register(page,base,'fixes-'+uuid.uuid4().hex[:10]+'@example.test')
-    page.locator('[data-form=create-kitchen] [name=name]').fill('Phone kitchen');page.locator('[data-form=create-kitchen] button').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
+    page.locator('[data-form=create-kitchen] [name=name]').fill('PhoneKitchen'+'LongName'*8);page.locator('[data-form=create-kitchen] button').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
     assert 'Shared food refreshes' not in page.locator('#main').inner_text()
     assert 'Categories help you navigate' not in page.locator('#main').inner_text()
     click(page,'add')
@@ -65,7 +65,7 @@ with tempfile.TemporaryDirectory() as directory,sync_playwright() as p:
     # Keyboard-size viewports, large text, landscape, and ordinary phone/desktop sizes.
     for width,height in [(320,480),(360,640),(390,844),(844,390),(768,1024),(1365,900)]:
         page.set_viewport_size({'width':width,'height':height})
-        for route in ['kitchen','category/all','food','recipes','settings']:
+        for route in ['kitchen','category/all','food','recipes','settings','shared','preferences','reminders','help']:
             navigate(page,route);expect(page.locator('#main')).to_be_visible()
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'),(width,height,route,'document overflow')
             if not page.locator('#main').evaluate('(e)=>e.scrollWidth<=e.clientWidth+1'):
@@ -76,6 +76,18 @@ with tempfile.TemporaryDirectory() as directory,sync_playwright() as p:
     page.set_viewport_size({'width':360,'height':640});navigate(page,'preferences');page.locator('[name=text_size]').select_option('large');page.locator('[name=language]').select_option('zh-Hant');page.locator('[data-form=preferences] button').click();expect(page.locator('h1')).to_have_text('個人偏好')
     navigate(page,'category/all');expect(page.locator('.food-row')).to_have_count(1)
     assert page.locator('#main').evaluate('(e)=>e.scrollWidth<=e.clientWidth+1')
+    # Large-text landscape must retain enough space to scroll and select stock.
+    for width,height in [(320,568),(667,375),(568,320)]:
+        page.set_viewport_size({'width':width,'height':height})
+        navigate(page,'category/all');expect(page.locator('[data-select]')).to_have_count(1)
+        page.locator('[data-select]').check();expect(page.locator('.selection')).to_be_visible()
+        page.wait_for_function("() => document.querySelector('#main').clientHeight>=80")
+        assert_dock_layout(page)
+        click(page,'batch-used');expect(page.locator('#used-picker')).to_be_visible()
+        assert page.locator('#used-foods').evaluate('(e)=>e.clientHeight>=30')
+        assert page.locator('#used-confirm').evaluate('(e)=>e.getBoundingClientRect().bottom<=innerHeight+1')
+        page.locator('#used-cancel').click();click(page,'clear-selection')
+    page.set_viewport_size({'width':360,'height':640})
     page.screenshot(path=str(artifacts/'phone-large-inventory.png'))
     navigate(page,'food');page.locator('[data-form=food] button.primary').scroll_into_view_if_needed();page.screenshot(path=str(artifacts/'phone-food-form-bottom.png'))
     assert errors==[],errors

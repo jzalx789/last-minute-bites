@@ -39,6 +39,14 @@ with sync_playwright() as p:
  with page.expect_response(lambda r:r.url.endswith('/api/register')) as response:page.locator('[data-form=auth] button.primary').click()
  assert response.value.status==200,response.value.json();expect(page.locator('[data-form=create-kitchen]')).to_be_visible();assert not page.locator('html').evaluate("e=>e.classList.contains('auth-screen')")
  page.evaluate('__keyboardViewport(null,null)');page.set_viewport_size({'width':390,'height':844});page.locator('[data-form=create-kitchen] [name=name]').fill('Keyboard regression kitchen');page.locator('[data-form=create-kitchen] button').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?');expect(page.locator('.app-dock')).to_be_visible();assert page.evaluate('scrollY===0')
+ # Confirmations with a text field must fit the keyboard's visible viewport too.
+ navigate(page,'settings');click(page,'clear-kitchen');expect(page.locator('#confirm')).to_be_visible()
+ page.locator('#confirm-input').fill('Unsubmitted confirmation')
+ page.evaluate('__keyboardViewport(300,0)')
+ assert page.locator('#confirm').evaluate('(e)=>{const r=e.getBoundingClientRect();return r.top>=0 && r.bottom<=300;}'), 'Confirmation extends behind keyboard'
+ page.locator('#confirm-cancel').scroll_into_view_if_needed();page.locator('#confirm-cancel').click()
+ assert read_state(page)['kitchen']['name']=='Keyboard regression kitchen'
+ page.evaluate('__keyboardViewport(null,null)')
  navigate(page,'settings');click(page,'sign-out');expect(page.locator('[data-form=auth]')).to_be_visible();click(page,'auth-login');assert page.locator('html').evaluate("e=>e.classList.contains('auth-screen')")
  page.evaluate('__keyboardViewport(300,230)');page.set_viewport_size({'width':320,'height':360});page.locator('[name=email]').fill(email);page.locator('[name=password]').fill(password);page.locator('[data-form=auth] button.primary').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?');assert read_state(page)['kitchen']['name']=='Keyboard regression kitchen'
  page.evaluate('__keyboardViewport(null,null)');page.set_viewport_size({'width':390,'height':844});assert not errors,errors;b.close()
