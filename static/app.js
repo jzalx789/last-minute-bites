@@ -995,6 +995,11 @@ function selectionBar() {
     return "";
   return `<aside class="selection" aria-label="${E(t("selected"))}"><div class="selection-summary"><strong id="selected-count">${selection.size}</strong> ${E(t("selected"))}${button("clear-selection", t("clear"), "quiet")}</div><div class="selection-actions">${button("batch-used", t("consume"))}${button("batch-delete", t("remove_short"), "danger")}${button("find-recipes", t("find"), "primary")}</div></aside>`;
 }
+function addFoodDock() {
+  const [page = "kitchen", category = "all"] = route();
+  if (!["kitchen", "category"].includes(page)) return "";
+  return `<div class="add-food-dock"><button type="button" data-action="add" class="primary add-food-tile" ${page === "category" ? `data-category="${E(category)}"` : ""}><span aria-hidden="true">＋</span>${E(t("add"))}</button></div>`;
+}
 function render(keepScroll = false) {
   if (!state) return;
   const wasAuth = document.documentElement.classList.contains("auth-screen");
@@ -1023,7 +1028,7 @@ function render(keepScroll = false) {
   else if (page === "reminders") content = reminders();
   else if (page === "help") content = help();
   else content = kitchen();
-  app.innerHTML = `<header class="topbar"><button class="brand" data-action="go" data-path="kitchen">${icon("leaf")}<span>Last Minute <b>Bites</b></span></button><div class="header-actions">${state.user ? button("go", t("settings"), "", 'data-path="settings"') : button("language", language() === "en" ? "繁體中文" : "English")}</div></header><main id="main" tabindex="-1">${offline ? `<p class="error">${E(t("offline"))} ${button("retry", t("retry"))}</p>` : ""}${content}</main>${state.user && state.kitchen ? `<footer class="app-dock">${selectionBar()}<nav class="bottom-nav" aria-label="${E(t("kitchen"))}"><button data-action="go" data-path="kitchen" ${page === "kitchen" ? 'aria-current="page"' : ""}>${icon("home")}${E(t("kitchen"))}</button><button data-action="go" data-path="category/all" ${page === "category" ? 'aria-current="page"' : ""}>${icon("bag")}${E(t("inventory"))}</button><button data-action="go" data-path="recipes" ${page === "recipes" ? 'aria-current="page"' : ""}>${icon("book")}${E(t("recipes"))}</button></nav></footer>` : ""}`;
+  app.innerHTML = `<header class="topbar"><button class="brand" data-action="go" data-path="kitchen">${icon("leaf")}<span>Last Minute <b>Bites</b></span></button><div class="header-actions">${state.user ? button("go", t("settings"), "", 'data-path="settings"') : button("language", language() === "en" ? "繁體中文" : "English")}</div></header><main id="main" tabindex="-1">${offline ? `<p class="error">${E(t("offline"))} ${button("retry", t("retry"))}</p>` : ""}${content}</main>${state.user && state.kitchen ? `<footer class="app-dock">${selectionBar()}${addFoodDock()}<nav class="bottom-nav" aria-label="${E(t("kitchen"))}"><button data-action="go" data-path="kitchen" ${page === "kitchen" ? 'aria-current="page"' : ""}>${icon("home")}${E(t("kitchen"))}</button><button data-action="go" data-path="category/all" ${page === "category" ? 'aria-current="page"' : ""}>${icon("bag")}${E(t("inventory"))}</button><button data-action="go" data-path="recipes" ${page === "recipes" ? 'aria-current="page"' : ""}>${icon("book")}${E(t("recipes"))}</button></nav></footer>` : ""}`;
   if (page === "food") bindFoodForm();
   if (page === "reminders") loadPushStatus();
   if (page === "recipes") displayRecipes(arg);
@@ -1079,7 +1084,7 @@ function reminderBanner() {
     : "";
 }
 function kitchen() {
-  return `<section class="page-heading kitchen-heading"><div><p class="kitchen-label">${E(state.kitchen.name)} <span class="role">${E(t(state.kitchen.role))}</span></p><h1>${E(t("kitchen_intro"))}</h1></div>${button("add", t("add"), "primary")}</section><div class="kitchen-toolbar"><div class="switcher">${button("view-categories", t("categories"), view === "categories" ? "chosen" : "")}${button("view-first", t("use_first"), view === "use_first" ? "chosen" : "")}</div>${button("category", t("all"), "quiet", 'data-category="all"')}</div>${reminderBanner()}${
+  return `<section class="page-heading kitchen-heading"><div><p class="kitchen-label">${E(state.kitchen.name)} <span class="role">${E(t(state.kitchen.role))}</span></p><h1>${E(t("kitchen_intro"))}</h1></div></section><div class="kitchen-toolbar"><div class="switcher">${button("view-categories", t("categories"), view === "categories" ? "chosen" : "")}${button("view-first", t("use_first"), view === "use_first" ? "chosen" : "")}</div>${button("category", t("all"), "quiet", 'data-category="all"')}</div>${reminderBanner()}${
     view === "categories"
       ? `<div class="kitchen-illustration"><section class="fridge" aria-label="${E(t("fridge"))}"><div class="fridge-top"><span>Last Minute Bites</span><span class="fridge-hinge"></span></div><div class="fridge-shelves">${categoryButton("produce", "leaf")}${categoryButton("dairy", "egg")}${categoryButton("protein", "fish")}${categoryButton("cooked", "bowl")}</div><div class="freezer-drawer">${categoryButton("freezer", "snow")}</div></section><aside class="pantry-rack"><div class="rack-top">${icon("jar")}${icon("jar")}${icon("jar")}</div>${categoryButton("condiments", "jar", "rack-category")}${categoryButton("dryother", "bag", "dry-category")}</aside></div>`
       : foodList(
@@ -1089,7 +1094,7 @@ function kitchen() {
   }`;
 }
 function categoryPage(key) {
-  return `${back()}<section class="page-heading kitchen-heading"><h1>${E(key === "all" ? t("inventory") : t(key))}</h1>${button("add", t("add"), "primary", `data-category="${E(key)}"`)}</section><div class="list-tools"><label class="search-label"><span>${E(t("search"))}</span><input type="search" id="search" value="${E(search)}"></label><label>${E(t("inventory"))}<select id="inventory-status"><option value="active" ${inventoryStatus === "active" ? "selected" : ""}>${E(t("active_food"))}</option><option value="used" ${inventoryStatus === "used" ? "selected" : ""}>${E(t("used_food"))}</option></select></label></div><div id="food-list">${filteredList(key)}</div>`;
+  return `${back()}<section class="page-heading kitchen-heading"><h1>${E(key === "all" ? t("inventory") : t(key))}</h1></section><div class="list-tools"><label class="search-label"><span>${E(t("search"))}</span><input type="search" id="search" value="${E(search)}"></label><label>${E(t("inventory"))}<select id="inventory-status"><option value="active" ${inventoryStatus === "active" ? "selected" : ""}>${E(t("active_food"))}</option><option value="used" ${inventoryStatus === "used" ? "selected" : ""}>${E(t("used_food"))}</option></select></label></div><div id="food-list">${filteredList(key)}</div>`;
 }
 function filteredList(key) {
   return foodList(
@@ -1109,7 +1114,7 @@ function filteredList(key) {
 }
 function foodList(foods, key) {
   if (!foods.length)
-    return `<section class="empty">${icon("leaf")}<h2>${E(t(search ? "no_results" : "empty"))}</h2><p>${E(t("empty_hint"))}</p>${button("add", t("add"), "primary", `data-category="${E(key)}"`)}</section>`;
+    return `<section class="empty">${icon("leaf")}<h2>${E(t(search ? "no_results" : "empty"))}</h2><p>${E(t("empty_hint"))}</p></section>`;
   const known = foods
       .filter((f) => f.effective_date)
       .sort(

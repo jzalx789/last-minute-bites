@@ -373,6 +373,23 @@ main {
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 10;
 }
+.add-food-dock {
+  max-width: 680px;
+  margin: auto;
+  padding: 0.55rem 0.8rem 0.2rem;
+}
+.add-food-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 48px;
+}
+.add-food-tile span {
+  font-size: 1.3em;
+  line-height: 1;
+}
 .bottom-nav {
   display: flex;
   max-width: 680px;
