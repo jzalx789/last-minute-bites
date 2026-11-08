@@ -690,7 +690,7 @@ Object.assign(words, {
     "依庫存食材建議 1–4 款菜式。",
   ],
   dish_style: ["Dish style", "菜式款式"],
-  dish_count: ["Number of dishes", "菜式數目"],
+  dish_count: ["Dishes", "菜式數目"],
   scope: ["Ingredients", "使用食材"],
   scope_selected: ["Selected food", "已選食材"],
   scope_all: ["All current food", "目前庫存"],

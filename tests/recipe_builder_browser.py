@@ -18,6 +18,15 @@ with sync_playwright() as p:
  page.reload();expect(page.locator('h1')).to_have_text('What’s in your kitchen?');navigate(page,'category/all')
  for food in foods[:5]:page.locator(f'[data-select="{food["id"]}"]').check()
  click(page,'find-recipes');expect(page.locator('[data-recipe-food]')).to_have_count(5);expect(page.locator('#recipe-foods')).to_contain_text('8 pcs');before=read_state(page)['foods']
+ # A wrapped caption must not push its control below its neighbour.
+ for width in [320, 360, 390, 412, 768]:
+  page.set_viewport_size({'width':width,'height':844})
+  page.wait_for_function("""() => [...document.querySelectorAll('.recipe-controls .two-fields')].every(row => {
+   const controls=[...row.querySelectorAll('input, select')].map(el=>el.getBoundingClientRect());
+   return controls.length===2 && Math.abs(controls[0].top-controls[1].top)<1 &&
+    controls.every(rect=>rect.left>=0 && rect.right<=innerWidth);
+  })""")
+ page.set_viewport_size({'width':390,'height':844})
  page.locator('[name=servings]').fill('4');page.locator('[name=portion]').select_option('hearty');page.locator('[name=count]').select_option('4');page.locator('[name=style]').select_option('mixed')
  page.locator(f'[data-action=recipe-remove-food][data-id="{foods[1]["id"]}"]').click();expect(page.locator('[data-recipe-food]')).to_have_count(4)
  page.locator('.recipe-food-picker summary').click();page.locator('#recipe-food-search').fill('Milk');page.locator(f'[data-action=recipe-add-food][data-id="{foods[5]["id"]}"]').click();expect(page.locator('[data-recipe-food]')).to_have_count(5);expect(page.locator('[name=servings]')).to_have_value('4');expect(page.locator('[name=portion]')).to_have_value('hearty');assert read_state(page)['foods']==before;page.locator('.recipe-preferences summary').click();page.locator('[name=avoid]').fill('milk');expect(page.locator('[data-recipe-food]')).to_have_count(4);expect(page.locator('#recipe-foods')).to_contain_text('Excluded by your ingredient preferences');page.locator('[name=avoid]').fill('');expect(page.locator('[data-recipe-food]')).to_have_count(5);assert calls==[]

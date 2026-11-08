@@ -716,6 +716,17 @@ hr {
   padding: 1.25rem;
   margin-bottom: 1.5rem;
 }
+/* Keep paired controls aligned even when one caption wraps. */
+.recipe-controls .two-fields > label {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 0.4rem;
+}
+.recipe-controls .two-fields > label > input,
+.recipe-controls .two-fields > label > select {
+  height: 3.25rem;
+  margin-top: 0;
+}
 .recipe-controls .full {
   margin-top: 0.2rem;
 }
