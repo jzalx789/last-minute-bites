@@ -469,7 +469,7 @@ const words = {
     "Something went wrong. Your input is kept. Try again.",
     "發生錯誤，已保留輸入，請重試。",
   ],
-  already_member: ["You already belong to a kitchen.", "你已加入一個冰箱。"],
+  already_member: ["You already belong to this kitchen.", "你已加入此廚房。"],
   owner_cannot_leave: [
     "The Owner cannot leave their kitchen.",
     "擁有者不能離開自己的冰箱。",
