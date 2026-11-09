@@ -255,7 +255,8 @@ export class PushService {
           when,
         );
         s.sql.exec(
-          "DELETE FROM push_subscriptions WHERE NOT EXISTS(SELECT 1 FROM sessions WHERE token=push_subscriptions.session_token AND user_id=push_subscriptions.user_id AND expires>?) OR NOT EXISTS(SELECT 1 FROM memberships WHERE user_id=push_subscriptions.user_id AND kitchen_id=push_subscriptions.kitchen_id)",
+          "DELETE FROM push_subscriptions WHERE NOT EXISTS(SELECT 1 FROM sessions WHERE token=push_subscriptions.session_token AND user_id=push_subscriptions.user_id AND expires>?) OR NOT EXISTS(SELECT 1 FROM memberships WHERE user_id=push_subscriptions.user_id AND kitchen_id=push_subscriptions.kitchen_id) OR EXISTS(SELECT 1 FROM kitchens k WHERE k.id=push_subscriptions.kitchen_id AND k.kind='party' AND (k.ended IS NOT NULL OR k.expires<=?))",
+          when,
           when,
         );
         const rows = s.rows(
@@ -309,6 +310,8 @@ export class PushService {
                 when,
               );
               if (!current) return false;
+              const kitchen = s.one("SELECT kind,expires,ended FROM kitchens WHERE id=?",row.kitchen_id);
+              if (kitchen?.kind === "party" && (kitchen.ended || kitchen.expires <= when)) return false;
               const prefs = JSON.parse(current.preferences),
                 plan = reminderPlan(
                   s.foods(

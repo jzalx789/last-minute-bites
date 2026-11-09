@@ -11,7 +11,7 @@ with sync_playwright() as p:
  # Block service workers only in this fault-injection test so page.route can intercept API requests.
  page=b.new_page(service_workers='block',viewport={'width':390,'height':844},is_mobile=True,has_touch=True);errors=[];calls=[]
  page.on('pageerror',lambda e:errors.append(str(e)));page.on('request',lambda r:calls.append(r.url) if r.url.endswith(('/api/recipes/generate','/api/recipes/replace')) else None)
- register(page,base,'meal-browser-'+uuid.uuid4().hex[:10]+'@example.test');page.locator('[name=name]').fill('Meal builder');page.locator('[data-form=create-kitchen] button').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
+ register(page,base,'meal-browser-'+uuid.uuid4().hex[:10]+'@example.test');page.locator('[data-form=create-kitchen] [name=name]').fill('Meal builder');page.locator('[data-form=create-kitchen] button').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
  foods=[]
  for name in ['Egg','Tomato','Tofu','Spinach','Rice','Milk']:
   r=request(page,'food/create',dict(name=name,quantity=8,unit='pcs',date_source='unknown',purchased_date='2026-11-08'));assert r['status']==200,r;foods.append(r['body'])

@@ -1933,3 +1933,24 @@ details p {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Kitchen switching and party sources stay in the existing scroll container. */
+.kitchen-switch { min-width:0; max-width:100%; text-align:start; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.kitchen-context { display:flex; gap:.5rem; align-items:center; margin:0 0 .65rem; min-width:0; }
+.kitchen-context .kitchen-switch { flex:0 1 auto; padding:.35rem .65rem; }
+.kitchen-list { display:grid; gap:.6rem; margin:1rem 0; }
+.kitchen-card { display:flex; align-items:center; justify-content:space-between; gap:.75rem; text-align:start; width:100%; }
+.kitchen-card > span:first-child { min-width:0; overflow-wrap:anywhere; }
+.kitchen-card small { display:block; color:var(--muted); }
+.kitchen-card.chosen { border-color:var(--green); background:#edf5ef; }
+.party-create { margin:1rem 0; }
+.party-create summary { font-weight:700; cursor:pointer; min-height:44px; display:flex; align-items:center; }
+.party-create form { margin-top:.75rem; }
+.party-choices { min-width:0; margin:.75rem 0; border:1px solid #d7e4d9; border-radius:12px; padding:.75rem; }
+.party-choices legend { font-weight:700; }
+.party-banner { display:flex; align-items:center; flex-wrap:wrap; gap:.35rem .75rem; padding:.55rem .75rem; margin-bottom:.6rem; background:#edf5ef; border-radius:12px; font-size:.875rem; }
+.party-banner span { overflow-wrap:anywhere; }
+.party-source-list { padding:0; list-style:none; }
+.party-source-list li { display:flex; align-items:center; justify-content:space-between; gap:.6rem; border-bottom:1px solid #d7e4d9; padding:.5rem 0; }
+.party-source-list strong { min-width:0; overflow-wrap:anywhere; }
+.recipe-fields { border:0; margin:0; padding:0; min-width:0; }

@@ -1,3 +1,4 @@
+import { migrateKitchens, KitchenAccess, partyEnded } from "./kitchens.js";
 import { DurableObject } from "cloudflare:workers";
 import { PushService, PUSH_SCHEMA } from "./push-service.js";
 import {
@@ -82,11 +83,13 @@ export class KitchenStore extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
+    this.kitchenAccess = new KitchenAccess(this);
     this.attempts = new Map();
     this.aiBusy = new Set();
     this.pushService = new PushService(this, env);
     ctx.blockConcurrencyWhile(async () => {
       this.sql.exec(SCHEMA);
+      migrateKitchens(ctx.storage);
     });
   }
   rows(query, ...bindings) {
@@ -117,7 +120,7 @@ export class KitchenStore extends DurableObject {
       csrf = token() + token(),
       hash = await sha(value);
     this.sql.exec(
-      "INSERT INTO sessions VALUES(?,?,?,?)",
+      "INSERT INTO sessions(token,user_id,csrf,expires) VALUES(?,?,?,?)",
       hash,
       userId,
       csrf,
@@ -126,12 +129,8 @@ export class KitchenStore extends DurableObject {
     this.cookie = value;
     this.session = { token: hash, user_id: userId, csrf };
   }
-  member(owner = false) {
-    const row = this.one(
-      "SELECT m.*,k.name FROM memberships m JOIN kitchens k ON k.id=m.kitchen_id WHERE user_id=?",
-      this.session.user_id,
-    );
-    check(row, "no_kitchen", 403);
+  member(owner = false, allowEnded = false) {
+    const row = this.kitchenAccess.member(this.session, this.requestKitchenId, {allowEnded});
     check(!owner || row.role === "owner", "owner_only", 403);
     return row;
   }
@@ -144,7 +143,8 @@ export class KitchenStore extends DurableObject {
     );
   }
   foods(kid, today) {
-    return this.rows("SELECT * FROM food_items WHERE kitchen_id=?", kid).map(
+    const scope = this.kitchenAccess.scope(kid);
+    return this.rows(`SELECT f.*,k.name AS kitchen_name FROM food_items f JOIN kitchens k ON k.id=f.kitchen_id WHERE f.kitchen_id IN (${scope.map(() => '?').join(',')})`, ...scope).map(
       (r) => {
         const f = {
           quantity: null,
@@ -152,6 +152,8 @@ export class KitchenStore extends DurableObject {
           purchased_date: null,
           ...JSON.parse(r.data),
           id: r.id,
+          kitchen_id: r.kitchen_id,
+          kitchen_name: r.kitchen_name,
           version: r.version,
           status: r.status,
         };
@@ -182,13 +184,14 @@ export class KitchenStore extends DurableObject {
     return this.ctx.blockConcurrencyWhile(async () => {
       this.cookie = null;
       this.session = null;
+      this.requestKitchenId = request.headers.get("X-Kitchen-ID");
       const url = new URL(request.url),
         secure = url.protocol === "https:";
       try {
         if (url.pathname === "/healthz") {
           this.one("SELECT COUNT(*) AS count FROM users");
           return respond(
-            { status: "ok", version: "1.2", storage: "persistent-sqlite" },
+            { status: "ok", version: "1.3", storage: "persistent-sqlite" },
             200,
             null,
             secure,
@@ -256,6 +259,7 @@ export class KitchenStore extends DurableObject {
       } finally {
         this.cookie = null;
         this.session = null;
+        this.requestKitchenId = null;
       }
     });
   }
@@ -503,6 +507,7 @@ export class KitchenStore extends DurableObject {
           "no_kitchen",
           403,
         );
+        this.kitchenAccess.member({user_id:snapshot.uid}, snapshot.kid);
         this.saveAssessment(
           snapshot.uid,
           snapshot.kid,
@@ -549,11 +554,7 @@ export class KitchenStore extends DurableObject {
       "csrf",
       403,
     );
-    const member = this.one(
-      "SELECT * FROM memberships WHERE user_id=?",
-      session.user_id,
-    );
-    check(member, "no_kitchen", 403);
+    const member = this.kitchenAccess.member(session, request.headers.get("X-Kitchen-ID"));
     check(
       Number(request.headers.get("Content-Length") || 0) <= maxBytes,
       "invalid_input",
@@ -822,6 +823,7 @@ export class KitchenStore extends DurableObject {
           "no_kitchen",
           403,
         );
+        this.kitchenAccess.member({user_id:snapshot.uid}, snapshot.kid);
         let output;
         try {
           output = image
@@ -878,7 +880,10 @@ export class KitchenStore extends DurableObject {
           provider: result.provider,
           model: result.model,
           repair_reason: result.repair_reason ?? null,
-          recipes: output,
+          recipes: output.map(r => ({...r,uses:r.uses.map(use => {
+            const source = current.find(f => f.id === use.food_id);
+            return {...use,kitchen_id:source.kitchen_id,kitchen_name:source.kitchen_name};
+          })})),
           selected: planInput.selected,
           versions: Object.fromEntries(current.map((f) => [f.id, f.version])),
           options: {
@@ -907,9 +912,11 @@ export class KitchenStore extends DurableObject {
             Date.now(),
           );
           this.sql.exec(
-            "DELETE FROM recipe_generations WHERE user_id=? AND id NOT IN (SELECT id FROM recipe_generations WHERE user_id=? ORDER BY created DESC LIMIT 5)",
+            "DELETE FROM recipe_generations WHERE user_id=? AND kitchen_id=? AND id NOT IN (SELECT id FROM recipe_generations WHERE user_id=? AND kitchen_id=? ORDER BY created DESC LIMIT 5)",
             snapshot.uid,
+            snapshot.kid,
             snapshot.uid,
+            snapshot.kid,
           );
         });
         return respond({ generation }, 200, null, secure);
@@ -942,7 +949,7 @@ export class KitchenStore extends DurableObject {
     const uid = this.session.user_id;
     if (request.method === "GET" && path === "/api/recipes/history") {
       check(uid !== null, "unauthorized", 401);
-      const member = this.member();
+      const member = this.member(false, true);
       const row = this.one(
         "SELECT data FROM recipe_generations WHERE user_id=? AND kitchen_id=? ORDER BY created DESC LIMIT 1",
         uid,
@@ -969,15 +976,13 @@ export class KitchenStore extends DurableObject {
       const user = this.one("SELECT id,email FROM users WHERE id=?", uid),
         preferences = this.prefs(),
         today = todayIn(preferences.timezone);
-      const member = this.one(
-        "SELECT m.*,k.name FROM memberships m JOIN kitchens k ON k.id=m.kitchen_id WHERE user_id=?",
-        uid,
-      );
+      const member = this.kitchenAccess.member(this.session, this.requestKitchenId, {fallback:true,allowEnded:true});
       Object.assign(state, {
         user,
         preferences,
         today,
         kitchen: null,
+        kitchens: this.kitchenAccess.list(uid),
         foods: [],
         members: [],
         ingredients,
@@ -988,6 +993,10 @@ export class KitchenStore extends DurableObject {
           id: member.kitchen_id,
           name: member.name,
           role: member.role,
+          kind: member.kind,
+          expires: member.expires,
+          closed: partyEnded(member),
+          sources: this.kitchenAccess.sources(member.kitchen_id),
         };
         state.foods = this.foods(member.kitchen_id, today);
         state.members = this.rows(
@@ -1064,7 +1073,7 @@ export class KitchenStore extends DurableObject {
         this.pushService.removeSession(previous);
         this.sql.exec("DELETE FROM sessions WHERE token=?", previous);
         this.sql.exec(
-          "INSERT INTO sessions VALUES(?,?,?,?)",
+          "INSERT INTO sessions(token,user_id,csrf,expires) VALUES(?,?,?,?)",
           hash,
           id,
           csrf,
@@ -1108,17 +1117,12 @@ export class KitchenStore extends DurableObject {
       bodyHash = await sha(JSON.stringify(content));
     }
     if (["/api/invitation/preview", "/api/invitation/accept"].includes(path)) {
-      check(
-        !this.one("SELECT 1 FROM memberships WHERE user_id=?", uid),
-        "already_member",
-        409,
-      );
       codeHash = await sha(text(data.code, 100));
     }
     if (path === "/api/invitation/replace") {
       this.member(true);
       const code = token(),
-        expires = Date.now() + 604800000,
+        expires = Math.min(Date.now() + 604800000, this.member(true).expires ?? Infinity),
         hash = await sha(code);
       this.transaction(() => {
         const kid = this.member(true).kitchen_id;
@@ -1158,34 +1162,21 @@ export class KitchenStore extends DurableObject {
         );
         return { ok: true };
       }
-      if (path === "/api/kitchen/create") {
-        check(
-          !this.one("SELECT 1 FROM memberships WHERE user_id=?", uid),
-          "already_member",
-          409,
-        );
-        const kid = this.insert(
-          "INSERT INTO kitchens(name) VALUES(?)",
-          text(data.name, 80),
-        );
-        this.sql.exec("INSERT INTO memberships VALUES(?,?,'owner')", uid, kid);
-        return { ok: true };
-      }
+      const kitchenResult = this.kitchenAccess.route(this.session, this.requestKitchenId, path, data);
+      if (kitchenResult) return kitchenResult;
       if (
         ["/api/invitation/preview", "/api/invitation/accept"].includes(path)
       ) {
         this.rate("invite:" + uid);
-        check(
-          !this.one("SELECT 1 FROM memberships WHERE user_id=?", uid),
-          "already_member",
-          409,
-        );
         const invitation = this.one(
-          "SELECT i.*,k.name FROM invitations i JOIN kitchens k ON k.id=i.kitchen_id WHERE code=? AND expires>?",
+          "SELECT i.*,k.name,k.kind,k.expires AS party_expires,k.ended FROM invitations i JOIN kitchens k ON k.id=i.kitchen_id WHERE code=? AND i.expires>?",
           codeHash,
           Date.now(),
         );
         check(invitation, "invalid_invitation", 404);
+        check(!partyEnded({...invitation,expires:invitation.party_expires}), "party_ended",409);
+        check(!this.one("SELECT 1 FROM memberships WHERE user_id=? AND kitchen_id=?",uid,invitation.kitchen_id),"already_member",409);
+        check(this.kitchenAccess.list(uid).length < 20,"kitchen_limit",400);
         if (path.endsWith("accept")) {
           check(data.confirmed === true, "confirmation_required");
           this.sql.exec(
@@ -1193,8 +1184,10 @@ export class KitchenStore extends DurableObject {
             uid,
             invitation.kitchen_id,
           );
+          this.kitchenAccess.activate(this.session, invitation.kitchen_id);
         }
         return {
+          kitchen_id: invitation.kitchen_id,
           name: invitation.name,
           role: "editor",
           expires: invitation.expires / 1000,
@@ -1215,11 +1208,7 @@ export class KitchenStore extends DurableObject {
           integer(item.version);
           check(!seen.has(item.id));
           seen.add(item.id);
-          const row = this.one(
-            "SELECT * FROM food_items WHERE id=? AND kitchen_id=?",
-            item.id,
-            kid,
-          );
+          const row = this.kitchenAccess.food(item.id, kid);
           check(row, "food_not_found", 404);
           check(row.version === item.version, "conflict", 409);
           check(item.all === undefined || typeof item.all === "boolean");
@@ -1254,12 +1243,9 @@ export class KitchenStore extends DurableObject {
           integer(item.version);
           check(!seen.has(item.id));
           seen.add(item.id);
-          const row = this.one(
-            "SELECT * FROM food_items WHERE id=? AND kitchen_id=?",
-            item.id,
-            kid,
-          );
+          const row = this.kitchenAccess.food(item.id, kid);
           check(row, "food_not_found", 404);
+          check(data.action !== "delete" || row.kitchen_id === kid,"source_edit_required",403);
           check(row.version === item.version, "conflict", 409);
           if (data.action === "used")
             check(row.status === "active", "conflict", 409);
@@ -1299,13 +1285,15 @@ export class KitchenStore extends DurableObject {
           "member_not_removable",
           403,
         );
+        this.sql.exec("DELETE FROM party_sources WHERE party_id=? AND owner_id=?", kid, data.user_id);
         this.pushService.removeMember(data.user_id, kid);
         return { ok: true };
       }
       if (path === "/api/kitchen/leave") {
         check(member.role === "editor", "owner_cannot_leave", 403);
         check(data.confirmed === true, "confirmation_required");
-        this.sql.exec("DELETE FROM memberships WHERE user_id=?", uid);
+        this.sql.exec("DELETE FROM memberships WHERE user_id=? AND kitchen_id=?", uid, kid);
+        this.sql.exec("DELETE FROM party_sources WHERE party_id=? AND owner_id=?", kid, uid);
         this.pushService.removeMember(uid, kid);
         return { ok: true };
       }

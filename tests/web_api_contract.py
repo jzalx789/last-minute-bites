@@ -5,6 +5,7 @@ import sys
 import uuid
 import urllib.request
 import urllib.error
+from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from test_app import Client as BaseClient
@@ -13,7 +14,11 @@ BROWSER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.3
 
 class Client(BaseClient):
     def request(self,path,data=None,headers=None):
-        return super().request(path,data,dict({"User-Agent":BROWSER_AGENT},**(headers or {})))
+        defaults={"User-Agent":BROWSER_AGENT}
+        if urlparse(self.base).hostname in {"127.0.0.1","localhost","::1"}:
+            if not hasattr(self,"_local_test_ip"):self._local_test_ip="synthetic-api-"+uuid.uuid4().hex
+            defaults["CF-Connecting-IP"]=self._local_test_ip
+        return super().request(path,data,dict(defaults,**(headers or {})))
 
 
 def run(base):

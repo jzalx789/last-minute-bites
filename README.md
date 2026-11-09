@@ -1,10 +1,16 @@
-# Last Minute Bites — Web Prototype 1.1
+# Last Minute Bites — Web Prototype 1.3
 
 **網站：https://last-minute-bites-demo.jzalx789.workers.dev**
 
-電腦、Mac 或手機瀏覽器可直接開啟，不需 VPN；一般瀏覽免安裝，iPhone／iPad 的推播需先加入主畫面。可自行註冊並建立冰箱；共用示範帳戶只放合成食物資料。
+電腦、Mac 或手機瀏覽器可直接開啟，連線依所在地及網路而異；一般瀏覽免安裝，iPhone／iPad 的推播需先加入主畫面。可自行註冊並建立冰箱；共用示範帳戶只放合成食物資料。
 
 ## 已實作
+
+- 多廚房：同帳號可建立／加入多個廚房，在首頁點廚房名稱或設定 → 切換／加入廚房。Owner／Editor 權限按廚房獨立判斷；離開／移除成員只影響該廚房。切換會清除當前選材及食譜草稿，食譜歷史各廚房分開保留。
+- 聚會模式：建立有效 24／48 小時或 7 天的臨時廚房，可提前結束；來源廚房擁有者明確同意後，聚會成員可查看、生成食譜及消耗該來源庫存。跨廚房食譜僅限聚會模式，普通廚房不能混用其他廚房庫存。每帳號最多 20 個廚房、每聚會最多 8 個來源。
+- 聚會食材不複製或搬移，來源名稱、批次和份量保留。多來源消耗一次交易驗證權限、批次版本和剩餘量，任何一項失敗全部回滾；編輯／刪除來源食物需回原廚房。撤回分享或分享者離開／被移除後立即停止共享，重新加入必須重新分享。
+- 聚會期限由伺服器檢查；結束後保留成員及個人食譜歷史，停止來源庫存共享、邀請、新生成及食物變更。來源食物留在原廚房，沒有自動刪除、重設或自動復原已確認的消耗。
+- SQLite 在原 Durable Object 內一次原子遷移至複合成員主鍵，保留帳號、原廚房、庫存、邀請及登入 session。網頁請求帶明確廚房 ID，防止另一分頁切換預設廚房時扣錯庫存。推播仍每裝置綁定一個廚房，切換後可到提醒頁明確重新啟用，已結束聚會不排程發送。
 
 - Web Push：設定 → 提醒內可明確允許通知、啟用／停止此裝置、發送測試通知及更新狀態。不會在瀏覽時自行彈出權限視窗；iPhone／iPad 先顯示加入主畫面說明，權限封鎖時顯示系統設定指引。
 - 伺服器每 5 分鐘執行 Cron，在帳戶時區上午 9 點左右，對有日期、仍有剩餘且接近設定日期或已過日期的食材合併提醒；包括包裝日期及自訂預計吃完日，沒有日期或已用完的食材不提醒。每裝置每天一次，關閉 App 不影響排程。日期提醒總開關也會暫停排程推播，測試通知仍可明確按下。
@@ -33,7 +39,7 @@
 - 自行決定／開封後：可留空而不設固定日期，或填預計吃完日作自訂提醒；支援補填、修改、清除及共享。提醒日不視作包裝食用期限，過了提醒日仍由使用者判斷；清庫存排序及食譜輸入保留日期來源。
 - 包裝日期／生產日＋期限／未知日期、日曆月尾及閏年計算、Use by／Best before、QR 邀請及雙語偏好。
 
-網站使用 Cloudflare Worker＋SQLite-backed Durable Object，靜態頁面與 API 同源。密碼使用 PBKDF2-SHA256 與隨機 salt，session token 只保存雜湊。保留的 Python 後端供舊 API 對照；目前網頁的 AI／批次庫存功能需要 Worker。
+網站使用 Cloudflare Worker＋SQLite-backed Durable Object，靜態頁面與 API 同源。密碼使用 PBKDF2-SHA256 與隨機 salt，session token 只保存雜湊。保留的 Python 後端供舊 API 對照；目前網頁的 AI／批次庫存／多廚房與聚會功能需要 Worker。
 
 ## 開發及驗證
 
@@ -53,7 +59,7 @@ web/node_modules/.bin/wrangler dev --config tests/fixtures/food-ai/wrangler.json
 web/node_modules/.bin/wrangler dev --config web/wrangler.test.jsonc --port 8790 --test-scheduled
 ```
 
-然後執行 `LMB_WEB_BASE_URL=http://127.0.0.1:8790 python3 tests/web_api_contract.py`、`python3 tests/ai_api_contract.py`、`python3 tests/stock_api_contract.py`、`python3 tests/stock_browser.py`、`python3 tests/consume_browser.py`、`python3 tests/classification_api.py`、`python3 tests/classification_browser.py`、`python3 tests/personal_dates_browser.py`、`python3 tests/recipe_builder_api.py`、`python3 tests/recipe_builder_browser.py`、`python3 tests/push_api_contract.py`、`python3 tests/push_browser.py`、`python3 tests/push_service_worker.py`、`python3 tests/user_fixes_browser.py` 及同網址的 `tests/web_browser.py`。`LMB_WEB_ENGINE=webkit` 可切換引擎。CI 不花費模型額度。`tests/live_ai_browser.py` 需明確設定 `LMB_LIVE_AI=1`、正式網址及經檢視的測試食物照片才驗證四個真實 DeepSeek 流程（辨識、4 人大食量設計、清庫存、空庫存採購計劃）；每次食譜及格式不合的名稱分類最多可再修正一次；不會為不確定的判斷重試至肯定。`tests/live_classification.py` 需明確設定 `LMB_LIVE_FOOD=1`、正式網址、食物照片與非食物圖片，才驗證真實名稱／影像分類。`tests/live_recipe_builder.py` 需明確設定 `LMB_LIVE_RECIPES=1` 才驗證正式模型的 4 道菜及單道替換。驗證紀錄見 [docs/VALIDATION.md](docs/VALIDATION.md)。
+然後執行 `LMB_WEB_BASE_URL=http://127.0.0.1:8790 python3 tests/web_api_contract.py`、`python3 tests/ai_api_contract.py`、`python3 tests/stock_api_contract.py`、`python3 tests/stock_browser.py`、`python3 tests/consume_browser.py`、`python3 tests/classification_api.py`、`python3 tests/classification_browser.py`、`python3 tests/personal_dates_browser.py`、`python3 tests/recipe_builder_api.py`、`python3 tests/multi_kitchen_api.py`、`python3 tests/multi_kitchen_browser.py`、`python3 tests/recipe_builder_browser.py`、`python3 tests/push_api_contract.py`、`python3 tests/push_browser.py`、`python3 tests/push_service_worker.py`、`python3 tests/user_fixes_browser.py` 及同網址的 `tests/web_browser.py`。`LMB_WEB_ENGINE=webkit` 可切換引擎。CI 不花費模型額度。`tests/live_ai_browser.py` 需明確設定 `LMB_LIVE_AI=1`、正式網址及經檢視的測試食物照片才驗證四個真實 DeepSeek 流程（辨識、4 人大食量設計、清庫存、空庫存採購計劃）；每次食譜及格式不合的名稱分類最多可再修正一次；不會為不確定的判斷重試至肯定。`tests/live_classification.py` 需明確設定 `LMB_LIVE_FOOD=1`、正式網址、食物照片與非食物圖片，才驗證真實名稱／影像分類。`tests/live_recipe_builder.py` 需明確設定 `LMB_LIVE_RECIPES=1` 才驗證正式模型的 4 道菜及單道替換。驗證紀錄見 [docs/VALIDATION.md](docs/VALIDATION.md)。
 
 ## 部署結構
 

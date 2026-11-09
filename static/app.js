@@ -62,10 +62,39 @@ const words = {
     "登入後可與冰箱成員共享食材紀錄。",
   ],
   create_kitchen: ["Create a kitchen", "建立冰箱"],
+  kitchens: ["Your kitchens", "我的廚房"],
+  switch_kitchen: ["Switch / add kitchen", "切換／加入廚房"],
+  kitchen_switched: ["Kitchen switched", "已切換廚房"],
+  current_kitchen: ["Current", "目前使用"],
+  party: ["Party mode", "聚會模式"],
+  create_party: ["Create a temporary party kitchen", "建立臨時聚會廚房"],
+  party_hours: ["Party duration", "聚會時長"],
+  hours_24: ["24 hours", "24 小時"],
+  hours_48: ["48 hours", "48 小時"],
+  hours_168: ["7 days", "7 天"],
+  party_sources: ["Shared ingredient sources", "分享的食材來源"],
+  party_source_consent: ["Choose kitchens you own to share with this party. All party members can see these food records, use them in recipes and record consumption against the original stock. Sharing does not move or copy food.", "選擇你擁有的廚房分享至聚會。所有聚會成員都可查看這些食材紀錄、合成食譜及扣減原庫存；食物不會搬移或複製。"],
+  party_source_hint: ["Only a source kitchen’s owner can share it. Each guest can share their own kitchen after joining.", "只有來源廚房的擁有者可以分享。來賓加入後也可分享自己的廚房。"],
+  share_source: ["Share this kitchen’s food", "分享此廚房食材"],
+  unshare_source: ["Stop sharing", "停止分享"],
+  unshare_confirm: ["Stop sharing these food records with the party? Existing consumption stays recorded in the source kitchen.", "停止向聚會分享這些食材紀錄？已扣減的份量仍保留在來源廚房。"],
+  party_invite_policy: ["The code stops working when this party ends. Replacing it stops new joins with the old code; current members stay.", "邀請碼會在聚會結束時失效。替換後舊碼不能再加入，現有成員不受影響。"],
+  party_until: ["Party ends", "聚會結束時間"],
+  party_closed: ["Party ended · records only", "聚會已結束・僅供查看紀錄"],
+  end_party: ["End party", "結束聚會"],
+  end_party_confirm: ["End this party now? Records stay available, but invitations, new recipes and inventory changes stop. Food stays in its original kitchen.", "現在結束聚會？紀錄會保留，邀請、新食譜及庫存變更將停止。食物仍留在原本廚房。"],
+  party_ended: ["This party has ended. Switch to an active kitchen to make changes.", "此聚會已結束，請切換至其他廚房進行操作。"],
+  not_party: ["Cross-kitchen ingredients are available only in party mode.", "只有聚會模式可以使用跨廚房食材。"],
+  source_owner_only: ["Only the owner can share this source kitchen.", "只有來源廚房的擁有者可以分享食材。"],
+  source_edit_required: ["Edit or delete this food in its source kitchen.", "請到來源廚房編輯或刪除此食物。"],
+  kitchen_limit: ["Limit reached: 20 kitchens per account, 8 source kitchens per party.", "每個帳號最多 20 個廚房；每次聚會最多分享 8 個來源廚房。"],
+  source_kitchen: ["Source", "來源廚房"],
+  party_own_food: ["Food added directly to this party", "直接新增至聚會的食物"],
+  push_kitchen_scope: ["This device’s push subscription follows one kitchen. Enable it here to receive reminders for this kitchen.", "此裝置的推播訂閱綁定一個廚房。如需接收目前廚房的提醒，請在此啟用。"],
   join_kitchen: ["Join a kitchen", "加入冰箱"],
   setup_intro: [
-    "Start your own kitchen, or join someone you cook with. Each account can belong to one kitchen.",
-    "建立自己的冰箱，或加入親友的冰箱。每個帳戶只可加入一個冰箱。",
+    "Start your own kitchen, or join someone you cook with. You can switch between your kitchens, or share food in a temporary party kitchen.",
+    "建立自己的冰箱，或加入親友的冰箱。可切換多個廚房，或建立臨時聚會廚房分享食材。",
   ],
   kitchen_name: ["Kitchen name", "冰箱名稱"],
   invite_code: ["Invitation code", "邀請碼"],
@@ -858,18 +887,16 @@ function notify(s) {
   clearTimeout(notify.timer);
   notify.timer = setTimeout(() => ($("#toast").textContent = ""), 6500);
 }
+let activeKitchenId = null, contextEpoch = 0, switchingKitchen = false;
 async function api(path, data) {
   let res, result;
   try {
     res = await fetch("/api/" + path, {
       method: data === undefined ? "GET" : "POST",
-      headers:
-        data === undefined
-          ? {}
-          : {
-              "Content-Type": "application/json",
-              "X-CSRF-Token": state?.csrf || "",
-            },
+      headers: {
+        ...(activeKitchenId ? {"X-Kitchen-ID": String(activeKitchenId)} : {}),
+        ...(data === undefined ? {} : {"Content-Type":"application/json", "X-CSRF-Token":state?.csrf || ""}),
+      },
       body: data === undefined ? undefined : JSON.stringify(data),
       credentials: "same-origin",
     });
@@ -887,14 +914,16 @@ function storeSelection() {
   if (state?.user)
     try {
       sessionStorage.setItem(
-        "lmb-selection-" + state.user.id,
+        "lmb-selection-" + state.user.id + "-" + state.kitchen?.id,
         JSON.stringify([...selection]),
       );
     } catch (_) {}
 }
 async function refresh(draw = true) {
-  const next = await api("state"),
-    uid = next.user?.id ?? null,
+  const epoch = contextEpoch;
+  const next = await api("state");
+  if (epoch !== contextEpoch) return;
+  const uid = next.user?.id ?? null,
     kid = next.kitchen?.id ?? null;
   if (uid !== lastUser) {
     pushState = null;
@@ -912,7 +941,7 @@ async function refresh(draw = true) {
     if (uid)
       try {
         selection = new Set(
-          JSON.parse(sessionStorage.getItem("lmb-selection-" + uid) || "[]"),
+          JSON.parse(sessionStorage.getItem("lmb-selection-" + uid + "-" + kid) || "[]"),
         );
       } catch (_) {}
     view = null;
@@ -931,12 +960,15 @@ async function refresh(draw = true) {
     recipeHistoryLoaded = false;
     photoCandidates = [];
     recipeSeq++;
-    notify(t("lost_access"));
+    notify(t(switchingKitchen ? "kitchen_switched" : "lost_access"));
     location.hash = "kitchen";
   }
   lastUser = uid;
   lastKitchen = kid;
+  const justClosed = state?.kitchen?.id === kid && !state.kitchen.closed && next.kitchen?.closed;
   state = next;
+  activeKitchenId = kid;
+  if (justClosed && $("#used-picker").open) $("#used-picker").close("cancel");
   if (recipeResult) {
     const current = state.foods.filter((f) => f.eligible);
     recipeResult.stale =
@@ -954,7 +986,7 @@ async function refresh(draw = true) {
     if (size !== selection.size) notify(t("selection_changed"));
     view ||= state.preferences.default_view;
   }
-  if (draw || lost) render(!lost);
+  if (draw || lost || justClosed) render(!lost);
 }
 const route = () => location.hash.slice(1).split("/").filter(Boolean);
 function go(path) {
@@ -1008,15 +1040,15 @@ const dateLine = (f) =>
   `${t(f.date_source === "unknown" ? "no_date" : f.date_source === "personal" ? "personal_date_source" : f.date_source)} · ${foodStatus(f)}${f.effective_date ? " · " + dateText(f.effective_date) : ""}`;
 function selectionBar() {
   if (
-    !selection.size ||
+    state.kitchen?.closed || !selection.size ||
     !["kitchen", "category"].includes(route()[0] || "kitchen")
   )
     return "";
-  return `<aside class="selection" aria-label="${E(t("selected"))}"><div class="selection-summary"><strong id="selected-count">${selection.size}</strong> ${E(t("selected"))}${button("clear-selection", t("clear"), "quiet")}</div><div class="selection-actions">${button("batch-used", t("consume"))}${button("batch-delete", t("remove_short"), "danger")}${button("find-recipes", t("find"), "primary")}</div></aside>`;
+  return `<aside class="selection" aria-label="${E(t("selected"))}"><div class="selection-summary"><strong id="selected-count">${selection.size}</strong> ${E(t("selected"))}${button("clear-selection", t("clear"), "quiet")}</div><div class="selection-actions">${button("batch-used", t("consume"))}${[...selection].every(id => state.foods.find(f => f.id === id)?.kitchen_id === state.kitchen.id) ? button("batch-delete", t("remove_short"), "danger") : ""}${button("find-recipes", t("find"), "primary")}</div></aside>`;
 }
 function addFoodDock() {
   const [page = "kitchen", category = "all"] = route();
-  if (!["kitchen", "category"].includes(page)) return "";
+  if (state.kitchen?.closed || !["kitchen", "category"].includes(page)) return "";
   return `<div class="add-food-dock"><button type="button" data-action="add" class="primary add-food-tile" ${page === "category" ? `data-category="${E(category)}"` : ""}><span aria-hidden="true">＋</span>${E(t("add"))}</button></div>`;
 }
 function render(keepScroll = false) {
@@ -1039,6 +1071,8 @@ function render(keepScroll = false) {
     !["settings", "preferences", "help"].includes(page)
   )
     content = setup();
+  else if (page === "kitchens") content = setup();
+  else if (page === "party") content = partyPage();
   else if (page === "food") content = foodForm(arg);
   else if (page === "category") content = categoryPage(arg || "all");
   else if (page === "recipes") content = recipesPage(arg);
@@ -1048,7 +1082,7 @@ function render(keepScroll = false) {
   else if (page === "reminders") content = reminders();
   else if (page === "help") content = help();
   else content = kitchen();
-  app.innerHTML = `<header class="topbar"><button class="brand" data-action="go" data-path="kitchen">${icon("leaf")}<span>Last Minute <b>Bites</b></span></button><div class="header-actions">${state.user ? button("go", t("settings"), "", 'data-path="settings"') : button("language", language() === "en" ? "繁體中文" : "English")}</div></header><main id="main" tabindex="-1">${offline ? `<p class="error">${E(t("offline"))} ${button("retry", t("retry"))}</p>` : ""}${content}</main>${state.user && state.kitchen ? `<footer class="app-dock">${selectionBar()}${addFoodDock()}<nav class="bottom-nav" aria-label="${E(t("kitchen"))}"><button data-action="go" data-path="kitchen" ${page === "kitchen" ? 'aria-current="page"' : ""}>${icon("home")}${E(t("kitchen"))}</button><button data-action="go" data-path="category/all" ${page === "category" ? 'aria-current="page"' : ""}>${icon("bag")}${E(t("inventory"))}</button><button data-action="go" data-path="recipes" ${page === "recipes" ? 'aria-current="page"' : ""}>${icon("book")}${E(t("recipes"))}</button></nav></footer>` : ""}`;
+  app.innerHTML = `<header class="topbar"><button class="brand" data-action="go" data-path="kitchen">${icon("leaf")}<span>Last Minute <b>Bites</b></span></button><div class="header-actions">${state.user ? button("go", t("settings"), "", 'data-path="settings"') : button("language", language() === "en" ? "繁體中文" : "English")}</div></header><main id="main" tabindex="-1">${offline ? `<p class="error">${E(t("offline"))} ${button("retry", t("retry"))}</p>` : ""}${state.user && state.kitchen && !["kitchen","kitchens"].includes(page) ? kitchenContext() : ""}${state.kitchen?.closed ? `<p class="warning party-closed" role="status">${E(t("party_closed"))}</p>` : ""}${content}</main>${state.user && state.kitchen ? `<footer class="app-dock">${selectionBar()}${addFoodDock()}<nav class="bottom-nav" aria-label="${E(t("kitchen"))}"><button data-action="go" data-path="kitchen" ${page === "kitchen" ? 'aria-current="page"' : ""}>${icon("home")}${E(t("kitchen"))}</button><button data-action="go" data-path="category/all" ${page === "category" ? 'aria-current="page"' : ""}>${icon("bag")}${E(t("inventory"))}</button><button data-action="go" data-path="recipes" ${page === "recipes" ? 'aria-current="page"' : ""}>${icon("book")}${E(t("recipes"))}</button></nav></footer>` : ""}`;
   if ($("#date-reminders")) $("#date-reminders").open = reminderOpen;
   if (page === "food") bindFoodForm();
   if (page === "reminders") loadPushStatus();
@@ -1069,7 +1103,24 @@ function auth() {
   return `<div class="auth-layout"><section class="auth-story"><div class="little-leaf">${icon("leaf")}</div><h1>${E(t("welcome"))}</h1><p>${E(t("intro"))}</p><div class="mini-fridge" aria-hidden="true"><span></span><span></span></div></section><section class="auth-panel"><div class="switcher">${button("auth-login", t("sign_in"), authMode === "login" ? "chosen" : "")}${button("auth-register", t("register"), authMode === "register" ? "chosen" : "")}</div><h2>${E(t(authMode === "login" ? "sign_in" : "register"))}</h2><p>${E(t("auth_hint"))}</p><form data-form="auth">${field("email", t("email"), "", "email", 'required maxlength="254" autocomplete="username"')}${field("password", t("password"), "", "password", `required minlength="10" maxlength="128" autocomplete="${authMode === "login" ? "current-password" : "new-password"}"`)}${authMode === "register" ? field("confirm_password", t("confirm_password"), "", "password", 'required minlength="10" maxlength="128" autocomplete="new-password"') : ""}<p class="hint">${E(t("password_hint"))}</p><label class="check"><input type="checkbox" data-show-password>${E(t("show_password"))}</label>${formError()}<button class="primary full">${E(t(authMode === "login" ? "sign_in" : "register"))}</button></form></section></div>`;
 }
 function setup() {
-  return `<section class="page-heading"><h1>${E(t("welcome_kitchen"))}</h1><p>${E(t("setup_intro"))}</p><details><summary>${E(t("help"))}</summary><p>${E(t("help_steps"))}</p></details></section><div class="two-column"><section class="panel"><h2>${E(t("create_kitchen"))}</h2><form data-form="create-kitchen">${field("name", t("kitchen_name"), "", "text", 'required maxlength="80"')}${formError()}<button class="primary">${E(t("create_kitchen"))}</button></form></section><section class="panel"><h2>${E(t("join_kitchen"))}</h2><form data-form="preview-invite">${field("code", t("invite_code"), invitePreview?.code || "", "text", 'required maxlength="100" autocomplete="off"')}${formError()}<div class="actions"><button>${E(t("preview_invite"))}</button>${button("scan-invite", t("scan_invite"))}</div></form>${invitePreview ? `<div class="invitation-preview"><h3>${E(invitePreview.name)}</h3><p>${E(t("preview_note"))}</p>${button("accept-invite", t("join_confirm"), "primary")}</div>` : ""}</section></div>${button("sign-out", t("sign_out"), "quiet")}`;
+  return `<section class="page-heading"><h1>${E(t(state.kitchen ? "kitchens" : "welcome_kitchen"))}</h1><p>${E(t("setup_intro"))}</p><details><summary>${E(t("help"))}</summary><p>${E(t("help_steps"))}</p></details></section>${kitchenList()}${partyCreateForm()}<div class="two-column"><section class="panel"><h2>${E(t("create_kitchen"))}</h2><form data-form="create-kitchen">${field("name", t("kitchen_name"), "", "text", 'required maxlength="80"')}${formError()}<button class="primary">${E(t("create_kitchen"))}</button></form></section><section class="panel"><h2>${E(t("join_kitchen"))}</h2><form data-form="preview-invite">${field("code", t("invite_code"), invitePreview?.code || "", "text", 'required maxlength="100" autocomplete="off"')}${formError()}<div class="actions"><button>${E(t("preview_invite"))}</button>${button("scan-invite", t("scan_invite"))}</div></form>${invitePreview ? `<div class="invitation-preview"><h3>${E(invitePreview.name)}</h3><p>${E(t("preview_note"))}</p>${button("accept-invite", t("join_confirm"), "primary")}</div>` : ""}</section></div>${button("sign-out", t("sign_out"), "quiet")}`;
+}
+function kitchenContext() {
+  return `<div class="kitchen-context">${button("go", state.kitchen.name + " ⌄", "kitchen-switch", 'data-path="kitchens"')}${state.kitchen.kind === "party" ? `<span class="role">${E(t("party"))}</span>` : ""}</div>`;
+}
+function kitchenList() {
+  if (!state.kitchens?.length) return "";
+  return `<section class="kitchen-list" aria-label="${E(t("kitchens"))}">${state.kitchens.map(k => `<button type="button" class="kitchen-card${k.id === state.kitchen?.id ? " chosen" : ""}" data-action="switch-kitchen" data-id="${k.id}" ${k.id === state.kitchen?.id ? 'aria-current="true"' : ""}><span><strong>${E(k.name)}</strong><small>${E(t(k.role))}${k.kind === "party" ? " · " + E(t(k.closed ? "party_closed" : "party")) : ""}</small></span><span>${k.id === state.kitchen?.id ? E(t("current_kitchen")) : "›"}</span></button>`).join("")}</section>`;
+}
+function partyCreateForm() {
+  const owned = (state.kitchens || []).filter(k => k.kind === "home" && k.role === "owner");
+  return `<details class="panel party-create"><summary>${E(t("create_party"))}</summary><form data-form="create-party">${field("name",t("kitchen_name"),"","text",'required maxlength="80"')}<label>${E(t("party_hours"))}<select name="hours">${[24,48,168].map(h => option(h,t("hours_"+h),24)).join("")}</select></label><fieldset class="party-choices"><legend>${E(t("party_sources"))}</legend><p class="hint">${E(t("party_source_consent"))}</p>${owned.map(k => `<label class="check"><input type="checkbox" name="source_ids" value="${k.id}">${E(k.name)}</label>`).join("")}<p class="hint">${E(t("party_source_hint"))}</p></fieldset>${formError()}<button class="primary full">${E(t("create_party"))}</button></form></details>`;
+}
+function partyPage() {
+  const k = state.kitchen;
+  if (k.kind !== "party") return `${back()}<h1>${E(t("party"))}</h1><p>${E(t("not_party"))}</p>${button("go", t("create_party"), "primary", 'data-path="kitchens"')}`;
+  const options = (state.kitchens || []).filter(s => s.kind === "home" && s.role === "owner" && !k.sources.some(x => x.id === s.id));
+  return `<div class="narrow">${back()}<h1>${E(t("party"))}</h1><h2>${E(k.name)}</h2><p>${E(t("party_until"))}: ${E(new Date(k.expires).toLocaleString(language(), {timeZone:state.preferences.timezone,timeZoneName:"short"}))}</p><h2>${E(t("party_sources"))}</h2><p class="hint">${E(t("party_source_consent"))}</p><ul class="party-source-list">${k.sources.map(src => `<li><strong>${E(src.name)}</strong>${!k.closed && (k.role === "owner" || src.owner_id === state.user.id) ? button("party-unshare",t("unshare_source"),"quiet",`data-id="${src.id}"`) : ""}</li>`).join("")}</ul>${!k.sources.length ? `<p class="hint">${E(t("party_source_hint"))}</p>` : ""}${!k.closed && options.length ? `<form data-form="party-source"><label>${E(t("source_kitchen"))}<select name="source_id">${options.map(src => option(src.id,src.name,options[0].id)).join("")}</select></label>${formError()}<button class="primary">${E(t("share_source"))}</button></form>` : ""}<p class="hint">${E(t("party_own_food"))}: ${state.foods.filter(f => f.kitchen_id === k.id && f.status === "active").length}</p>${button("go",t("shared"),"full",'data-path="shared"')}${!k.closed && k.role === "owner" ? button("party-end",t("end_party"),"danger full") : ""}</div>`;
 }
 function categoryButton(key, svg, cls = "") {
   const count = state.foods.filter(
@@ -1135,7 +1186,7 @@ function reminderBanner() {
     : "";
 }
 function kitchen() {
-  return `<section class="page-heading kitchen-heading kitchen-overview"><div><p class="kitchen-label"><span class="kitchen-name" title="${E(state.kitchen.name)}">${E(state.kitchen.name)}</span><span class="role">${E(t(state.kitchen.role))}</span></p><h1 class="sr-only">${E(t("kitchen_intro"))}</h1></div></section><div class="kitchen-toolbar"><div class="switcher">${button("view-categories", t("categories"), view === "categories" ? "chosen" : "")}${button("view-first", t("use_first"), view === "use_first" ? "chosen" : "")}</div>${button("category", t("all"), "quiet", 'data-category="all"')}</div>${expiryAlert()}${reminderBanner()}${
+  return `<section class="page-heading kitchen-heading kitchen-overview"><div><p class="kitchen-label"><button class="kitchen-name kitchen-switch" data-action="go" data-path="kitchens" title="${E(t("switch_kitchen"))}">${E(state.kitchen.name)} <span aria-hidden="true">⌄</span></button><span class="role">${E(t(state.kitchen.role))}</span></p><h1 class="sr-only">${E(t("kitchen_intro"))}</h1></div></section>${state.kitchen.kind === "party" ? `<div class="party-banner"><strong>${E(t("party"))}</strong><span>${E(t("party_until"))}: ${E(new Date(state.kitchen.expires).toLocaleString(language(), {timeZone:state.preferences.timezone,timeZoneName:"short"}))}</span>${button("go", t("party_sources"), "quiet", 'data-path="party"')}</div>` : ""}<div class="kitchen-toolbar"><div class="switcher">${button("view-categories", t("categories"), view === "categories" ? "chosen" : "")}${button("view-first", t("use_first"), view === "use_first" ? "chosen" : "")}</div>${button("category", t("all"), "quiet", 'data-category="all"')}</div>${expiryAlert()}${reminderBanner()}${
     view === "categories"
       ? `<div class="kitchen-illustration"><section class="fridge" aria-label="${E(t("fridge"))}"><div class="fridge-top"><span>Last Minute Bites</span><span class="fridge-hinge"></span></div><div class="fridge-shelves">${categoryButton("produce", "leaf")}${categoryButton("dairy", "egg")}${categoryButton("protein", "fish")}${categoryButton("cooked", "bowl")}</div><div class="freezer-drawer">${categoryButton("freezer", "snow")}</div></section><aside class="pantry-rack"><div class="rack-top">${icon("jar")}${icon("jar")}${icon("jar")}</div>${categoryButton("condiments", "jar", "rack-category")}${categoryButton("dryother", "bag", "dry-category")}</aside></div>`
       : foodList(
@@ -1204,12 +1255,13 @@ function amountText(quantity, unit = "pcs") {
     : t("quantity_unknown");
 }
 function batchLine(food) {
-  return `${t("batch")} #${food.id} · ${food.purchased_date ? t("purchased_date") + " " + dateText(food.purchased_date) : t("purchase_unknown")}`;
+  return `${state.kitchen?.kind === "party" ? (food.kitchen_name || state.kitchen.name) + " · " : ""}${t("batch")} #${food.id} · ${food.purchased_date ? t("purchased_date") + " " + dateText(food.purchased_date) : t("purchase_unknown")}`;
 }
 function foodRow(f) {
-  return `<article class="food-row${pastDate(f) ? " past-date-row" : ""}${expiredUseBy(f) ? " expired-use-by" : ""}" data-food-id="${f.id}"><label class="food-select"><input type="checkbox" data-select="${f.id}" ${selection.has(f.id) ? "checked" : ""} ${f.eligible ? "" : "disabled"} aria-label="${E(t("selected") + " " + f.name)}"><span><strong>${E(f.name)}</strong><span class="stock-quantity">${E(t("remaining"))}: ${E(amountText(f.quantity, f.unit))}</span>${f.food_warning ? `<small class="warning">${E(t("not_food"))}</small>` : ""}<small class="batch-label">${E(batchLine(f))}</small><small class="${!f.eligible && f.status !== "used" ? "warning" : ""}">${E(dateLine(f))}${expiredUseBy(f) ? ` · ${E(t("overdue_critical"))}` : ""}</small><small>${E(t(f.category))} · ${E(t(f.location))}</small></span></label><div class="food-actions">${button("edit", t("edit"), "quiet", `data-id="${f.id}"`)}${f.status === "used" ? button("row-restore", t("restore"), "", 'data-id="' + f.id + '"') : f.food_warning ? "" : button("row-used", t("consume"), "", 'data-id="' + f.id + '"')}${button("row-delete", t("remove_short"), "danger", `data-id="${f.id}"`)}</div></article>`;
+  return `<article class="food-row${pastDate(f) ? " past-date-row" : ""}${expiredUseBy(f) ? " expired-use-by" : ""}" data-food-id="${f.id}"><label class="food-select"><input type="checkbox" data-select="${f.id}" ${selection.has(f.id) ? "checked" : ""} ${f.eligible && !state.kitchen.closed ? "" : "disabled"} aria-label="${E(t("selected") + " " + f.name)}"><span><strong>${E(f.name)}</strong><span class="stock-quantity">${E(t("remaining"))}: ${E(amountText(f.quantity, f.unit))}</span>${f.food_warning ? `<small class="warning">${E(t("not_food"))}</small>` : ""}<small class="batch-label">${E(batchLine(f))}</small><small class="${!f.eligible && f.status !== "used" ? "warning" : ""}">${E(dateLine(f))}${expiredUseBy(f) ? ` · ${E(t("overdue_critical"))}` : ""}</small><small>${E(t(f.category))} · ${E(t(f.location))}</small></span></label><div class="food-actions">${!state.kitchen.closed && f.kitchen_id === state.kitchen.id ? button("edit", t("edit"), "quiet", `data-id="${f.id}"`) : ""}${state.kitchen.closed ? "" : f.status === "used" ? button("row-restore", t("restore"), "", 'data-id="' + f.id + '"') : f.food_warning ? "" : button("row-used", t("consume"), "", 'data-id="' + f.id + '"')}${!state.kitchen.closed && f.kitchen_id === state.kitchen.id ? button("row-delete", t("remove_short"), "danger", `data-id="${f.id}"`) : ""}</div></article>`;
 }
 function foodForm(id) {
+  if (state.kitchen.closed) return `${back()}<h1>${E(t("party_closed"))}</h1>`;
   const f = id ? state.foods.find((f) => f.id === Number(id)) : null;
   if (id && !f) return `${back()}<h1>${E(t("food_not_found"))}</h1>`;
   const key = foodForm.category,
@@ -1510,7 +1562,7 @@ function recipeSwapButton(r) {
     "replace-recipe",
     t("recipe_replace"),
     "",
-    `data-id="${r.id}" ${recipeBusy || recipeResult?.stale || recipeInputsChanged() ? "disabled" : ""}`,
+    `data-id="${r.id}" ${state.kitchen.closed || recipeBusy || recipeResult?.stale || recipeInputsChanged() ? "disabled" : ""}`,
   );
 }
 function pantryHTML() {
@@ -1544,7 +1596,7 @@ function recipesPage(id) {
   if (!selected && recipeOptions.scope === "selected" && !recipeDraft)
     recipeOptions.scope = "all";
   return `<section class="page-heading"><h1>${E(t("recipe_title"))}</h1></section>
-  <form data-form="ai-recipes" class="recipe-controls">
+  <form data-form="ai-recipes" class="recipe-controls"><fieldset class="recipe-fields" ${state.kitchen.closed ? "disabled" : ""}>
     ${recipeFoodsHTML()}
     <label>${E(t("recipe_mode"))}<select name="mode">${["stock_first", "plan", "use_up"].map((v) => option(v, t("mode_" + v), recipeOptions.mode)).join("")}</select></label>
     <p id="mode-hint" class="hint">${E(t("mode_hint_" + recipeOptions.mode))}</p>
@@ -1558,7 +1610,7 @@ function recipesPage(id) {
       <label>${E(t("max_minutes"))}<select name="max_minutes">${option("", t("any_time"), recipeOptions.max_minutes ?? "")}${[15, 30, 45, 60].map((v) => option(v, `${v} ${t("minutes")}`, recipeOptions.max_minutes)).join("")}</select></label>
       <label>${E(t("avoid"))}<input name="avoid" value="${E(recipeOptions.avoid)}" maxlength="120" placeholder="${E(t("avoid_hint"))}"></label>
     </details>
-    ${formError()}<button class="primary full" ${recipeBusy ? "disabled" : ""}>${E(t(recipeBusy ? "generating" : recipeResult ? "regenerate" : "generate"))}</button>
+    ${formError()}<button class="primary full" ${recipeBusy ? "disabled" : ""}>${E(t(recipeBusy ? "generating" : recipeResult ? "regenerate" : "generate"))}</button></fieldset>
   </form><div id="recipe-content" aria-live="polite">${recipeBusy ? `<p class="loading">${E(t("generating"))}</p>` : ""}</div>`;
 }
 function recipeSummary(generation) {
@@ -1640,19 +1692,19 @@ function displayRecipes(id) {
       root.innerHTML = E(t("not_found"));
       return;
     }
-    root.innerHTML = `${back("recipes")}${status}<p class="recipe-source">${E(recipeSummary(recipeResult))}</p>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<article class="recipe-detail"><span class="dish-tag">${E(t("recipe_dish"))} ${r.id} · ${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p>${r.uses.length ? `<h3>${E(t("used_ingredients"))}</h3><ul>${r.uses.map((use) => `<li>${E(use.name)} <span>${E(use.amount)}</span>${typeof use.quantity === "number" ? `<small class="recipe-stock">${E(t("suggested_amount"))}: ${E(amountText(use.quantity, use.unit))}</small>` : ""}<small class="recipe-stock">${E(t("remaining"))}: ${E(amountText(state.foods.find((f) => f.id === use.food_id)?.quantity, use.unit))} · ${E(batchLine({ id: use.food_id, purchased_date: use.purchased_date }))}</small></li>`).join("")}</ul>` : ""}${r.additional.length ? `<h3>${E(t("extra_ingredients"))}</h3><ul>${r.additional.map((item) => `<li>${E(item.name)} ${E(item.amount)}</li>`).join("")}</ul>` : ""}${recipeSeasoningsHTML(r)}${recipePastDatesHTML(r)}<h3>${E(t("steps"))}</h3><ol>${r.steps.map((step) => `<li>${E(step)}</li>`).join("")}</ol>${recipeResult.options?.mode !== "use_up" && r.pairing ? `<h3>${E(t("pairing"))}</h3><p>${E(r.pairing)}</p>` : ""}${r.notes ? `<p class="hint">${E(r.notes)}</p>` : ""}<p class="hint">${E(t("ai_note"))}</p>${recipeSwapButton(r)}${r.uses.length ? button("cooked-recipe", t("cooked"), "primary full", `data-id="${r.id}"`) : `<p class="hint">${E(t("shopping_note"))}</p>`}</article>${shoppingHTML({ ...recipeResult, recipes: [r] })}`;
+    root.innerHTML = `${back("recipes")}${status}<p class="recipe-source">${E(recipeSummary(recipeResult))}</p>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<article class="recipe-detail"><span class="dish-tag">${E(t("recipe_dish"))} ${r.id} · ${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p>${r.uses.length ? `<h3>${E(t("used_ingredients"))}</h3><ul>${r.uses.map((use) => `<li>${E(use.name)} <span>${E(use.amount)}</span>${typeof use.quantity === "number" ? `<small class="recipe-stock">${E(t("suggested_amount"))}: ${E(amountText(use.quantity, use.unit))}</small>` : ""}<small class="recipe-stock">${E(t("remaining"))}: ${E(amountText(state.foods.find((f) => f.id === use.food_id)?.quantity, use.unit))} · ${E(batchLine({ id: use.food_id, purchased_date: use.purchased_date, kitchen_name:use.kitchen_name }))}</small></li>`).join("")}</ul>` : ""}${r.additional.length ? `<h3>${E(t("extra_ingredients"))}</h3><ul>${r.additional.map((item) => `<li>${E(item.name)} ${E(item.amount)}</li>`).join("")}</ul>` : ""}${recipeSeasoningsHTML(r)}${recipePastDatesHTML(r)}<h3>${E(t("steps"))}</h3><ol>${r.steps.map((step) => `<li>${E(step)}</li>`).join("")}</ol>${recipeResult.options?.mode !== "use_up" && r.pairing ? `<h3>${E(t("pairing"))}</h3><p>${E(r.pairing)}</p>` : ""}${r.notes ? `<p class="hint">${E(r.notes)}</p>` : ""}<p class="hint">${E(t("ai_note"))}</p>${recipeSwapButton(r)}${r.uses.length && !state.kitchen.closed ? button("cooked-recipe", t("cooked"), "primary full", `data-id="${r.id}"`) : `<p class="hint">${E(t("shopping_note"))}</p>`}</article>${shoppingHTML({ ...recipeResult, recipes: [r] })}`;
     return;
   }
-  root.innerHTML = `${status}<div class="recipe-source">${E(t("ai_provider"))}<br>${E(recipeSummary(recipeResult))}</div>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<div class="recipe-grid">${recipes.map((r) => `<article class="recipe-card"><div class="recipe-art">${icon(r.kind === "soup" ? "bowl" : r.kind === "meat" ? "fish" : r.kind === "main" ? "bowl" : "leaf")}</div><div class="recipe-copy"><span class="dish-tag">${E(t("recipe_dish"))} ${r.id} · ${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p><p class="recipe-used">${r.uses.map((f) => E(f.name) + (typeof f.quantity === "number" ? " · " + E(amountText(f.quantity, f.unit)) : "")).join(" / ")}</p>${recipeSeasoningsHTML(r, true)}${recipePastDatesHTML(r)}${recipeResult.options?.mode !== "use_up" && r.pairing ? `<p class="hint">${E(r.pairing)}</p>` : ""}<div class="actions">${button("recipe-detail", t("details"), "primary", `data-id="${r.id}"`)}${recipeSwapButton(r)}${r.uses.length ? button("cooked-recipe", t("cooked"), "", `data-id="${r.id}"`) : ""}</div></div></article>`).join("")}</div>${shoppingHTML(recipeResult)}<p class="hint">${E(t("ai_note"))}</p>`;
+  root.innerHTML = `${status}<div class="recipe-source">${E(t("ai_provider"))}<br>${E(recipeSummary(recipeResult))}</div>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<div class="recipe-grid">${recipes.map((r) => `<article class="recipe-card"><div class="recipe-art">${icon(r.kind === "soup" ? "bowl" : r.kind === "meat" ? "fish" : r.kind === "main" ? "bowl" : "leaf")}</div><div class="recipe-copy"><span class="dish-tag">${E(t("recipe_dish"))} ${r.id} · ${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p><p class="recipe-used">${r.uses.map((f) => E(f.name) + (typeof f.quantity === "number" ? " · " + E(amountText(f.quantity, f.unit)) : "")).join(" / ")}</p>${recipeSeasoningsHTML(r, true)}${recipePastDatesHTML(r)}${recipeResult.options?.mode !== "use_up" && r.pairing ? `<p class="hint">${E(r.pairing)}</p>` : ""}<div class="actions">${button("recipe-detail", t("details"), "primary", `data-id="${r.id}"`)}${recipeSwapButton(r)}${r.uses.length && !state.kitchen.closed ? button("cooked-recipe", t("cooked"), "", `data-id="${r.id}"`) : ""}</div></div></article>`).join("")}</div>${shoppingHTML(recipeResult)}<p class="hint">${E(t("ai_note"))}</p>`;
 }
 
 const settingsLink = (path, key) =>
   `<button class="settings-link" data-action="go" data-path="${path}"><span>${E(t(key))}</span><span aria-hidden="true">›</span></button>`;
 function settings() {
-  return `<div class="narrow">${back()}<h1>${E(t("settings"))}</h1>${state.kitchen ? `<h2>${E(t("kitchen"))}</h2><p>${E(state.kitchen.name)} · ${E(t(state.kitchen.role))}</p>${settingsLink("shared", "shared")}` : ""}<h2>${E(t("personal"))}</h2>${settingsLink("preferences", "preferences")}${state.kitchen ? settingsLink("reminders", "reminders") : ""}<h2>${E(t("help"))}</h2>${settingsLink("help", "help")}${state.web_app ? "" : button("install", t("install"), "settings-link")}<p class="hint" id="install-guide" hidden>${E(t("install_note"))}</p>${state.kitchen?.role === "owner" ? `<h2>${E(t("kitchen_data"))}</h2>${button("clear-kitchen", t("clear_kitchen"), "danger full")}` : ""}<hr><p class="hint">${E(t("signout_note"))}</p>${button("sign-out", t("sign_out"), "full")}</div>`;
+  return `<div class="narrow">${back()}<h1>${E(t("settings"))}</h1>${settingsLink("kitchens", "switch_kitchen")}${state.kitchen?.kind === "party" ? settingsLink("party","party") : ""}${state.kitchen ? `<h2>${E(t("kitchen"))}</h2><p>${E(state.kitchen.name)} · ${E(t(state.kitchen.role))}</p>${settingsLink("shared", "shared")}` : ""}<h2>${E(t("personal"))}</h2>${settingsLink("preferences", "preferences")}${state.kitchen ? settingsLink("reminders", "reminders") : ""}<h2>${E(t("help"))}</h2>${settingsLink("help", "help")}${state.web_app ? "" : button("install", t("install"), "settings-link")}<p class="hint" id="install-guide" hidden>${E(t("install_note"))}</p>${state.kitchen?.role === "owner" && !state.kitchen.closed && state.kitchen.kind !== "party" ? `<h2>${E(t("kitchen_data"))}</h2>${button("clear-kitchen", t("clear_kitchen"), "danger full")}` : ""}<hr><p class="hint">${E(t("signout_note"))}</p>${button("sign-out", t("sign_out"), "full")}</div>`;
 }
 function shared() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("shared"))}</h1><h2>${E(state.kitchen.name)}</h2><h3>${E(t("members"))}</h3><ul class="member-list">${state.members.map((m) => `<li><span>${E(m.email)}<small>${E(t(m.role))}</small></span>${state.kitchen.role === "owner" && m.role === "editor" ? button("remove-member", t("remove"), "danger", `data-id="${m.id}"`) : ""}</li>`).join("")}</ul>${state.kitchen.role === "owner" ? `<h3>${E(t("invite_editor"))}</h3><p>${E(t("invite_policy"))}</p>${button("invite", t("invite_editor"), "primary")}<div id="invite-output" aria-live="polite"></div>` : `<p>${E(t("preview_note"))}</p>${button("leave", t("leave"), "danger")}`}</div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("shared"))}</h1><h2>${E(state.kitchen.name)}</h2><h3>${E(t("members"))}</h3><ul class="member-list">${state.members.map((m) => `<li><span>${E(m.email)}<small>${E(t(m.role))}</small></span>${state.kitchen.role === "owner" && m.role === "editor" ? button("remove-member", t("remove"), "danger", `data-id="${m.id}"`) : ""}</li>`).join("")}</ul>${state.kitchen.closed ? "" : state.kitchen.role === "owner" ? `<h3>${E(t("invite_editor"))}</h3><p>${E(t(state.kitchen.kind === "party" ? "party_invite_policy" : "invite_policy"))}</p>${button("invite", t("invite_editor"), "primary")}<div id="invite-output" aria-live="polite"></div>` : `<p>${E(t("preview_note"))}</p>${button("leave", t("leave"), "danger")}`}</div>`;
 }
 function preferences() {
   const p = state.preferences;
@@ -1702,10 +1754,10 @@ async function loadPushStatus() {
 
 function reminders() {
   const p = state.preferences;
-  return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form><section id="push-panel" class="push-panel" aria-label="${E(t("push_title"))}">${pushPanelHTML()}</section></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form><p class="hint">${E(t("push_kitchen_scope"))}</p><section id="push-panel" class="push-panel" aria-label="${E(t("push_title"))}">${pushPanelHTML()}</section></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 1.2</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 1.3</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
 async function confirmAction(title, message, typed = false) {
   const dialog = $("#confirm");
@@ -1808,11 +1860,25 @@ document.addEventListener("submit", async (event) => {
         go("kitchen");
         render();
         break;
-      case "create-kitchen":
-        await api("kitchen/create", data);
+      case "create-party":
+      case "create-kitchen": {
+        const result = await api("kitchen/create", {...data,
+          kind: form.dataset.form === "create-party" ? "party" : "home",
+          hours: Number(data.hours || 24),
+          source_ids: form.dataset.form === "create-party" ? new FormData(form).getAll("source_ids").map(Number) : [],
+        });
+        activeKitchenId = result.kitchen_id;
+        contextEpoch++;
+        switchingKitchen = true;
         await refresh(false);
         go("kitchen");
         render();
+        switchingKitchen = false;
+        break;
+      }
+      case "party-source":
+        await api("party/source/add", {source_id:Number(data.source_id),confirmed:true});
+        await refresh();
         break;
       case "preview-invite":
         invitePreview = {
@@ -1867,7 +1933,7 @@ document.addEventListener("submit", async (event) => {
     recipeBusy = false;
     error.textContent = errorText(err);
     if (form.dataset.form === "ai-recipes") displayRecipes();
-    if (["no_kitchen", "unauthorized"].includes(err.code))
+    if (["no_kitchen", "unauthorized", "party_ended"].includes(err.code))
       await refresh().catch(() => {});
   } finally {
     delete form.dataset.classifyingSubmit;
@@ -1882,6 +1948,28 @@ document.addEventListener("click", async (event) => {
   b.disabled = true;
   try {
     switch (a) {
+      case "switch-kitchen":
+        await api("kitchen/switch", {kitchen_id:Number(b.dataset.id)});
+        activeKitchenId = Number(b.dataset.id);
+        contextEpoch++;
+        switchingKitchen = true;
+        await refresh(false);
+        switchingKitchen = false;
+        go("kitchen");
+        render();
+        break;
+      case "party-unshare":
+        if (await confirmAction(t("unshare_source"),t("unshare_confirm"))) {
+          await api("party/source/remove",{source_id:Number(b.dataset.id),confirmed:true});
+          await refresh();
+        }
+        break;
+      case "party-end":
+        if (await confirmAction(t("end_party"),t("end_party_confirm"))) {
+          await api("party/end",{confirmed:true});
+          await refresh();
+        }
+        break;
       case "enable-push":
       case "disable-push":
       case "test-push":
@@ -2079,18 +2167,25 @@ document.addEventListener("click", async (event) => {
       case "retry":
         await refresh();
         break;
-      case "accept-invite":
-        await api("invitation/accept", {
+      case "accept-invite": {
+        const joined = await api("invitation/accept", {
           code: invitePreview.code,
           confirmed: true,
         });
         invitePreview = null;
+        activeKitchenId = joined.kitchen_id;
+        contextEpoch++;
+        switchingKitchen = true;
         await refresh(false);
         go("kitchen");
         render();
+        switchingKitchen = false;
         break;
+      }
       case "sign-out":
         await api("logout", {});
+        activeKitchenId = null;
+        contextEpoch++;
         selection.clear();
         storeSelection();
         await refresh(false);
@@ -2141,7 +2236,7 @@ document.addEventListener("click", async (event) => {
           await refresh();
         break;
       case "invite": {
-        if (!(await confirmAction(t("invite_editor"), t("invite_policy"))))
+        if (!(await confirmAction(t("invite_editor"), t(state.kitchen.kind === "party" ? "party_invite_policy" : "invite_policy"))))
           break;
         const r = await api("invitation/replace", {});
         $("#invite-output").innerHTML =
@@ -2192,7 +2287,7 @@ document.addEventListener("click", async (event) => {
     const error = b.closest("form")?.querySelector(".error");
     if (error) error.textContent = errorText(err);
     else notify(errorText(err));
-    if (["no_kitchen", "unauthorized"].includes(err.code))
+    if (["no_kitchen", "unauthorized", "party_ended"].includes(err.code))
       await refresh().catch(() => {});
   } finally {
     b.disabled = false;
@@ -2381,6 +2476,7 @@ async function consumeFoods(foods, suggested = new Map()) {
           ? recommendation.quantity
           : "";
       const detail = [
+        state.kitchen?.kind === "party" ? f.kitchen_name : "",
         typeof f.quantity === "number"
           ? `${t("left_short")} ${amountText(f.quantity, f.unit)}`
           : t("quantity_unknown"),
@@ -2534,7 +2630,7 @@ async function consumeFoods(foods, suggested = new Map()) {
       )
         ? t("consumption_conflict")
         : errorText(err);
-      if (["no_kitchen", "unauthorized"].includes(err.code))
+      if (["no_kitchen", "unauthorized", "party_ended"].includes(err.code))
         await refresh(false).catch(() => {});
     } finally {
       busy = false;

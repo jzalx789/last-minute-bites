@@ -16,7 +16,7 @@ MOCK=r'''(()=>{
 })();'''
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox']);ctx=b.new_context(viewport={'width':390,'height':844},extra_http_headers={'CF-Connecting-IP':'synthetic-push-browser'});ctx.add_init_script(MOCK);page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
- register(page,base,'push-ui-'+uuid.uuid4().hex[:10]+'@example.test');page.locator('[name=name]').fill('Notification UI');page.locator('[data-form=create-kitchen] button').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
+ register(page,base,'push-ui-'+uuid.uuid4().hex[:10]+'@example.test');page.locator('[data-form=create-kitchen] [name=name]').fill('Notification UI');page.locator('[data-form=create-kitchen] button').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
  navigate(page,'reminders');expect(page.locator('#push-status')).to_contain_text('not enabled');assert page.evaluate('__pushPermissionCalls()')==0
  page.locator('[data-action=enable-push]').click();expect(page.locator('#push-status')).to_contain_text('enabled on this device');assert page.evaluate('__pushPermissionCalls()')==1
  page.locator('[data-action=test-push]').click();expect(page.locator('#toast')).to_contain_text('Test sent');before=read_state(page)['foods'];page.reload();expect(page.locator('#push-status')).to_contain_text('enabled on this device');assert page.evaluate('__pushPermissionCalls()')==0
