@@ -14,6 +14,8 @@ import {
   avoidTerms,
   matchesAvoid,
   RECIPE_MODES,
+  PANTRY_STAPLES,
+  pantrySelection,
   priorityFoodIds,
   RECIPE_COUNTS,
   replacementInput,
@@ -186,7 +188,7 @@ export class KitchenStore extends DurableObject {
         if (url.pathname === "/healthz") {
           this.one("SELECT COUNT(*) AS count FROM users");
           return respond(
-            { status: "ok", version: "1.1", storage: "persistent-sqlite" },
+            { status: "ok", version: "1.2", storage: "persistent-sqlite" },
             200,
             null,
             secure,
@@ -662,7 +664,7 @@ export class KitchenStore extends DurableObject {
           const scope = auth.data.scope ?? "selected";
           check(["selected", "all"].includes(scope));
           auth.data.scope = scope;
-          if (mode === "use_up") check(allFoods.length > 0, "no_food");
+          if (mode !== "plan") check(allFoods.length > 0, "no_food");
           check(allFoods.length <= 80, "invalid_input");
           const servings = auth.data.servings ?? 2,
             portion = auth.data.portion ?? "standard",
@@ -673,7 +675,7 @@ export class KitchenStore extends DurableObject {
           if (maxMinutes !== null) integer(maxMinutes, 5, 180);
           const terms = avoidTerms(avoid);
           const foods = allFoods.filter((f) => !matchesAvoid(f, terms));
-          if (mode === "use_up") check(foods.length > 0, "preference_conflict");
+          if (mode !== "plan") check(foods.length > 0, "preference_conflict");
           check(STYLES.includes(auth.data.style ?? "auto"));
           check(RECIPE_COUNTS.includes(auth.data.count ?? 2));
           const selected =
@@ -685,6 +687,7 @@ export class KitchenStore extends DurableObject {
               selected.length <= 80 &&
               selected.every(Number.isSafeInteger),
           );
+          check(selected.every((id) => allFoods.some((f) => f.id === id)));
           const valid = selected.filter((id) => foods.some((f) => f.id === id));
           if (auth.data.use_all === true)
             check(
@@ -692,14 +695,17 @@ export class KitchenStore extends DurableObject {
               "split_foods",
               400,
             );
-          if (mode === "use_up")
+          if (mode !== "plan")
             check(
               valid.length > 0,
               terms.length ? "preference_conflict" : "no_food",
             );
           const preference = auth.data.preference ?? "";
           check(typeof preference === "string" && preference.length <= 120);
+          const pantry = pantrySelection(auth.data.pantry_staples, avoid, input.language);
           Object.assign(input, {
+            pantry_staples: pantry.ids,
+            pantry: mode === "use_up" ? [] : pantry.pantry,
             foods: foods
               .filter(
                 (f) => auth.data.scope !== "selected" || valid.includes(f.id),
@@ -726,11 +732,11 @@ export class KitchenStore extends DurableObject {
             avoid,
             mode,
             scope,
-            require_selected: scope === "selected" && valid.length > 0,
+            require_selected: valid.length > 0,
             use_all: auth.data.use_all === true,
             exact_count: auth.data.exact_count === true,
             priority_ids:
-              mode === "use_up"
+              mode !== "plan"
                 ? priorityFoodIds(
                     foods,
                     valid,
@@ -877,6 +883,7 @@ export class KitchenStore extends DurableObject {
           versions: Object.fromEntries(current.map((f) => [f.id, f.version])),
           options: {
             mode: planInput.mode,
+            pantry_staples: planInput.pantry_staples,
             style: planInput.style,
             count: planInput.count,
             scope: planInput.scope,
@@ -974,6 +981,7 @@ export class KitchenStore extends DurableObject {
         foods: [],
         members: [],
         ingredients,
+        pantry_staples: PANTRY_STAPLES.map((s) => ({id:s.id,name:preferences.language === "zh-Hant" ? s.zh : s.name})),
       });
       if (member) {
         state.kitchen = {

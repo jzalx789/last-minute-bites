@@ -496,16 +496,26 @@ Object.assign(words, {
     "Your selected food conflicts with your preferences. Adjust the selection or preferences.",
     "所選食材與偏好不符，請調整食材或條件。",
   ],
-  recipe_mode: ["What is your goal?", "這次想做甚麼？"],
-  mode_use_up: ["Use up stock · no shopping", "清庫存・不另外採購"],
-  mode_plan: ["Design a meal · shopping allowed", "設計一餐・可以添購"],
+  recipe_mode: ["Generation mode", "生成模式"],
+  mode_stock_first: ["1. Stock first · Recommended", "1. 優先清理庫存・推薦"],
+  mode_hint_stock_first: ["Use stock as the main ingredients, with home basics and at most two new ingredients for the whole meal.", "以庫存為主，可用家中常備調味料；整餐最多補購兩種新食材。"],
+  pantry_title: ["Home basics", "家中常備調味料"],
+  pantry_hint: ["Enabled by default for modes 1 and 2. Uncheck anything you do not have. These need no stock records and are not deducted. Dietary exclusions take priority; check product ingredients.", "模式 1、2 預設可用；沒有的可取消。無需建立庫存、不扣數量；忌口條件優先，請確認產品成分。"],
+  pantry_used: ["Home basics · not tracked", "常備調味料・不扣庫存"],
+  taste_label: ["Taste / dish preferences", "口味／想吃的菜式"],
+  taste_placeholder: ["e.g. spicy, pan-seared salmon, Cantonese", "例如：想吃辣、香煎三文魚、港式"],
+  purchase_limit: ["Could not keep purchases small. Try again or choose flexible mode.", "未能符合少量補購限制，可再生成或選完全自由模式。"],
+  no_new_purchases: ["No extra purchases needed for these dishes", "這次菜式不需另外採購"],
+  recipe_past_dates: ["Uses food past a label or reminder date. Check the label, storage and condition first; leave it out if unsure.", "包含已過標示或提醒日期的食材；請先確認標示、儲存及實際狀態，不確定就不要使用。"],
+  mode_use_up: ["3. Strict stock only", "3. 安全局限・只用庫存"],
+  mode_plan: ["2. Flexible meal", "2. 完全自由・可添購"],
   mode_hint_use_up: [
-    "Prioritise food approaching expiry, using stock only. Small stocks may only make sides or snacks.",
-    "優先使用快到期食材，只用現有庫存；份量少時可能只夠小菜。",
+    "Only recorded inventory and tap water. No assumed seasoning or purchases, even with one ingredient.",
+    "只用已登記庫存及清水；不假設調味料、不添購，只有一種食材也照此限制。",
   ],
   mode_hint_plan: [
-    "Plan for your group and preferences. Extra ingredients appear in the shopping list.",
-    "按人數與偏好設計菜式，缺少食材會列入採購清單。",
+    "Build around your selected food and freely add ingredients; extras appear in the shopping list.",
+    "圍繞所選食材自由搭配，可使用庫存以外的食材；新增食材列入採購清單。",
   ],
   shopping_list: ["Shopping / preparation list", "待採購／準備清單"],
   shopping_note: [
@@ -513,8 +523,8 @@ Object.assign(words, {
     "以下列出各菜式所需份量；買好後請先加入庫存，再記錄消耗。",
   ],
   no_shopping: [
-    "Uses stock only · no extra purchases",
-    "只用現有庫存・不用添購",
+    "Only recorded stock and tap water · no extra purchases",
+    "只用已登記庫存及清水・不添購",
   ],
   quantity: ["Quantity remaining", "剩餘數量"],
   unit: ["Unit", "單位"],
@@ -784,7 +794,8 @@ const defaultRecipeOptions = () => ({
   count: 2,
   scope: "selected",
   preference: "",
-  mode: "use_up",
+  mode: "stock_first",
+  pantry_staples: null,
   servings: 2,
   portion: "standard",
   max_minutes: null,
@@ -1412,6 +1423,7 @@ function readRecipeOptions() {
     scope: d.scope,
     preference: d.preference,
     mode: d.mode,
+    pantry_staples: [...form.querySelectorAll('[name="pantry_staples"]:checked')].map((el) => el.value),
     servings: Number(d.servings),
     portion: d.portion,
     max_minutes: d.max_minutes ? Number(d.max_minutes) : null,
@@ -1469,7 +1481,9 @@ function recipeInputsChanged() {
   const options = readRecipeOptions(),
     saved = recipeResult.options || {};
   const changed = Object.keys(options).some(
-    (k) => k !== "exact_count" && (options[k] ?? "") !== (saved[k] ?? ""),
+    (k) => k !== "exact_count" && (Array.isArray(options[k])
+      ? JSON.stringify(options[k]) !== JSON.stringify(saved[k] || [])
+      : (options[k] ?? "") !== (saved[k] ?? "")),
   );
   const ids = chosenRecipeFoods()
     .map((f) => f.id)
@@ -1499,6 +1513,30 @@ function recipeSwapButton(r) {
     `data-id="${r.id}" ${recipeBusy || recipeResult?.stale || recipeInputsChanged() ? "disabled" : ""}`,
   );
 }
+function pantryHTML() {
+  const staples = state.pantry_staples || [];
+  const selected = recipeOptions.pantry_staples ?? staples.map((s) => s.id);
+  return `<details class="pantry-preferences" ${recipeOptions.mode === "use_up" ? "hidden" : ""}><summary>${E(t("pantry_title"))} <span id="pantry-count" class="food-count">${selected.length}</span></summary><p class="hint">${E(t("pantry_hint"))}</p><div class="pantry-options">${staples.map((s) => `<label class="check"><input type="checkbox" name="pantry_staples" value="${E(s.id)}" ${selected.includes(s.id) ? "checked" : ""}>${E(s.name)}</label>`).join("")}</div></details>`;
+}
+function updatePantryUI() {
+  const form = $('[data-form="ai-recipes"]');
+  if (!form) return;
+  const details = $(".pantry-preferences", form);
+  if (details) details.hidden = form.elements.mode.value === "use_up";
+  const count = $("#pantry-count", form);
+  if (count) count.textContent = form.querySelectorAll('[name="pantry_staples"]:checked').length;
+}
+function recipeSeasoningsHTML(recipe, compact = false) {
+  const items = recipe.seasonings || [];
+  if (!items.length) return "";
+  return compact
+    ? `<p class="recipe-basics"><strong>${E(t("pantry_title"))}:</strong> ${items.map((i) => E(i.name)).join(" · ")}</p>`
+    : `<section class="recipe-seasonings"><h3>${E(t("pantry_used"))}</h3><ul>${items.map((i) => `<li>${E(i.name)} · ${E(i.amount)}</li>`).join("")}</ul></section>`;
+}
+function recipePastDatesHTML(recipe) {
+  return recipe.uses.some((use) => state.foods.some((f) => f.id === use.food_id && pastDate(f)))
+    ? `<p class="warning recipe-date-note">${E(t("recipe_past_dates"))}</p>` : "";
+}
 function recipesPage(id) {
   if (id)
     return `<div class="narrow"><div id="recipe-content" aria-live="polite"></div></div>`;
@@ -1508,16 +1546,17 @@ function recipesPage(id) {
   return `<section class="page-heading"><h1>${E(t("recipe_title"))}</h1></section>
   <form data-form="ai-recipes" class="recipe-controls">
     ${recipeFoodsHTML()}
-    <label>${E(t("recipe_mode"))}<select name="mode">${["use_up", "plan"].map((v) => option(v, t("mode_" + v), recipeOptions.mode)).join("")}</select></label>
+    <label>${E(t("recipe_mode"))}<select name="mode">${["stock_first", "plan", "use_up"].map((v) => option(v, t("mode_" + v), recipeOptions.mode)).join("")}</select></label>
     <p id="mode-hint" class="hint">${E(t("mode_hint_" + recipeOptions.mode))}</p>
     <div class="two-fields recipe-dish-fields"><label>${E(t("dish_style"))}<select name="style">${["auto", "mixed", "cold", "soup", "main", "meat", "vegetable"].map((v) => option(v, t("style_" + v), recipeOptions.style)).join("")}</select></label><label>${E(t("dish_count"))}<select name="count">${[1, 2, 3, 4].map((v) => option(v, String(v), recipeOptions.count)).join("")}</select></label></div>
     <div class="two-fields"><label>${E(t("diners"))}<input name="servings" type="number" min="1" max="12" step="1" inputmode="numeric" value="${recipeOptions.servings}" required></label><label>${E(t("per_person_portion"))}<select name="portion">${["light", "standard", "hearty"].map((v) => option(v, t("portion_" + v), recipeOptions.portion)).join("")}</select></label></div>
     <label>${E(t("scope"))}<select name="scope"><option value="selected" ${recipeOptions.scope === "selected" ? "selected" : ""}>${E(t("scope_selected"))} (${selected})</option><option value="all" ${recipeOptions.scope === "all" ? "selected" : ""}>${E(t("scope_all"))}</option></select></label>
     <label class="check"><input type="checkbox" name="use_all" ${recipeOptions.use_all ? "checked" : ""}>${E(t("recipe_use_all"))}</label>
+    <label>${E(t("taste_label"))}<input name="preference" value="${E(recipeOptions.preference)}" maxlength="120" placeholder="${E(t("taste_placeholder"))}"></label>
+    ${pantryHTML()}
     <details class="recipe-preferences"><summary>${E(t("more_preferences"))}</summary>
       <label>${E(t("max_minutes"))}<select name="max_minutes">${option("", t("any_time"), recipeOptions.max_minutes ?? "")}${[15, 30, 45, 60].map((v) => option(v, `${v} ${t("minutes")}`, recipeOptions.max_minutes)).join("")}</select></label>
       <label>${E(t("avoid"))}<input name="avoid" value="${E(recipeOptions.avoid)}" maxlength="120" placeholder="${E(t("avoid_hint"))}"></label>
-      <label>${E(t("preference"))}<input name="preference" value="${E(recipeOptions.preference)}" maxlength="120" placeholder="${E(t("preference_hint"))}"></label>
     </details>
     ${formError()}<button class="primary full" ${recipeBusy ? "disabled" : ""}>${E(t(recipeBusy ? "generating" : recipeResult ? "regenerate" : "generate"))}</button>
   </form><div id="recipe-content" aria-live="polite">${recipeBusy ? `<p class="loading">${E(t("generating"))}</p>` : ""}</div>`;
@@ -1532,7 +1571,7 @@ function shoppingHTML(generation) {
   const items = generation.recipes.flatMap((r) =>
     r.additional.map((item) => ({ ...item, recipe: r.title })),
   );
-  if (!items.length) return "";
+  if (!items.length) return `<p class="recipe-source">${E(t("no_new_purchases"))}</p>`;
   return `<section class="shopping-list"><h2>${E(t("shopping_list"))}</h2><p class="hint">${E(t("shopping_note"))}</p><ul>${items.map((item) => `<li><strong>${E(item.name)} ${E(item.amount)}</strong><small>${E(item.recipe)}</small></li>`).join("")}</ul></section>`;
 }
 async function loadRecipes(id) {
@@ -1555,7 +1594,7 @@ async function loadRecipes(id) {
       recipeOptions = {
         ...defaultRecipeOptions(),
         ...saved,
-        mode: saved.mode || "plan",
+        mode: Object.hasOwn(saved, "pantry_staples") ? saved.mode || "stock_first" : "stock_first",
         servings: saved.servings || recipeResult.recipes[0]?.servings || 2,
         count: saved.count || recipeResult.recipes.length,
         use_all: saved.use_all ?? false,
@@ -1601,10 +1640,10 @@ function displayRecipes(id) {
       root.innerHTML = E(t("not_found"));
       return;
     }
-    root.innerHTML = `${back("recipes")}${status}<p class="recipe-source">${E(recipeSummary(recipeResult))}</p>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<article class="recipe-detail"><span class="dish-tag">${E(t("recipe_dish"))} ${r.id} · ${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p>${r.uses.length ? `<h3>${E(t("used_ingredients"))}</h3><ul>${r.uses.map((use) => `<li>${E(use.name)} <span>${E(use.amount)}</span>${typeof use.quantity === "number" ? `<small class="recipe-stock">${E(t("suggested_amount"))}: ${E(amountText(use.quantity, use.unit))}</small>` : ""}<small class="recipe-stock">${E(t("remaining"))}: ${E(amountText(state.foods.find((f) => f.id === use.food_id)?.quantity, use.unit))} · ${E(batchLine({ id: use.food_id, purchased_date: use.purchased_date }))}</small></li>`).join("")}</ul>` : ""}${r.additional.length ? `<h3>${E(t("extra_ingredients"))}</h3><ul>${r.additional.map((item) => `<li>${E(item.name)} ${E(item.amount)}</li>`).join("")}</ul>` : ""}<h3>${E(t("steps"))}</h3><ol>${r.steps.map((step) => `<li>${E(step)}</li>`).join("")}</ol>${recipeResult.options?.mode !== "use_up" && r.pairing ? `<h3>${E(t("pairing"))}</h3><p>${E(r.pairing)}</p>` : ""}${r.notes ? `<p class="hint">${E(r.notes)}</p>` : ""}<p class="hint">${E(t("ai_note"))}</p>${recipeSwapButton(r)}${r.uses.length ? button("cooked-recipe", t("cooked"), "primary full", `data-id="${r.id}"`) : `<p class="hint">${E(t("shopping_note"))}</p>`}</article>${shoppingHTML({ ...recipeResult, recipes: [r] })}`;
+    root.innerHTML = `${back("recipes")}${status}<p class="recipe-source">${E(recipeSummary(recipeResult))}</p>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<article class="recipe-detail"><span class="dish-tag">${E(t("recipe_dish"))} ${r.id} · ${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p>${r.uses.length ? `<h3>${E(t("used_ingredients"))}</h3><ul>${r.uses.map((use) => `<li>${E(use.name)} <span>${E(use.amount)}</span>${typeof use.quantity === "number" ? `<small class="recipe-stock">${E(t("suggested_amount"))}: ${E(amountText(use.quantity, use.unit))}</small>` : ""}<small class="recipe-stock">${E(t("remaining"))}: ${E(amountText(state.foods.find((f) => f.id === use.food_id)?.quantity, use.unit))} · ${E(batchLine({ id: use.food_id, purchased_date: use.purchased_date }))}</small></li>`).join("")}</ul>` : ""}${r.additional.length ? `<h3>${E(t("extra_ingredients"))}</h3><ul>${r.additional.map((item) => `<li>${E(item.name)} ${E(item.amount)}</li>`).join("")}</ul>` : ""}${recipeSeasoningsHTML(r)}${recipePastDatesHTML(r)}<h3>${E(t("steps"))}</h3><ol>${r.steps.map((step) => `<li>${E(step)}</li>`).join("")}</ol>${recipeResult.options?.mode !== "use_up" && r.pairing ? `<h3>${E(t("pairing"))}</h3><p>${E(r.pairing)}</p>` : ""}${r.notes ? `<p class="hint">${E(r.notes)}</p>` : ""}<p class="hint">${E(t("ai_note"))}</p>${recipeSwapButton(r)}${r.uses.length ? button("cooked-recipe", t("cooked"), "primary full", `data-id="${r.id}"`) : `<p class="hint">${E(t("shopping_note"))}</p>`}</article>${shoppingHTML({ ...recipeResult, recipes: [r] })}`;
     return;
   }
-  root.innerHTML = `${status}<div class="recipe-source">${E(t("ai_provider"))}<br>${E(recipeSummary(recipeResult))}</div>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<div class="recipe-grid">${recipes.map((r) => `<article class="recipe-card"><div class="recipe-art">${icon(r.kind === "soup" ? "bowl" : r.kind === "meat" ? "fish" : r.kind === "main" ? "bowl" : "leaf")}</div><div class="recipe-copy"><span class="dish-tag">${E(t("recipe_dish"))} ${r.id} · ${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p><p class="recipe-used">${r.uses.map((f) => E(f.name) + (typeof f.quantity === "number" ? " · " + E(amountText(f.quantity, f.unit)) : "")).join(" / ")}</p>${recipeResult.options?.mode !== "use_up" && r.pairing ? `<p class="hint">${E(r.pairing)}</p>` : ""}<div class="actions">${button("recipe-detail", t("details"), "primary", `data-id="${r.id}"`)}${recipeSwapButton(r)}${r.uses.length ? button("cooked-recipe", t("cooked"), "", `data-id="${r.id}"`) : ""}</div></div></article>`).join("")}</div>${shoppingHTML(recipeResult)}<p class="hint">${E(t("ai_note"))}</p>`;
+  root.innerHTML = `${status}<div class="recipe-source">${E(t("ai_provider"))}<br>${E(recipeSummary(recipeResult))}</div>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<div class="recipe-grid">${recipes.map((r) => `<article class="recipe-card"><div class="recipe-art">${icon(r.kind === "soup" ? "bowl" : r.kind === "meat" ? "fish" : r.kind === "main" ? "bowl" : "leaf")}</div><div class="recipe-copy"><span class="dish-tag">${E(t("recipe_dish"))} ${r.id} · ${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p><p class="recipe-used">${r.uses.map((f) => E(f.name) + (typeof f.quantity === "number" ? " · " + E(amountText(f.quantity, f.unit)) : "")).join(" / ")}</p>${recipeSeasoningsHTML(r, true)}${recipePastDatesHTML(r)}${recipeResult.options?.mode !== "use_up" && r.pairing ? `<p class="hint">${E(r.pairing)}</p>` : ""}<div class="actions">${button("recipe-detail", t("details"), "primary", `data-id="${r.id}"`)}${recipeSwapButton(r)}${r.uses.length ? button("cooked-recipe", t("cooked"), "", `data-id="${r.id}"`) : ""}</div></div></article>`).join("")}</div>${shoppingHTML(recipeResult)}<p class="hint">${E(t("ai_note"))}</p>`;
 }
 
 const settingsLink = (path, key) =>
@@ -1666,7 +1705,7 @@ function reminders() {
   return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form><section id="push-panel" class="push-panel" aria-label="${E(t("push_title"))}">${pushPanelHTML()}</section></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 1.1</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 1.2</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
 async function confirmAction(title, message, typed = false) {
   const dialog = $("#confirm");
@@ -1727,7 +1766,7 @@ document.addEventListener("submit", async (event) => {
         if (
           recipeOptions.scope === "selected" &&
           !selection.size &&
-          recipeOptions.mode === "use_up"
+          recipeOptions.mode !== "plan"
         )
           throw { code: "recipe_empty_choice" };
         recipeSeq++;
@@ -2170,6 +2209,8 @@ document.addEventListener("change", (e) => {
     else if (el.name === "avoid") updateRecipeFoods();
     else if (recipeResult) displayRecipes(route()[1]);
   }
+  if (el.closest('[data-form="ai-recipes"]') && (el.name === "mode" || el.name === "pantry_staples"))
+    updatePantryUI();
   if (el.matches("[data-select]")) {
     const id = Number(el.dataset.select);
     if (el.checked) selection.add(id);

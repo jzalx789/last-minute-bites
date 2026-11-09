@@ -37,6 +37,7 @@ jobs:
           python tests/stock_api_contract.py
           python tests/classification_api.py
           python tests/recipe_builder_api.py
+          python tests/recipe_modes_api.py
           python tests/push_api_contract.py
           python tests/web_browser.py
           python tests/auth_keyboard_browser.py
@@ -47,6 +48,7 @@ jobs:
           python tests/personal_dates_browser.py
           python tests/expiry_alert_browser.py
           python tests/recipe_builder_browser.py
+          python tests/recipe_modes_browser.py
           python tests/push_browser.py
           python tests/push_service_worker.py
           LMB_WEB_ENGINE=webkit python tests/auth_keyboard_browser.py
@@ -57,3 +59,4 @@ jobs:
           LMB_WEB_ENGINE=webkit python tests/personal_dates_browser.py
           LMB_WEB_ENGINE=webkit python tests/expiry_alert_browser.py
           LMB_WEB_ENGINE=webkit python tests/recipe_builder_browser.py
+          LMB_WEB_ENGINE=webkit python tests/recipe_modes_browser.py

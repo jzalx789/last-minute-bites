@@ -1,7 +1,7 @@
 // This named RPC entrypoint runs in the existing CareSync Worker so its configured
 // DeepSeek credential stays there. No public HTTP endpoint exposes this service.
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { recipePrompt, validatePhoto, validateRecipes } from "./ai.js";
+import { recipePrompt, validatePhoto, validateRecipes, pantrySelection } from "./ai.js";
 import { validateFoodAssessment } from "./food-classifier.js";
 
 async function completion(env, messages, maxTokens, timeout = 45000) {
@@ -112,11 +112,14 @@ export class FoodAI extends WorkerEntrypoint {
       date_source: f.date_source ?? "unknown",
       date_kind: f.date_kind ?? "unspecified",
     }));
+    const pantry = pantrySelection(input.pantry_staples, input.avoid || "", input.language);
     const normalized = {
       ...input,
       mode: input.mode ?? "use_up",
       style: input.style ?? "auto",
       servings: input.servings ?? 2,
+      pantry_staples: pantry.ids,
+      pantry: (input.mode ?? "use_up") === "use_up" ? [] : pantry.pantry,
     };
     const messages = [
       { role: "system", content: recipePrompt(normalized) },
@@ -152,7 +155,7 @@ export class FoodAI extends WorkerEntrypoint {
     // One bounded model correction. Invalid drafts are never shown or deducted.
     messages.push({
       role: "user",
-      content: `Correct the response. Validation failed: ${reason || "schema"}. Return complete concise JSON with 2–5 practical steps per dish. Obey exact dish count, selected-ID coverage, exclude_titles and excluded_kinds when supplied. Keep the requested diners and time limit. Across ALL dishes, never exceed any batch quantity. In use_up mode additional must be empty, use priority_ids, and never assume oil/salt. Use EXACT inventory units; do not convert unknown pack sizes. In plan mode list all missing purchases. Follow every original constraint.`,
+      content: `Correct the response. Validation failed: ${reason || "schema"}. Return complete concise JSON with 2–5 practical steps per dish. Obey exact dish count, selected-ID coverage, exclude_titles and excluded_kinds when supplied. Keep the requested diners and time limit. Across ALL dishes, never exceed any batch quantity. In strict use_up mode both additional and seasonings must be empty. In stock_first mode each dish must use selected stock, honour priority_ids, and the meal may purchase at most two distinct ingredients including purchase_reservations. In plan mode keep selected stock central while allowing extra purchases. In non-strict modes only approved pantry IDs belong in seasonings; these are not purchases. Honour requested tastes using those items. Use EXACT inventory units; do not convert unknown pack sizes. In plan mode list all missing purchases. Follow every original constraint.`,
     });
     result = await completion(
       this.env,

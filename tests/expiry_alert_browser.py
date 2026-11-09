@@ -15,7 +15,7 @@ with sync_playwright() as p:
  for name,source,kind,date in [('Milk','printed','use_by',past),('Egg','printed','best_before',past),('薯片','personal','unspecified',past),('Tofu','printed','unspecified',past),('Spinach','printed','use_by',today),('Rice','unknown','unspecified',None),('Tomato','printed','best_before',past)]:
   r=request(page,'food/create',dict(name=name,quantity=1,unit='pcs',date_source=source,date_kind=kind,effective_date=date));assert r['status']==200,r;foods[name]=r['body']
  r=request(page,'food/batch',dict(action='used',items=[dict(id=foods['Tomato']['id'],version=foods['Tomato']['version'])],confirmed=True));assert r['status']==200,r
- request(page,'preferences',dict(reminders=False));page.reload()
+ request(page,'preferences',dict(reminders=False));page.wait_for_load_state("networkidle");page.reload()
  alert=page.locator('.expiry-alert');expect(alert).to_be_visible();expect(alert).to_have_attribute('role','alert');expect(alert.locator('.expiry-count')).to_have_text('4');expect(alert).to_contain_text('Milk');expect(alert).to_contain_text('do not eat')
  expect(page.locator('.reminder-banner')).to_have_count(0)
  page.screenshot(path=str(artifacts/'past-use-by-phone.png'))
@@ -26,11 +26,11 @@ with sync_playwright() as p:
  expect(page.locator('.food-row').filter(has_text='薯片')).to_contain_text('Past your reminder date')
  page.locator('#inventory-status').select_option('used');expect(page.locator('.food-row')).to_have_count(1);click(page,'review-overdue');expect(page.locator('.food-row')).to_have_count(4)
  # Warnings remain readable on narrow and large-text screens.
- request(page,'preferences',dict(language='zh-Hant',text_size='large'));page.reload();expect(alert).to_contain_text('請勿食用')
+ request(page,'preferences',dict(language='zh-Hant',text_size='large'));page.wait_for_load_state("networkidle");page.reload();expect(alert).to_contain_text('請勿食用')
  for width in [280,320,390,717]:
   page.set_viewport_size({'width':width,'height':844});assert page.locator('#main').evaluate('(e)=>e.scrollWidth<=e.clientWidth+1'),width
  page.set_viewport_size({'width':390,'height':844});page.screenshot(path=str(artifacts/'past-dates-large-chinese.png'))
- request(page,'preferences',dict(language='en',text_size='standard'));page.reload()
+ request(page,'preferences',dict(language='en',text_size='standard'));page.wait_for_load_state("networkidle");page.reload()
  # Correcting a date removes its warning; today is not already expired.
  click(page,'edit',f'[data-id="{foods["Milk"]["id"]}"]');page.locator('[name=effective_date]').fill(today);page.locator('[data-form=food] button.primary').click();expect(alert).to_be_visible();expect(alert).not_to_contain_text('do not eat');expect(alert.locator('.expiry-count')).to_have_text('3');expect(alert).to_contain_text('quality date')
  click(page,'review-overdue')

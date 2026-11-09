@@ -53,9 +53,14 @@ export class FoodAI extends WorkerEntrypoint {
                 },
               ]
             : [],
-        steps: zh
-          ? ["洗淨食材並切好。", "徹底煮熟後享用。"]
-          : ["Wash and prepare the ingredients.", "Cook thoroughly and serve."],
+        seasonings: input.mode === "use_up" ? [] : (input.pantry || [])
+          .filter((s) => /spicy|辣/i.test(input.preference || "") ? ["oil","chilli"].includes(s.id) : s.id === "salt")
+          .map((s) => ({staple_id:s.id,amount:zh ? "適量" : "to taste"})),
+        steps: input.mode !== "use_up" && /spicy|辣/i.test(input.preference || "") && input.pantry?.some((s) => s.id === "chilli")
+          ? zh ? ["準備主要食材及乾辣椒碎。", "香煎食材，拌入乾辣椒醬汁後上桌。"]
+            : ["Prepare the main ingredient and dried chilli flakes.", "Pan-sear and serve with a dried chilli sauce."]
+          : zh ? ["洗淨食材並切好。", "徹底煮熟後享用。"]
+            : ["Wash and prepare the ingredients.", "Cook thoroughly and serve."],
         pairing: zh
           ? "與另一道菜一同上桌。"
           : "Serve together with the other dish.",
