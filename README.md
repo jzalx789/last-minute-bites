@@ -1,78 +1,188 @@
-# Last Minute Bites — Web Prototype 1.3
+# Last Minute Bites
 
-**網站：https://last-minute-bites-demo.jzalx789.workers.dev**
+以減少食物浪費為目標的課程 Web／PWA prototype。使用者可管理食材批次與份量、共享廚房、生成 DeepSeek 食譜，並在聚會中整合已同意分享的食材。
 
-電腦、Mac 或手機瀏覽器可直接開啟，連線依所在地及網路而異；一般瀏覽免安裝，iPhone／iPad 的推播需先加入主畫面。可自行註冊並建立冰箱；共用示範帳戶只放合成食物資料。
+目前版本：**1.3**（交接資訊更新：2026-11-09，香港時間）。
 
-## 已實作
+| 入口 | 連結／位置 |
+| --- | --- |
+| 正式 App | https://last-minute-bites-demo.jzalx789.workers.dev/ |
+| 最新程式碼分支 | [`codex/last-minute-bites-prototype`](https://github.com/jzalx789/last-minute-bites/tree/codex/last-minute-bites-prototype) |
+| AI coding assistant 指引 | [AGENTS.md](AGENTS.md) |
+| 原始碼驗收 CI | [Prototype acceptance](https://github.com/jzalx789/last-minute-bites/actions/workflows/checks.yml) |
+| 歷次驗證紀錄 | [docs/VALIDATION.md](docs/VALIDATION.md)（依日期閱讀，舊版本結果不是目前規格） |
 
-- 多廚房：同帳號可建立／加入多個廚房，在首頁點廚房名稱或設定 → 切換／加入廚房。Owner／Editor 權限按廚房獨立判斷；離開／移除成員只影響該廚房。切換會清除當前選材及食譜草稿，食譜歷史各廚房分開保留。
-- 聚會模式：建立有效 24／48 小時或 7 天的臨時廚房，可提前結束；來源廚房擁有者明確同意後，聚會成員可查看、生成食譜及消耗該來源庫存。跨廚房食譜僅限聚會模式，普通廚房不能混用其他廚房庫存。每帳號最多 20 個廚房、每聚會最多 8 個來源。
-- 聚會食材不複製或搬移，來源名稱、批次和份量保留。多來源消耗一次交易驗證權限、批次版本和剩餘量，任何一項失敗全部回滾；編輯／刪除來源食物需回原廚房。撤回分享或分享者離開／被移除後立即停止共享，重新加入必須重新分享。
-- 聚會期限由伺服器檢查；結束後保留成員及個人食譜歷史，停止來源庫存共享、邀請、新生成及食物變更。來源食物留在原廚房，沒有自動刪除、重設或自動復原已確認的消耗。
-- SQLite 在原 Durable Object 內一次原子遷移至複合成員主鍵，保留帳號、原廚房、庫存、邀請及登入 session。網頁請求帶明確廚房 ID，防止另一分頁切換預設廚房時扣錯庫存。推播仍每裝置綁定一個廚房，切換後可到提醒頁明確重新啟用，已結束聚會不排程發送。
+**組員請先確認有 GitHub 儲存庫權限，再切到上列分支。** 目前儲存庫為 Private；沒有權限時 GitHub 會顯示 404。擁有者須在 repository Settings → Collaborators 邀請組員，對方接受後才可看 code。App 本身可公開開啟，不需要 GitHub 權限；各地網路的可達性仍可能不同。組員毋須為看 code 索取 Cloudflare 或 DeepSeek 金鑰。
 
-- Web Push：設定 → 提醒內可明確允許通知、啟用／停止此裝置、發送測試通知及更新狀態。不會在瀏覽時自行彈出權限視窗；iPhone／iPad 先顯示加入主畫面說明，權限封鎖時顯示系統設定指引。
-- 伺服器每 5 分鐘執行 Cron，在帳戶時區上午 9 點左右，對有日期、仍有剩餘且接近設定日期或已過日期的食材合併提醒；包括包裝日期及自訂預計吃完日，沒有日期或已用完的食材不提醒。每裝置每天一次，關閉 App 不影響排程。日期提醒總開關也會暫停排程推播，測試通知仍可明確按下。
-- 首頁及食物清單會顯示不可收起的日期過期警告，可一鍵篩選已過日期的紀錄；過食用期限明確標示請勿食用，最佳食用日期、自訂提醒日及標示不明則顯示各自的檢查提示。此畫面警告不受一般日期提醒開關影響；已授權推播仍遵循每天約 9 點及每裝置每天一次的排程，移除／用完紀錄後停止對該紀錄提醒。
-- 推播沿用有效登入及冰箱權限；登出、登入到期（目前 7 天）或被撤權後停止，再登入後需重新啟用。鎖定畫面只顯示通用提醒，不列食材名稱或數量，點通知回到 App。
+## 先認識這個專案
 
-- Email/password 登入、session cookie、CSRF、Owner／Editor 共用庫存、邀請及後端撤權。
-- 登入／註冊使用原生頁面捲動，避免 iPhone Safari 鍵盤彈出與 visual viewport 平移時，固定容器縮短而把欄位擠出畫面；登入後沿用原有底部導覽及庫存捲動。
-- 手機可捲動的主要內容區，底部導覽及選取操作不遮擋表單；支援窄屏、橫向及大字。
-- 我的食材：數量＋單位、購買日期與獨立批次。不同日期買的同名食物保留各自份量及期限；先列較早到期，期限相同再按購買日。
-- 快速消耗：每項直接輸入用量，0／空白代表略過，「全部」一按填好；不需勾選。舊食物可在同一視窗補填使用前數量及單位，與扣減一起確認。從食譜進入時，現有批次版本與單位相符才預填建議用量，可一按清除。
-- 消耗：填寫每批實際使用量，部分扣減保留剩餘，歸零才移到已用完。整批用完、刪除及復原也可獨立操作；復原只撤銷最後一次用完的份量。舊資料顯示「份量未設定」，不臆測數量。
-- 自動分類：輸入中英文名稱即可套用建議類別，常見食物使用本機規則；陌生名稱在離開名稱欄位或儲存時交由 DeepSeek 判斷，打字中的規則查詢不呼叫模型。仍可自行更改類別。
-- 非食物防護：前後端攔截明顯非食物，不能用自行送出分類或確認欄位繞過；不明確名稱需先取得伺服器判斷，再確認是食物／飲品。模型不可用時明示需要確認，既有明顯非食物標記警告並排除食譜、不自動刪除。
-- 照片辨識：選取照片後縮小並轉為 JPEG，DeepSeek 建議名稱及類別，排除非食物及低信心候選；使用者選取候選後自動套用分類，確認才儲存，不猜到期日、份量或新鮮程度。
-- 食譜頁直接顯示這次選用的食材、剩餘份量及購買批次，可在頁內搜尋、添加和移除，庫存不受影響。移除全部後不會擅自改用所有庫存；也可在設計一餐時不選庫存、只規劃採購。依飲食偏好排除的食物會另外標明。
-- 三種生成模式按 1→2→3 排序，預設推薦「優先清理庫存」：每道以選定庫存為主，可用已允許的常備調味料，整餐最多補購兩種新食材；「完全自由」仍以所選庫存作整餐核心，可加配庫存以外的食材及配菜，沒有兩種補購上限；「安全局限」只用已登記庫存及清水，不假設任何調味料，只有一種食材也遵守。
-- 模式 1、2 可使用使用者勾選的鹽、糖、油、醬油、醋、胡椒及乾辣椒等常備調味料，無需庫存紀錄，不列採購、不扣數量；可取消家中沒有的項目，忌口條件會先排除可辨識的不符項目。AI 分開回傳 inventory uses／seasonings／additional purchases，後端檢查調味料 ID、每批用量及模式限制；沒有固定菜式清單。
-- 庫存優先模式會先考慮已過非安全期限的提醒日期／最佳食用日期、較早到期及較早購入的可選紀錄；已過 Use by 仍排除食譜。使用已過品質或提醒日期的食材時，食譜會顯示先檢查標示、儲存及實際狀態的提示，不保證食用安全。
-- 可將所選食材分配到 1–4 道獨立菜式，顯示每道使用的食材及建議用量。「這組菜式用齊所有選用食材」開啟時，後端檢查每一個所選批次都有被使用；可取消此選項，允許留下不適合的食材。
-- 不喜歡其中一道可單獨「換一道」，沿用原組合的人數／偏好並保留其他菜式；替換會先扣留其他菜式建議用量，再驗證整餐不超量及不重複舊名稱。失敗保留原食譜，庫存或設定變動則須重新生成。重新載入會還原已儲存的選擇及設定。
-- DeepSeek 動態生成 1–4 道食譜，可選涼菜、湯、主食、肉類、蔬菜或搭配菜式；設定 1–12 人、小／一般／大食量、時間上限、不想使用的食材及口味／飲食偏好。
-- 每道菜均按所選人數及份量偏好設計，整餐的庫存用量合計不可超過同一批現存量；新增食材以採購／準備清單列出，完全自由模式也可從空庫存規劃。常備調味料獨立列示，確認煮過也只扣使用者確認的已登記庫存。
-- 食譜只有明確按下生成或「換一道」才呼叫模型；瀏覽及背景同步不觸發生成。保留個人最近結果，庫存變動後顯示需要更新。
-- 煮完後由使用者選批次及填寫實際消耗量；單純查看或生成食譜不扣庫存。採購清單不會自動建立食物，買好後須新增實際份量。
-- 自行決定／開封後：可留空而不設固定日期，或填預計吃完日作自訂提醒；支援補填、修改、清除及共享。提醒日不視作包裝食用期限，過了提醒日仍由使用者判斷；清庫存排序及食譜輸入保留日期來源。
-- 包裝日期／生產日＋期限／未知日期、日曆月尾及閏年計算、Use by／Best before、QR 邀請及雙語偏好。
+正式版本是 **原生 HTML／CSS／JavaScript + Cloudflare Worker + SQLite-backed Durable Object**，沒有 React、前端打包程序或外接 SQL 伺服器。`static/` 同源提供介面，`web/worker.js` 提供 `/api/*` 與 `/healthz`。
 
-網站使用 Cloudflare Worker＋SQLite-backed Durable Object，靜態頁面與 API 同源。密碼使用 PBKDF2-SHA256 與隨機 salt，session token 只保存雜湊。保留的 Python 後端供舊 API 對照；目前網頁的 AI／批次庫存／多廚房與聚會功能需要 Worker。
+`server.py`、WSGI、PythonAnywhere 工具和部分舊設計圖是早期版本保留的對照／回歸材料。**目前 AI、批次份量、多廚房與聚會功能以 `static/` 和 `web/` 為準**；啟動舊 Python server 不會得到完整正式功能。`design/README.md` 中的固定食譜設計也已被動態生成取代。
 
-## 開發及驗證
+```mermaid
+flowchart LR
+    UI["瀏覽器／PWA · static/"] --> API["食物 Worker · web/worker.js"]
+    API --> Store["KitchenStore · SQLite Durable Object"]
+    API -->|FOOD_AI 私有 service binding| RPC["CareSync Worker · FoodAI entrypoint"]
+    RPC --> DeepSeek["DeepSeek · deepseek-flash"]
+    Cron["Cron 每 5 分鐘"] --> Push["PushService"]
+    Push --> Store
+    Push --> Provider["瀏覽器推播服務"]
+    Provider --> SW["Service Worker · static/sw.js"]
+```
 
-需要 Node.js 22+、Python、Playwright 1.62.0 與 Pillow 13.0.0。
+`web/ai-gateway.js` 定義 `FoodAI` RPC 類別；正式部署時由另一個既有 Worker 匯出。DeepSeek 金鑰留在該 Worker，瀏覽器與這個來源儲存庫不持有金鑰。本機開發改接測試 RPC，可以不用金鑰先跑完整操作流程。
+
+## 本機啟動：Mac／Linux
+
+使用 **Node.js 24**（與 CI 一致）、**Python 3.12**、Git。以下指令從儲存庫根目錄執行。`git clone` 需要你自己的 GitHub 登入／授權。
 
 ```sh
+git clone --branch codex/last-minute-bites-prototype https://github.com/jzalx789/last-minute-bites.git
+cd last-minute-bites
 npm ci --prefix web
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install playwright==1.62.0 Pillow==13.0.0
+python -m playwright install chromium webkit
+```
+
+Linux 若缺少瀏覽器系統套件，可使用 CI 的 `python -m playwright install --with-deps chromium webkit`。只跑 JavaScript 單元測試不需要安裝 Playwright。
+
+在兩個終端機中保持下列程序運行，兩邊工作目錄均為 repo 根目錄：
+
+**終端機 A：測試 AI／推播傳輸**
+
+```sh
+web/node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --inspector-port 9231 --config tests/fixtures/food-ai/wrangler.jsonc --port 8791
+```
+
+**終端機 B：App 與本機 SQLite 儲存**
+
+```sh
+web/node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --inspector-port 9230 --config web/wrangler.test.jsonc --port 8790 --persist-to .data/dev-web --test-scheduled
+```
+
+開啟 http://127.0.0.1:8790/ ，自行註冊測試帳號。`/healthz` 應回報 `status: ok`、`storage: persistent-sqlite`。本機資料留在忽略的 `.data/dev-web/`，不會連到正式庫存。
+
+這套配置的食譜、分類和推播傳輸是 **test fixture**；它驗證流程與合約，不代表真實 DeepSeek 品質或手機已收到通知。不要部署 `wrangler.test.jsonc` 或 `tests/fixtures/`。`npm --prefix web run dev` 使用正式形狀的配置，若沒有對應 RPC service，不適合作為組員初次啟動方式。
+
+## 從哪個檔案開始改
+
+| 工作 | 主要檔案 |
+| --- | --- |
+| 頁面、表單、路由、選材、廚房切換 | [static/app.js](static/app.js)、[static/index.html](static/index.html) |
+| 手機版、鍵盤與 visual viewport、底部操作列 | [static/style.css](static/style.css)、`static/app.js` |
+| QR 掃描、邀請碼與 PWA 安裝工具 | [static/mobile.js](static/mobile.js) |
+| 照片選取、縮圖及結果確認 | `static/app.js` |
+| 通知權限、瀏覽器訂閱、PWA 背景事件 | [static/notifications.js](static/notifications.js)、[static/sw.js](static/sw.js)、[static/manifest.webmanifest](static/manifest.webmanifest) |
+| HTTP API、登入、CSRF、SQLite 操作、AI 呼叫前後驗證 | [web/worker.js](web/worker.js) |
+| 多廚房、聚會來源權限、一次性資料遷移 | [web/kitchens.js](web/kitchens.js) |
+| 日期、份量、消耗／復原、密碼與共用驗證 | [web/domain.js](web/domain.js) |
+| 食譜 prompt、三種模式、結果合約、單道替換 | [web/ai.js](web/ai.js) |
+| 名稱規則、自動分類、模型分類結果驗證 | [web/food-classifier.js](web/food-classifier.js) |
+| 真實 DeepSeek RPC adapter | [web/ai-gateway.js](web/ai-gateway.js) |
+| 排程、訂閱儲存、RFC 8291／8292 Web Push | [web/push-service.js](web/push-service.js)、[web/web-push.js](web/web-push.js) |
+| 正式／本機測試 binding | [web/wrangler.jsonc](web/wrangler.jsonc)、[web/wrangler.test.jsonc](web/wrangler.test.jsonc) |
+| 自動驗收的完整指令與順序 | [.github/workflows/checks.yml](.github/workflows/checks.yml) |
+
+## 目前的產品規則
+
+### 庫存與日期
+
+- 同名食物每次購買可建立獨立批次，保存數量、單位、購買日、位置及日期來源。份量以千分之一單位精確扣減；每筆帶版本號，避免重複或同時操作時多扣。
+- 新增／修改會建議類別，攔截明顯非食物；不明確名稱需確認。照片只提供高信心食物候選，使用者確認後才入庫，不推測到期日、數量、新鮮度或安全性。
+- 日期可以是包裝日期、生產日＋期限、使用者自訂提醒日，或完全不設日期。已過 Use by 明確警示並排除食譜；Best before、自訂日及不明標示各有不同提示，不能一律稱為不安全。
+- 實際消耗由使用者確認，可部分扣減或全部用完，也可獨立刪除／復原。生成、瀏覽食譜及採購建議都不會自行改庫存。
+
+### 食譜
+
+生成 1–4 道菜，可選菜式類型、人數 1–12、每人食量、時間、不想使用的食材及口味。可在食譜頁添加／移除選材，或只更換其中一道；單道替換須保留其他菜式及其已預留份量。食譜歷史按使用者與廚房分開儲存。
+
+| 顯示順序／模式 | 程式值 | 規則 |
+| --- | --- | --- |
+| 1. 優先清理庫存（預設推薦） | `stock_first` | 每道以選定庫存為主，可用允許的常備調味料；整餐最多補購兩種新食材 |
+| 2. 完全自由 | `plan` | 所選庫存是整餐核心，也可用庫存以外食材與配菜；沒有兩種補購上限，空選材可規劃採購 |
+| 3. 安全局限 | `use_up` | 只用已登記庫存及清水；即使只有一種食材，也不能假設其他調味料 |
+
+常備調味料目前為鹽、糖、油、醬油、醋、胡椒、乾辣椒，可逐項取消。模型回覆分成 `uses`（庫存）、`seasonings`（允許的常備調味料）和 `additional`（需補購），後端會驗證來源與數量。這些模式中的「安全局限」是庫存限制，不是食物安全認證。
+
+食譜只在明確按下生成或換一道時呼叫模型；背景更新不觸發生成。失敗會顯示錯誤並保留既有結果，不用固定食譜代替 AI。配額與輸入限制以 `web/worker.js` 的 `consumeAI()`／`aiFetch()` 為準；目前一次生成要求可選庫存不超過 80 筆，聚會來源也計入。
+
+### 多廚房與聚會
+
+- 每帳號最多連結 20 個廚房，角色按廚房獨立判斷。首頁點廚房名稱切換；切換會清除當前選材與草稿。請求帶 `X-Kitchen-ID`，避免另一分頁切換預設廚房後扣錯庫存。
+- **跨廚房合成食譜只屬於聚會模式**。普通廚房只用自己的庫存；聚會不是第四種食譜生成策略，而是一種臨時廚房。
+- 聚會有效期為 24／48 小時或 7 天，最多 8 個來源。來源廚房擁有者須明確同意分享；參與者可查看、合成食譜及確認消耗。食物不複製／搬移，扣減原來源的批次。
+- 多來源扣減在一次 SQLite 交易中驗證權限、版本和剩餘量，任何一項失敗全部回滾。編輯／刪除來源食物要回原廚房。
+- 停止分享、離開或被移除後立即撤回來源存取；重新加入不會自動恢復分享。聚會到期或提前結束後停止 live 來源共享、邀請、生成及食物變更，保留成員與個人食譜歷史，不自動刪除原庫存或復原已確認的消耗。
+
+### PWA 與通知
+
+一般瀏覽免安裝；iPhone／iPad 推播須先加入主畫面並從圖示開啟，再由使用者允許通知。伺服器每 5 分鐘檢查，在使用者設定時區約上午 9 點合併提醒，每裝置每天一次。只提醒仍有剩餘的相關日期紀錄，鎖定畫面不列食材名稱與數量。
+
+目前每裝置的推播訂閱綁定一個廚房；切換後可在提醒頁明確重新啟用。登出、登入到期、撤權或聚會結束會停止相應通知。協定、模擬權限及測試傳輸有自動驗收；**這些測試不代表實際 iPhone 收件已驗證**。真機仍須授權並按「發送測試通知」確認。
+
+## 測試與交付
+
+先執行不需要啟動服務的檢查：
+
+```sh
 npm --prefix web run check
 npm --prefix web test
-python3 -m unittest discover -s tests -v
+node --check static/app.js
+node --check static/mobile.js
+node --check static/notifications.js
+node --check static/sw.js
+python -m unittest discover -s tests -v
 ```
 
-本機驗收使用明確標示的測試 RPC，**不是實際模型**。在兩個終端機啟動：
+上面的 Python unittest 驗證早期後端，不能代替 Worker 測試。啟動前述兩個本機服務後，在已啟用 `.venv` 的第三個終端機執行：
 
 ```sh
-web/node_modules/.bin/wrangler dev --config tests/fixtures/food-ai/wrangler.jsonc --port 8791
-web/node_modules/.bin/wrangler dev --config web/wrangler.test.jsonc --port 8790 --test-scheduled
+export LMB_WEB_BASE_URL=http://127.0.0.1:8790
+export LMB_TEST_CHROMIUM="$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
+python tests/web_api_contract.py
+python tests/multi_kitchen_api.py
+python tests/recipe_modes_api.py
+python tests/multi_kitchen_browser.py
+LMB_WEB_ENGINE=webkit python tests/multi_kitchen_browser.py
 ```
 
-然後執行 `LMB_WEB_BASE_URL=http://127.0.0.1:8790 python3 tests/web_api_contract.py`、`python3 tests/ai_api_contract.py`、`python3 tests/stock_api_contract.py`、`python3 tests/stock_browser.py`、`python3 tests/consume_browser.py`、`python3 tests/classification_api.py`、`python3 tests/classification_browser.py`、`python3 tests/personal_dates_browser.py`、`python3 tests/recipe_builder_api.py`、`python3 tests/multi_kitchen_api.py`、`python3 tests/multi_kitchen_browser.py`、`python3 tests/recipe_builder_browser.py`、`python3 tests/push_api_contract.py`、`python3 tests/push_browser.py`、`python3 tests/push_service_worker.py`、`python3 tests/user_fixes_browser.py` 及同網址的 `tests/web_browser.py`。`LMB_WEB_ENGINE=webkit` 可切換引擎。CI 不花費模型額度。`tests/live_ai_browser.py` 需明確設定 `LMB_LIVE_AI=1`、正式網址及經檢視的測試食物照片才驗證四個真實 DeepSeek 流程（辨識、4 人大食量設計、清庫存、空庫存採購計劃）；每次食譜及格式不合的名稱分類最多可再修正一次；不會為不確定的判斷重試至肯定。`tests/live_classification.py` 需明確設定 `LMB_LIVE_FOOD=1`、正式網址、食物照片與非食物圖片，才驗證真實名稱／影像分類。`tests/live_recipe_builder.py` 需明確設定 `LMB_LIVE_RECIPES=1` 才驗證正式模型的 4 道菜及單道替換。驗證紀錄見 [docs/VALIDATION.md](docs/VALIDATION.md)。
+這是接手時的重點驗收；完整 API、Chrome／WebKit、鍵盤、過期提醒、分類、份量、食譜與通知測試清單見 [checks.yml](.github/workflows/checks.yml)。`tests/browser_smoke.py` 提供共用 helper，但它的舊獨立主流程不是目前 Worker 版本的完整驗收入口。
 
-## 部署結構
+`tests/live_ai_browser.py`、`tests/live_classification.py`、`tests/live_recipe_builder.py` 會使用真實服務，分別須明確設定 `LMB_LIVE_AI=1`、`LMB_LIVE_FOOD=1`、`LMB_LIVE_RECIPES=1`，並閱讀各腳本的額外輸入要求。它們可能產生帳號、資料和模型費用，不屬於一般本機／CI 流程。不要把正式網址用在預期隔離的 API 測試中。
 
-部署鏡像位於 `jzalx789/caresync-is3542` 的 `codex/last-minute-bites-web` 分支、`apps/last-minute-bites/`。`.github/workflows/last-minute-bites.yml` 使用現有 GitHub 部署秘密，不需要使用者再提供 Token。通知金鑰由既有 Durable Object 自行產生、保存在私人儲存內；API 只提供公開 VAPID key，沒有把私鑰交給瀏覽器或寫入 Git。推播使用瀏覽器原有的推播服務，不另申請通知帳戶或啟用付費方案。只推送本來源儲存庫不會更新網站。
+課程原始碼包由下列指令產生；打包只讀 Git 已追蹤檔案，新檔案須先 `git add`：
 
-食物 Worker 的 `FOOD_AI` service binding 呼叫 CareSync Worker 的私有 `FoodAI` RPC entrypoint，沿用其現有伺服器端 DeepSeek 設定；沒有複製或向瀏覽器傳送金鑰。部署順序為先註冊該 entrypoint，再部署獨立食物 Worker。CareSync 預設 HTTP 功能及資料綁定保留；其日後獨立部署須保留此 export 與 gateway 檔案。原有兩個專案的主分支沒有修改。
+```sh
+python3 scripts/package.py
+```
 
-實際模型為 `deepseek-flash`，使用 DeepSeek OpenAI-compatible Chat Completions 及官方 vision 格式。選取照片會將處理後影像交給 DeepSeek；應用程式不把照片寫入資料庫。每帳戶每天最多 12 次照片辨識、24 次食譜、40 次陌生名稱分類；名稱分類另限全站每日 200 次、每帳戶 5 分鐘 6 次。常見名稱不佔模型額度，私人分類結果快取 24 小時，不可用結果 60 秒後可重試。另設照片／食譜整站及短時間限額；回覆會先檢驗，未通過可由模型修正一次再完整檢驗；仍失敗便顯示錯誤並保留手動新增／既有結果，不以固定食譜假裝 AI。數量以千分之一單位做精確扣減，批次修改使用版本與交易保護。模型的菜式人數／時間／合計庫存用量、清庫存不添購與避免食材名稱均會檢驗。口味／飲食偏好仍屬模型建議，名稱檢查不是過敏原認證；實際菜式仍需使用者檢查，不提供食物安全、營養判斷或照片到期日推測。
+輸出為 `submission/S01G10.zip`；執行資料、金鑰、帳密及私人驗證產物不可加入 Git 或 ZIP。這份 README 是開發交接說明，沒有新增問卷或正式 user guide。
 
-同步 `static/` 及正式 `web/` 檔案時，**不要部署測試 fixture 或 wrangler.test.jsonc**。同一個 Worker／Durable Object class／object name 會保留原資料，0.4 新增資料表；0.5 以相容的 JSON 欄位擴充份量及批次；0.7 新增私人名稱判斷快取表，沿用原有庫存。名稱／照片分類不代表實際物件可食用或食物安全判斷。`.data/`、`.wrangler/`、資料庫及私人帳密均忽略。`python3 scripts/package.py` 產生 `submission/S01G10.zip`，不包含秘密或執行資料。
+## 協作與正式部署
 
-通知使用 RFC 8291 aes128gcm 及 RFC 8292 VAPID，僅接受已知瀏覽器推播服務的 HTTPS endpoint，不跟隨重新導向；保護 CSRF、帳戶／裝置隔離、過期端點清理、短時間限流、重試及每日去重。正式 Cron 配置在 `web/wrangler.jsonc`；授權的 `push/config` 提供 `schedule.last_run` 供檢查實際觸發。
+來源與部署目前分開管理：
 
-推播測試明確區分協定向量／本機測試傳輸／模擬權限，以及真正 Service Worker 的背景事件處理。此雲端 Chromium 的真正 PushManager 註冊回傳 AbortError（permission denied）；沒有捏造遠端推播或實際 iPhone 收件成功。實機仍需使用者允許通知，並用「發送測試通知」確認。
+| 用途 | 儲存庫／分支／路徑 |
+| --- | --- |
+| 組員開發、PR、原始碼驗收 | `jzalx789/last-minute-bites` → `codex/last-minute-bites-prototype` |
+| 正式部署鏡像 | `jzalx789/caresync-is3542` → `codex/last-minute-bites-web` → `apps/last-minute-bites/` |
+| 部署工作流程 | 鏡像 repo 的 `.github/workflows/last-minute-bites.yml` |
 
-沒有製作問卷或正式 user guide；此版本專注可操作的 prototype。
+新工作可從最新來源分支開自己的 feature branch，再向來源分支提 PR；不要以可能較舊的 `main` 當作完整 prototype：
+
+```sh
+git fetch origin
+git switch -c feature/your-change origin/codex/last-minute-bites-prototype
+```
+
+**推送來源 repo 只會跑驗收，不會更新正式網站。** 經授權的上線工作需要將變更同步到部署鏡像，再由既有 Actions 先註冊私有 `FoodAI` entrypoint、後部署食物 Worker。同步 `web/ai-gateway.js` 等 RPC 依賴時，須連同檢查鏡像中 CareSync 的 export／import；保留 CareSync 其他功能、資料及自身規則。文件更新本身不需重新部署。
+
+正式部署使用既有 GitHub Actions secrets `CLOUDFLARE_API_TOKEN`／`CLOUDFLARE_ACCOUNT_ID`；DeepSeek secret 只在既有 CareSync Worker。沒有這些部署權限的組員仍可用 fixture 完整開發，毋須索取或複製正式金鑰。
+
+不要為方便重命名以下持久儲存識別值：Worker `last-minute-bites-demo`、binding `KITCHENS`、class `KitchenStore`、object name `shared-kitchens-v1`。`web/kitchens.js` 的遷移在原 object 內保留帳號、廚房、食物、邀請和 session。不能以重新 seed／清空正式資料來修正遷移。
+
+正式通知 VAPID 私鑰由 Durable Object 產生並私存，API 只公開 public key。照片選取後經前端縮小，交由 DeepSeek 處理但不寫入應用資料庫。`.data/`、`.wrangler/`、資料庫、`.env` 和私人帳密不得提交；不要把試用帳號密碼放進 README。
