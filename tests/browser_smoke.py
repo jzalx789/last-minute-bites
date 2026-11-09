@@ -4,6 +4,8 @@ import os
 import sys
 import tempfile
 import threading
+import uuid
+from urllib.parse import urlparse
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from server import AppServer
 from playwright.sync_api import sync_playwright, expect
@@ -23,12 +25,18 @@ def navigate(page, route):
 
 
 def register(page, base, email):
+    # CI runs many independent users through one loopback proxy. Give only local
+    # tests separate synthetic clients; never send this header to a public site.
+    if urlparse(base).hostname in {"127.0.0.1", "localhost", "::1"}:
+        page.set_extra_http_headers({"CF-Connecting-IP": "synthetic-browser-" + uuid.uuid4().hex})
     page.goto(base)
     click(page, 'auth-register')
     page.locator('[name=email]').fill(email)
     page.locator('[name=password]').fill('browser-test-password')
     page.locator('[name=confirm_password]').fill('browser-test-password')
-    page.locator('[data-form=auth] button.primary').click()
+    with page.expect_response(lambda r:r.url.endswith('/api/register')) as response:
+        page.locator('[data-form=auth] button.primary').click()
+    assert response.value.status==200,response.value.json()
     expect(page.locator('h1')).to_have_text('Make room for good food.')
 
 
