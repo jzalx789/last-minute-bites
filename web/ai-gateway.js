@@ -1,5 +1,5 @@
-// This named RPC entrypoint runs in the existing CareSync Worker so its configured
-// DeepSeek credential stays there. No public HTTP endpoint exposes this service.
+// This named RPC entrypoint runs in the private AI service. Its DeepSeek
+// credential stays server-side; no public HTTP endpoint exposes this service.
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { recipePrompt, validatePhoto, validateRecipes, pantrySelection } from "./ai.js";
 import { validateFoodAssessment } from "./food-classifier.js";

@@ -12,12 +12,17 @@ records. Keep changes proportional to the user's task; preserve unrelated work.
   Check the current branch and worktree first. Use the user's selected branch;
   new teammate feature branches should start from the integration branch.
   Do not assume `main` contains the latest prototype. Never force-push.
-- `server.py`, WSGI, PythonAnywhere deployment scripts and their tests are legacy
+- `server.py`, WSGI, legacy deployment scripts and their tests are legacy
   compatibility/reference code. Editing them alone does not change the current
   live app. Do not migrate the product back to that backend as a shortcut.
 - `docs/VALIDATION.md` contains dated historical results. `design/` contains older
   mockups, including obsolete fixed recipes. Use current code, README.md and the
   user's latest requirements to resolve differences.
+- Keep documentation and UI focused on Last Minute Bites. Refer to deployment
+  dependencies by their role, such as the private AI service; do not introduce
+  unrelated project names, features or validation results. Preserve the actual
+  runtime identifiers in configuration so this wording cleanup cannot break
+  deployed services.
 - Communicate with the team in clear Traditional Chinese by default. The UI is
   bilingual English / Traditional Chinese; add both translations through the
   existing `words` / `t()` mechanism rather than hardcoding one language.
@@ -186,13 +191,14 @@ phone receipt in reports; never claim one proves another.
 
 ## Source, deployment and delivery
 
-- This source repository's CI does not deploy the website. The production mirror
-  is `jzalx789/caresync-is3542`, branch `codex/last-minute-bites-web`, under
-  `apps/last-minute-bites/`; deployment is its `last-minute-bites.yml` workflow.
+- This source repository's CI does not deploy the website. The maintainer manages
+  a production mirror with this application's files under `apps/last-minute-bites/`
+  and a `last-minute-bites.yml` deployment workflow. Confirm its authorized
+  location with the maintainer when deployment access is needed.
 - When a task authorizes a live product update, sync relevant production files
-  to that mirror and follow its own AGENTS.md too. In particular, preserve the
-  CareSync HTTP routes/data and private `FoodAI` export/import dependencies.
-  Deploy the RPC host before the food Worker. Do not deploy test configuration.
+  to that mirror and follow its own AGENTS.md too. Preserve existing service
+  bindings, stored data and the private `FoodAI` export/import dependencies.
+  Deploy the AI service before the food Worker. Do not deploy test configuration.
 - Use existing configured credentials and workflows. If deployment access is
   missing, finish local work and report the specific remaining step without
   requesting secret values in chat or pretending the source push deployed it.

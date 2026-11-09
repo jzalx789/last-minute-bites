@@ -37,7 +37,7 @@ python3 tests/mobile_acceptance.py
 ## Web Prototype 0.3（公開網站）
 
 - 公開網址：https://last-minute-bites-demo.jzalx789.workers.dev
-- Cloudflare Worker＋SQLite-backed Durable Object，沒有本機 Python 依賴。沿用既有部署授權建立獨立 Worker，CareSync 主分支及服務保留。
+- Cloudflare Worker＋SQLite-backed Durable Object，沒有本機 Python 依賴。沿用既有部署授權建立獨立 Worker。
 - `npm --prefix web test`：3 項日期／欄位正規化／密碼測試通過。
 - `tests/web_api_contract.py`：本機與正式 HTTPS 都通過，涵蓋真實登入、CSRF、角色、跨冰箱 CRUD、同時修改的 200／409、日期、重試鍵、食譜、偏好、撤權、清空及重新登入。
 - `tests/web_browser.py`：本機 Chromium 與正式 HTTPS WebKit 都通過，包括桌面／手機 viewport、註冊、庫存、跨分類選取、配對、QR 邀請、雙語設定、撤權與登出。沒有關閉 TLS 驗證。
@@ -49,12 +49,11 @@ python3 tests/mobile_acceptance.py
 
 正式網站仍為 https://last-minute-bites-demo.jzalx789.workers.dev，`/healthz` 回報 `0.4` 與 `persistent-sqlite`。部署鏡像 commit `a919242`、GitHub Actions `42389631708` 成功。原 Demo Owner 重新登入及七項庫存保留，沒有重建或清空資料庫。
 
-- Python 舊後端回歸：48 項通過；Worker 單元測試：7 項通過；CareSync 私有 RPC 增補後的回歸：114 項通過，語法檢查及兩個 Worker dry-run 通過。
+- Python 舊後端回歸：48 項通過；Worker 單元測試：7 項通過。
 - 本機 AI API contract 使用**測試專用 RPC**：一款湯／兩款互補菜式、過 Use by 排除、私人歷史及快取、無效模型內容拒絕、等待模型不阻塞其他冰箱、重複請求限流、生成期間庫存變動拒絕、批次交易回滾、獨立用完／復原、圖片不自動入庫及不推測日期，全部通過。它不證明模型品質。
 - Chromium 及 WebKit 手機流程使用測試 RPC：320px／短螢幕／橫向／平板／桌面、繁中大字、內容可捲動、底部導覽不覆蓋表單、移除指定提醒、照片結果確認、直接用完／刪除／復原、明確按鈕生成、背景刷新不呼叫模型、無效模型結果保留舊食譜、煮完逐項確認移除，全部通過。Safari 引擎原先 360px 清單篩選器溢出已修正。這些是瀏覽器 viewport 測試，不是真機認證。
 - **正式 HTTPS、真實 DeepSeek 呼叫**：`tests/live_ai_browser.py` 用 WebKit 與系統 TLS 信任完成兩次模型呼叫。輸入已檢視的公開番茄照片（Wikimedia `Tomato_je.jpg`，不是私人相片），成功返回「番茄」候選，確認前庫存仍為空，日期維持未知。以番茄、雞蛋、豆腐、菠菜生成兩款不同類別的繁中菜式：「番茄炒蛋」及「菠菜豆腐湯」。API 回報 `provider=deepseek`、`model=deepseek-flash`；不是 fixture 或固定食譜。生成後四筆庫存全部保留，勾選一筆完全用完後，只有一筆進入已用完清單。390px 版面及食譜詳細頁通過，無未捕捉 JS 錯誤。
 - 正式網站 `tests/web_api_contract.py` 與 WebKit `tests/web_browser.py` 通過：登入／CSRF、跨冰箱權限、CRUD、衝突、日期、共享邀請及撤權、私人偏好、清空及重登入。
-- CareSync 首頁正常；原 `/api/analyse` 在沒有有效 owner code 的 near-fall POST 仍回 403。沒有取出其秘密或聲稱此次已用 owner code 執行 CareSync 真實模型；near-fall High 規則由原回歸測試驗證。
 
 正式模型驗收結果與截圖放在忽略的 `artifacts/live-ai/`，不包含秘密。CI 使用測試 RPC，避免每次 push 消耗模型額度。沒有關閉 TLS 驗證、修改系統信任或要求使用者執行額外設定。
 
@@ -62,7 +61,7 @@ python3 tests/mobile_acceptance.py
 
 此版本在同一網址提供數量、購買批次、部分消耗及客製化食譜。`/healthz` 回報 `0.5`，SQLite 資料庫及帳戶綁定沿用原有設定，舊紀錄不臆測數量或購買日。
 
-- Worker 單元測試 11 項、原 Python API 回歸 48 項通過。CareSync／私有 AI gateway 回歸 116 項通過，兩個 Worker 的語法及 dry-run 檢查通過；CareSync 首頁與原保護的 near-fall POST（未提供 owner code，403）維持原行為。
+- Worker 單元測試 11 項、原 Python API 回歸 48 項通過。
 - 本機及正式 HTTPS 的批次／數量合約通過：第一批 6 隻、第三天另一批 10 隻；第一批消耗 2 隻後餘 4／10；其他批次不變、跨冰箱拒絕、超量／非正數／超過三位小數拒絕、過期版本拒絕、多人同時扣減只允許一筆成功、批次交易回滾、歸零轉已用完、復原只返回最後一次完全用完的份量。舊 client 的整批用完及未帶數量欄位的編輯仍維持數量資料。
 - Chromium 與 WebKit 的 `stock_browser.py` 通過：數量必填、單位、購買日、兩批同名雞蛋、部分消耗／取消、全用完／復原、小數、公升、超量輸入、4 人大食量清庫存、3 人小食量菜單及採購清單、窄螢幕與繁中大字。消耗視窗的確定／取消固定可見，食物內容在視窗內捲動。
 - 模型邊界使用測試 RPC 驗證：人數、食量及時間設定傳遞；兩道菜合計用量不可超過同批庫存；清庫存不能加入 additional；優先較近到期及同期限較早購買批次；避免食材；無庫存可做採購規劃。測試服務不部署，也不代表真實模型品質。
@@ -89,10 +88,10 @@ python3 tests/mobile_acceptance.py
 
 輸入食物名稱會自動套用分類，保留自行修正選項；常見名稱使用中英文字詞規則，陌生名稱在離開欄位／儲存時使用既有 DeepSeek 私有 RPC。只有高信心食物結果才自動確認；不明確名稱需先取得伺服器判斷並明確確認。前後端均擋下明顯非食物，不能用自行送出類別或確認欄位繞過。照片建議加入類別、排除非食物及低信心候選。
 
-- 原 Python 後端 48 項及 Worker 單元測試 18 項通過，包括單字邊界、混合菜式名稱不冒然分類、蛋／油／鹽等單字的食材映射、玩具／清潔用品／手機及圖片候選過濾。CareSync 與私有 RPC 回歸 120 項及語法檢查通過，保留 near-fall High 規則。
+- 原 Python 後端 48 項及 Worker 單元測試 18 項通過，包括單字邊界、混合菜式名稱不冒然分類、蛋／油／鹽等單字的食材映射、玩具／清潔用品／手機及圖片候選過濾。
 - 本機 `classification_api.py` 使用明確標示的測試 RPC：自動類別、陌生食物的伺服器判斷快取、跨帳戶隔離、非食物新增／改名攔截、未經判斷不能直接勾選繞過、不確定名稱確認、服務不可用備援、自行修正及 CSRF 通過。
 - Chromium／WebKit 的分類流程通過：不手動選類別、延遲舊回覆不能改變新名稱的攔截狀態、少見食物分類、不明名稱需確認、自行修正（儲存後再編輯仍保留）及 390px 繁中版面。這是引擎／viewport 驗證，不是真機認證。既有手機流程、數量／快速消耗、食譜及 API 回歸通過。
-- 正式 HTTPS 的 `web_api_contract.py` 與 WebKit `web_browser.py` 通過：登入／CSRF、共享角色、庫存 CRUD／衝突、邀請與撤權、雙語偏好及登出。CareSync 首頁回 200，未提供有效 owner code 的 near-fall POST 仍為 403，未取用該秘密或宣稱實際臨床模型驗證。
+- 正式 HTTPS 的 `web_api_contract.py` 與 WebKit `web_browser.py` 通過：登入／CSRF、共享角色、庫存 CRUD／衝突、邀請與撤權、雙語偏好及登出。
 - **正式 HTTPS＋真實 DeepSeek**：`live_classification.py` 以獨立合成帳戶通過四個流程：Skyr 自動列為奶蛋類；榫卯夾具判為非食物，UI 禁用新增且偽造確認的 API 新增回 422；公開番茄照片自動帶入蔬果類，使用者填份量後才新增；包含食物文字的應用程式截圖回傳空候選且不新增紀錄。全部回報 `provider/source=deepseek`，不是 fixture。結果與畫面在忽略的 `artifacts/live-classification/`。
 - 正式模型曾回傳不符合分類 schema 的內容，遭檢驗擋下並顯示需要確認；已加入最多一次格式修正，持續失敗／無法判斷仍不會冒充已辨識成功。修正測試也確認不確定結果不重試。
 
@@ -105,7 +104,7 @@ python3 tests/mobile_acceptance.py
 
 - Worker 單元測試 19 項通過：選填日期、無效日期拒絕、清除舊日期欄位、過了自訂提醒仍可選用，及原有日期／分類／數量規則。
 - `personal_dates_browser.py` 在 Chromium／WebKit 通過：新增無日期的薯片、儲存後再編輯、設定今天的提醒、重新載入、過了提醒的文字與可用狀態、清除日期、切換回包裝 Use by、後端欄位正規化及無效日期拒絕、390px 繁中大字版面。使用合成帳戶及規則認識的名稱，不呼叫模型。
-- 原有 web API 與 AI 邊界合約通過；AI 合約使用本機測試 RPC，不代表此次重新做了真實模型生成。私有 gateway 傳遞 `personal`／`unspecified` 及提示語的回歸檢查包含在 CareSync 120 項通過測試內，其語法檢查也通過。
+- 原有 web API 與 AI 邊界合約通過；AI 合約使用本機測試 RPC，不代表此次重新做了真實模型生成。
 
 日期欄位以相容 JSON 擴充，沒有資料庫重建或覆寫現有食物。沒有製作問卷或正式 user guide。
 
@@ -116,7 +115,7 @@ python3 tests/mobile_acceptance.py
 
 - 支援 1–4 道菜。開啟整組用齊食材時，檢查所有所選批次在整餐至少被使用一次；新 UI 亦要求回傳指定數目的不同名稱菜式。食材分配到各道菜，不要求每道菜包含所有食材。每個批次的整餐合計數量仍受庫存上限保護。
 - 「不喜歡？換一道」使用已儲存、屬於該帳戶及冰箱的最新生成結果，先扣留其他菜式的建議份量，再以剩餘數量生成一個不同名稱的替代菜式，最後重新驗證整餐。保留其他菜式及設定，成功儲存新歷史；不會扣減食物。跨帳戶、舊組合、庫存／語言變更、超量及重複名稱均拒絕；錯誤保留上一組結果。
-- Worker 單元測試 22 項通過，包括明確菜數、整餐覆蓋、替換保留數量、大小寫／標點相同名稱拒絕、其他菜式完全保留。CareSync／私有 gateway 121 項及語法檢查通過，包含 4 道菜及替換上下文傳遞，保留 near-fall High 規則。
+- Worker 單元測試 22 項通過，包括明確菜數、整餐覆蓋、替換保留數量、大小寫／標點相同名稱拒絕、其他菜式完全保留。
 - 本機 `recipe_builder_api.py` 通過：4 道不同菜、選取範圍、覆蓋全部所選食物、私有歷史、單道替換保留其他結果／偏好／庫存、無庫存選擇的採購計劃、CSRF、跨帳戶與舊版本拒絕。使用測試 RPC。
 - Chromium／WebKit 的 `recipe_builder_browser.py` 通過：可見名稱／份量／批次、搜尋／增減、不遺失人數設定、偏好排除提示、4 道菜、單道替換、失敗保留舊菜、重新載入還原選擇／設定、清空選擇不回到全庫存、320px 繁中大字。只有此測試的 API 故障注入停用 Service Worker，讓 Playwright route 能確實攔截請求；正常／正式測試保留 Service Worker。
 - 原有數量／消耗、手機佈局及食譜流程在 Chromium／WebKit 通過；消耗測試改為清除所有預填食材後檢查空用量，因新菜式會包含多項食材。Web／AI／數量 API 合約通過，正式 HTTPS 的 web API 亦通過。
@@ -138,7 +137,7 @@ python3 tests/mobile_acceptance.py
 - `push_browser.py` 通過：不自動要求權限、明確允許／封鎖、啟用／測試／停止、重新載入、日期總開關暫停、iPhone 未安裝提示、320px 繁中大字。通知權限及 PushManager 訂閱是合成測試替身，後端仍為真正 Worker＋SQLite，傳輸為測試 RPC。
 - `push_service_worker.py` 使用真正 Chromium Service Worker 及已授權的測試 context，在 App 頁面關閉後，透過 CDP 注入 push event，成功由 Service Worker 顯示通知並從 getNotifications 讀回同一內容。這驗證背景處理，不是外部推播服務／實際手機收件的證明。
 - 實際嘗試本環境 Chromium PushManager 註冊，回傳 AbortError：Registration failed - permission denied；未捏造已取得真正端點、遠端送達或 iPhone 通知成功。使用者自己的裝置仍必須由本人允許通知，並以「發送測試通知」確認。
-- 原有 web API、個人日期及食譜建立／單道替換的本機流程通過；CareSync／私有 gateway 加入推播協定及日期窗口回歸後 123 項與語法檢查通過。沒有改用其他模型或為測試多做付費 AI 呼叫。
+- 原有 web API、個人日期及食譜建立／單道替換的本機流程通過。沒有改用其他模型或為測試多做付費 AI 呼叫。
 - 正式 Worker 已部署 1.0，GitHub Actions `42487816383` 成功，發布紀錄確認 `schedule: */5 * * * *`。真實 HTTPS 的 `push/config` 回報 web-push 與穩定公開 key；私有金鑰留在原 Durable Object，沒有要求新 Token／服務帳戶或修改原資料庫綁定。正式觸發時間可由授權 API 的 schedule.last_run 觀察，驗證結果保留在忽略的 artifacts/push/live-readiness.json。
 
 採用標準 Web Crypto、現有 Worker／Durable Object 與瀏覽器內建推播服務；沒有新增付費服務、對外公開排程觸發 API，或自動替使用者授權通知。鎖定畫面不包含食材名稱／份量，通知點擊只開同源 App；原帳戶、食材、批次及模型服務沿用。沒有製作問卷或正式 user guide。
@@ -150,7 +149,7 @@ python3 tests/mobile_acceptance.py
 
 - `auth_keyboard_browser.py` 在 Chromium／WebKit 通過：以縮小及平移的 visual viewport 事件模擬鍵盤，登入／註冊文件不被裁切；390／320px 短 viewport 可逐一聚焦電郵、密碼及確認密碼，保留全部輸入；顯示密碼、真正送出註冊並建立冰箱、登出後重新登入及底部導覽恢復均通過。
 - 鍵盤事件是測試注入，瀏覽器是真實引擎；沒有宣稱實際 iPhone 原生鍵盤已驗收。使用者仍需在更新頁面後於原裝置確認。
-- 原有 WebKit 網站、手機佈局及通知介面回歸通過；CareSync／私有 gateway 123 項及語法檢查通過。登入／共享／庫存／推播與排程維持既有資料及行為。
+- 原有 WebKit 網站、手機佈局及通知介面回歸通過。登入／共享／庫存／推播與排程維持既有資料及行為。
 
 使用者影片及擷取影格只在私人工作區／忽略的 artifacts，未加入 Git、部署檔案或原始碼包；自動測試使用新建合成帳戶。首頁截圖的版面要求保留，本次只修正未登入表單的鍵盤與捲動。
 

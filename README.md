@@ -12,19 +12,19 @@
 | 原始碼驗收 CI | [Prototype acceptance](https://github.com/jzalx789/last-minute-bites/actions/workflows/checks.yml) |
 | 歷次驗證紀錄 | [docs/VALIDATION.md](docs/VALIDATION.md)（依日期閱讀，舊版本結果不是目前規格） |
 
-**組員請先確認有 GitHub 儲存庫權限，再切到上列分支。** 目前儲存庫為 Private；沒有權限時 GitHub 會顯示 404。擁有者須在 repository Settings → Collaborators 邀請組員，對方接受後才可看 code。App 本身可公開開啟，不需要 GitHub 權限；各地網路的可達性仍可能不同。組員毋須為看 code 索取 Cloudflare 或 DeepSeek 金鑰。
+**儲存庫已公開，組員可直接查看、下載或 clone 程式碼，請使用上列最新分支。** 向原儲存庫推送程式碼仍需協作者權限，也可透過 fork 提交 PR。公開的是程式碼，App 的帳戶與庫存仍受登入及廚房權限保護。
 
 ## 先認識這個專案
 
 正式版本是 **原生 HTML／CSS／JavaScript + Cloudflare Worker + SQLite-backed Durable Object**，沒有 React、前端打包程序或外接 SQL 伺服器。`static/` 同源提供介面，`web/worker.js` 提供 `/api/*` 與 `/healthz`。
 
-`server.py`、WSGI、PythonAnywhere 工具和部分舊設計圖是早期版本保留的對照／回歸材料。**目前 AI、批次份量、多廚房與聚會功能以 `static/` 和 `web/` 為準**；啟動舊 Python server 不會得到完整正式功能。`design/README.md` 中的固定食譜設計也已被動態生成取代。
+`server.py`、WSGI、舊部署工具和部分舊設計圖是早期版本保留的對照／回歸材料。**目前 AI、批次份量、多廚房與聚會功能以 `static/` 和 `web/` 為準**；啟動舊 Python server 不會得到完整正式功能。`design/README.md` 中的固定食譜設計也已被動態生成取代。
 
 ```mermaid
 flowchart LR
     UI["瀏覽器／PWA · static/"] --> API["食物 Worker · web/worker.js"]
     API --> Store["KitchenStore · SQLite Durable Object"]
-    API -->|FOOD_AI 私有 service binding| RPC["CareSync Worker · FoodAI entrypoint"]
+    API -->|FOOD_AI 私有 service binding| RPC["AI 服務 · FoodAI entrypoint"]
     RPC --> DeepSeek["DeepSeek · deepseek-flash"]
     Cron["Cron 每 5 分鐘"] --> Push["PushService"]
     Push --> Store
@@ -32,11 +32,11 @@ flowchart LR
     Provider --> SW["Service Worker · static/sw.js"]
 ```
 
-`web/ai-gateway.js` 定義 `FoodAI` RPC 類別；正式部署時由另一個既有 Worker 匯出。DeepSeek 金鑰留在該 Worker，瀏覽器與這個來源儲存庫不持有金鑰。本機開發改接測試 RPC，可以不用金鑰先跑完整操作流程。
+`web/ai-gateway.js` 定義 `FoodAI` RPC 類別，由正式環境的私有 AI 服務匯出。DeepSeek 金鑰只留在伺服器，瀏覽器與這個來源儲存庫不持有金鑰。本機開發改接測試 RPC，可以不用金鑰先跑完整操作流程。
 
 ## 本機啟動：Mac／Linux
 
-使用 **Node.js 24**（與 CI 一致）、**Python 3.12**、Git。以下指令從儲存庫根目錄執行。`git clone` 需要你自己的 GitHub 登入／授權。
+使用 **Node.js 24**（與 CI 一致）、**Python 3.12**、Git。以下指令從儲存庫根目錄執行。公開原始碼的 `git clone` 不需登入；推送至原儲存庫仍需 GitHub 授權。
 
 ```sh
 git clone --branch codex/last-minute-bites-prototype https://github.com/jzalx789/last-minute-bites.git
@@ -169,7 +169,7 @@ python3 scripts/package.py
 | 用途 | 儲存庫／分支／路徑 |
 | --- | --- |
 | 組員開發、PR、原始碼驗收 | `jzalx789/last-minute-bites` → `codex/last-minute-bites-prototype` |
-| 正式部署鏡像 | `jzalx789/caresync-is3542` → `codex/last-minute-bites-web` → `apps/last-minute-bites/` |
+| 正式部署鏡像 | 由維護者管理；應用程式位於 `apps/last-minute-bites/` |
 | 部署工作流程 | 鏡像 repo 的 `.github/workflows/last-minute-bites.yml` |
 
 新工作可從最新來源分支開自己的 feature branch，再向來源分支提 PR；不要以可能較舊的 `main` 當作完整 prototype：
@@ -179,9 +179,9 @@ git fetch origin
 git switch -c feature/your-change origin/codex/last-minute-bites-prototype
 ```
 
-**推送來源 repo 只會跑驗收，不會更新正式網站。** 經授權的上線工作需要將變更同步到部署鏡像，再由既有 Actions 先註冊私有 `FoodAI` entrypoint、後部署食物 Worker。同步 `web/ai-gateway.js` 等 RPC 依賴時，須連同檢查鏡像中 CareSync 的 export／import；保留 CareSync 其他功能、資料及自身規則。文件更新本身不需重新部署。
+**推送來源 repo 只會跑驗收，不會更新正式網站。** 經授權的上線工作需要將變更同步到部署鏡像，再由既有 Actions 先註冊私有 `FoodAI` entrypoint、後部署食物 Worker。同步 `web/ai-gateway.js` 等 RPC 依賴時，須一併檢查 AI 服務的 export／import，並保留既有服務綁定與資料。文件更新本身不需重新部署。
 
-正式部署使用既有 GitHub Actions secrets `CLOUDFLARE_API_TOKEN`／`CLOUDFLARE_ACCOUNT_ID`；DeepSeek secret 只在既有 CareSync Worker。沒有這些部署權限的組員仍可用 fixture 完整開發，毋須索取或複製正式金鑰。
+正式部署使用既有 GitHub Actions secrets `CLOUDFLARE_API_TOKEN`／`CLOUDFLARE_ACCOUNT_ID`；DeepSeek secret 只在私有 AI 服務。沒有這些部署權限的組員仍可用 fixture 完整開發，毋須索取或複製正式金鑰。
 
 不要為方便重命名以下持久儲存識別值：Worker `last-minute-bites-demo`、binding `KITCHENS`、class `KitchenStore`、object name `shared-kitchens-v1`。`web/kitchens.js` 的遷移在原 object 內保留帳號、廚房、食物、邀請和 session。不能以重新 seed／清空正式資料來修正遷移。
 
