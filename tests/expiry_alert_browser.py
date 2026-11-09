@@ -33,7 +33,7 @@ with sync_playwright() as p:
  request(page,'preferences',dict(language='en',text_size='standard'));page.wait_for_load_state("networkidle");page.reload()
  # Correcting a date removes its warning; today is not already expired.
  click(page,'edit',f'[data-id="{foods["Milk"]["id"]}"]');page.locator('[name=effective_date]').fill(today);page.locator('[data-form=food] button.primary').click();expect(alert).to_be_visible();expect(alert).not_to_contain_text('do not eat');expect(alert.locator('.expiry-count')).to_have_text('3');expect(alert).to_contain_text('quality date')
- click(page,'review-overdue')
+ click(page,'review-overdue');expect(page.locator('.food-row')).to_have_count(3)
  # Removed records stop contributing immediately; no modal blocks browsing.
  while page.locator('.food-row').count():
   count=page.locator('.food-row').count();page.locator('.food-row [data-action=row-delete]').first.click();confirm(page);expect(page.locator('.food-row')).to_have_count(count-1)
