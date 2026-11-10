@@ -67,7 +67,11 @@ with sync_playwright() as p:
  expect(page.locator('#confirm')).to_be_visible();page.locator('#confirm-cancel').click()
  expect(page.locator('#food-photo')).to_be_enabled();expect(page.locator('#photo-results')).to_be_empty()
  assert not any('/api/food/recognize' in r for r in requests)
- navigate(page,'privacy');page.locator('[name=ai_text]').uncheck();page.locator('[data-form=privacy] button').click()
+ navigate(page,'privacy');page.locator('[name=ai_text]').uncheck()
+ with page.expect_response(lambda r:r.url.endswith('/api/privacy') and r.request.method=='POST') as withdrawn:
+  page.locator('[data-form=privacy] button').click()
+ assert withdrawn.value.status==200
+ page.wait_for_function('state.consent.ai_text===false')
  expect(page.locator('[name=ai_text]')).not_to_be_checked()
  assert page.evaluate('state.foods.length')==1
  assert page.evaluate('api("recipes/history")')['generation'] is None

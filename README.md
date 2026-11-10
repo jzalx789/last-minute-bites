@@ -2,7 +2,7 @@
 
 以減少食物浪費為目標的課程 Web／PWA prototype。使用者可管理食材批次與份量、共享廚房、生成 DeepSeek 食譜，並在聚會中整合已同意分享的食材。
 
-目前版本：**1.4**（交接資訊更新：2026-11-10，香港時間）。
+目前版本：**1.4.1**（交接資訊更新：2026-11-10，香港時間）。
 
 | 入口 | 連結／位置 |
 | --- | --- |
@@ -88,6 +88,8 @@ web/node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --inspector-port 9230 
 | 正式／本機測試 binding | [web/wrangler.jsonc](web/wrangler.jsonc)、[web/wrangler.test.jsonc](web/wrangler.test.jsonc) |
 | 自動驗收的完整指令與順序 | [.github/workflows/checks.yml](.github/workflows/checks.yml) |
 
+1.4.1 修正手機日期欄位溢出、多選 Delete 文字換行，以及舊記錄未設定數量時無法原值儲存。遇到協議版本要求時，可明確同意後續做原操作；取消保留已填內容。舊版介面會收到重新載入提示，更新不會自動替使用者同意條款。Help & about 應顯示 1.4.1。
+
 ## 目前的產品規則
 
 ### 庫存與日期
@@ -163,6 +165,7 @@ python tests/recipe_modes_api.py
 python tests/multi_kitchen_browser.py
 LMB_WEB_ENGINE=webkit python tests/multi_kitchen_browser.py
 python tests/privacy_browser.py
+python tests/iphone_fixes_browser.py
 LMB_WEB_ENGINE=webkit python tests/privacy_browser.py
 ```
 

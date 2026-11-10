@@ -36,6 +36,16 @@
         </div>
       </form>
     </dialog>
+    <dialog id="agreement-dialog" aria-labelledby="agreement-dialog-title">
+      <form method="dialog" data-agreement-recovery>
+        <h2 id="agreement-dialog-title"></h2>
+        <p id="agreement-dialog-note"></p>
+        <div id="agreement-dialog-links"></div>
+        <label class="check"><input type="checkbox" name="accepted" required><span id="agreement-dialog-label"></span></label>
+        <p id="agreement-dialog-error" class="error" role="alert"></p>
+        <div class="actions"><button type="submit" value="cancel" formnovalidate id="agreement-dialog-cancel"></button><button type="submit" value="accept" class="primary" id="agreement-dialog-accept"></button></div>
+      </form>
+    </dialog>
     <dialog id="scanner" aria-labelledby="scanner-title">
       <h2 id="scanner-title">Scan invitation / 掃描邀請</h2>
       <p id="scanner-status" role="status"></p>

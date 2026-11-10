@@ -10,7 +10,9 @@ suffix=uuid.uuid4().hex[:10];email='privacy-a-'+suffix+'@example.test';pw='test-
 status,policy=c.request('legal');assert status==200 and policy['contact']=='Bite.limited@gmail.com'
 version=policy['version'];assert all(s['body']['en'] and s['body']['zh-Hant'] for s in policy['privacy']+policy['terms'])
 body=dict(email=email,password=pw,confirm_password=pw,timezone='Asia/Hong_Kong')
-a.post('register',body,428);a.post('register',dict(body,terms_accepted=True,legal_version='old'),428)
+status,legacy=c.request('register',body,headers={'X-LMB-Client-Version':''});assert status==428 and legacy['error']['code']=='upgrade_required'
+status,current=a.request('register',body);assert status==428 and current['error']['code']=='agreement_required'
+a.post('register',dict(body,terms_accepted=True,legal_version='old'),428)
 a.post('register',dict(body,terms_accepted=True,legal_version=version))
 assert a.state()['consent']['accepted'] and not a.state()['consent']['ai_text'] and not a.state()['consent']['ai_photo']
 a.post('privacy',dict(ai_text='true'),400)

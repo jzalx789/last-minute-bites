@@ -122,6 +122,10 @@ Preserve the displayed order and default UI recommendation:
   payloads. The current subscription follows one kitchen per device.
 - Respect account timezone, daily deduplication, active membership and party
   expiry in both schedule selection and delivery rechecks.
+- Release identifiers in `web/release.js` and `static/app.js` must match. Legacy
+  shells receive their existing refresh instruction on agreement errors; current
+  clients offer explicit consent and replay once only in the original account /
+  kitchen context. Never automatically reload a dirty form or accept an agreement.
 - Service worker caches the public shell only, never API results or private user
   data. Bump its shell cache version when changing cached UI assets.
 
@@ -197,6 +201,7 @@ if `/usr/bin/chromium` is absent; README.md gives the command. Examples:
 
 | Change | Relevant acceptance files under `tests/` |
 | --- | --- |
+| iPhone report, agreement recovery, date controls, unknown legacy amounts, selection dock | `iphone_fixes_browser.py`, `web/release.test.mjs` |
 | Privacy, agreements, account deletion, passwords | `web/account.test.mjs`, `privacy_api.py`, `privacy_browser.py` |
 | Large inventories / selected recipes | `large_inventory_api.py` |
 | Kitchens, grants, session context, migrations | `web/kitchens.test.mjs`, `multi_kitchen_api.py`, `multi_kitchen_browser.py` |

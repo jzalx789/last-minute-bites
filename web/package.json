@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --config wrangler.jsonc --port 8787 --persist-to ../.data/cloudflare",
-    "check": "node --check legal.js && node --check account.js && node --check kitchens.js && node --check worker.js && node --check domain.js && node --check ai.js && node --check ai-gateway.js && node --check food-classifier.js && node --check web-push.js && node --check push-service.js",
+    "check": "node --check release.js && node --check legal.js && node --check account.js && node --check kitchens.js && node --check worker.js && node --check domain.js && node --check ai.js && node --check ai-gateway.js && node --check food-classifier.js && node --check web-push.js && node --check push-service.js",
     "test": "node --test ../tests/web/*.test.mjs"
   },
   "devDependencies": {

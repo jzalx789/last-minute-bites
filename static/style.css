@@ -1970,3 +1970,23 @@ details p {
 .agreement-check { align-items:start; }
 
 #ownership-blockers li, .privacy-section p { overflow-wrap:anywhere; }
+
+/* Safari date controls must shrink inside the form's content box. */
+input[type="date"] { display:block; width:100%; inline-size:100%; min-width:0; min-inline-size:0; max-width:100%; max-inline-size:100%; box-sizing:border-box; -webkit-appearance:none; appearance:none; min-height:3rem; }
+input[type="date"]::-webkit-date-and-time-value { min-width:0; text-align:start; }
+input[type="date"]::-webkit-datetime-edit { min-width:0; padding:0; }
+@media(max-width:700px) {
+  .selection-actions, .large .selection-actions { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1.3fr); flex:0 0 100%; width:100%; min-width:0; }
+  .selection-actions button { min-width:0; overflow-wrap:normal; word-break:normal; }
+  .selection-actions [data-action="batch-delete"] { white-space:nowrap; }
+}
+.app-update { display:flex; align-items:center; justify-content:space-between; gap:.5rem; padding:.5rem .7rem; margin-bottom:.7rem; background:#fff4de; border-radius:10px; font-size:.875rem; }
+.app-update[hidden] { display:none; }
+.app-update span { min-width:0; overflow-wrap:anywhere; }
+#agreement-dialog { max-height:calc(var(--visible-height,100dvh) - 24px); overflow-y:auto; }
+
+@media(min-width:540px) and (max-width:700px) and (max-height:480px) {
+  .selection-actions, .large .selection-actions { flex:1 1 auto; width:auto; }
+}
+
+@media(max-width:700px) { .selection-actions:not(:has([data-action="batch-delete"])) { grid-template-columns:repeat(2,minmax(0,1fr)); } }

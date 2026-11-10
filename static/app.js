@@ -1,4 +1,5 @@
 "use strict";
+const CLIENT_VERSION = "1.4.1";
 const $ = (s, r = document) => r.querySelector(s),
   E = (v) =>
     String(v ?? "").replace(
@@ -67,6 +68,9 @@ const words = {
   terms_title: ["Terms of use", "用戶協議"],
   privacy_policy: ["Privacy policy", "隱私政策"],
   agree_terms: ["I agree to the Terms of use and acknowledge the Privacy policy.", "我同意用戶協議，並已知悉隱私政策。"],
+  app_update: ["An app update is available. Reload to use the latest interface.", "App 有更新，重新載入即可使用最新介面。"],
+  reload_app: ["Reload app", "重新載入 App"],
+  quantity_keep_unknown: ["Leave blank to keep this food’s quantity unset. Enter a quantity when you know it.", "可留空保留此食物的未設定數量；知道份量後再補填。"],
   agreement_required: ["Please review and accept the current agreement first.", "請先閱讀並同意目前版本的協議。"],
   agreement_intro: ["Please review the updated terms. Optional AI and device permissions are separate. You can still export data or delete your account without accepting.", "請閱讀更新的條款。自選 AI 與裝置權限會分開處理；不接受仍可匯出資料或刪除帳戶。"],
   agreement_accept: ["Agree and continue", "同意並繼續"],
@@ -938,12 +942,15 @@ function notify(s) {
   notify.timer = setTimeout(() => ($("#toast").textContent = ""), 6500);
 }
 let activeKitchenId = null, contextEpoch = 0, switchingKitchen = false;
-async function api(path, data) {
+let pendingAgreement = null, updateAvailable = false, lastUpdateCheck = 0;
+async function api(path, data, options = {}) {
+  const requestContext={uid:state?.user?.id,kid:activeKitchenId,epoch:contextEpoch};
   let res, result;
   try {
     res = await fetch("/api/" + path, {
       method: data === undefined ? "GET" : "POST",
       headers: {
+        "X-LMB-Client-Version":CLIENT_VERSION,
         ...(activeKitchenId ? {"X-Kitchen-ID": String(activeKitchenId)} : {}),
         ...(data === undefined ? {} : {"Content-Type":"application/json", "X-CSRF-Token":state?.csrf || ""}),
       },
@@ -954,8 +961,20 @@ async function api(path, data) {
   } catch (_) {
     throw { code: "network_error" };
   }
-  if (!res.ok)
-    throw { code: result.error?.code || "internal_error", status: res.status };
+  if (!res.ok) {
+    const code = result.error?.code || "internal_error";
+    if (code === "agreement_required" && state?.user && options.recoverAgreement !== false && !["legal/accept","register","login"].includes(path)) {
+      if (await requestAgreement(true)) {
+        if (state?.user?.id !== requestContext.uid || activeKitchenId !== requestContext.kid || contextEpoch !== requestContext.epoch)
+          throw {code:"lost_access",status:409,recoveryHandled:true};
+        if (["recipes/generate","recipes/replace","food/recognize"].includes(path) && !(await ensureAI(path === "food/recognize" ? "photo" : "text")))
+          throw {code:"ai_consent_required",status:403,recoveryHandled:true};
+        return api(path,data,{...options,recoverAgreement:false});
+      }
+      throw {code,status:res.status,recoveryHandled:true};
+    }
+    throw {code,status:res.status};
+  }
   if (result.csrf && state) state.csrf = result.csrf;
   return result;
 }
@@ -1017,6 +1036,7 @@ async function refresh(draw = true) {
   lastKitchen = kid;
   const justClosed = state?.kitchen?.id === kid && !state.kitchen.closed && next.kitchen?.closed;
   state = next;
+  if (next.app_version && next.app_version !== CLIENT_VERSION) markAppUpdate();
   activeKitchenId = kid;
   if (justClosed && $("#used-picker").open) $("#used-picker").close("cancel");
   if (recipeResult) {
@@ -1140,7 +1160,7 @@ function render(keepScroll = false) {
   else if (page === "reminders") content = reminders();
   else if (page === "help") content = help();
   else content = kitchen();
-  app.innerHTML = `<header class="topbar"><button class="brand" data-action="go" data-path="kitchen">${icon("leaf")}<span>Last Minute <b>Bites</b></span></button><div class="header-actions">${state.user ? button("go", t("settings"), "", 'data-path="settings"') : button("language", language() === "en" ? "繁體中文" : "English")}</div></header><main id="main" tabindex="-1">${offline ? `<p class="error">${E(t("offline"))} ${button("retry", t("retry"))}</p>` : ""}${state.user && state.kitchen && !publicLegal && !agreementGate && !["kitchen","kitchens"].includes(page) ? kitchenContext() : ""}${state.kitchen?.closed ? `<p class="warning party-closed" role="status">${E(t("party_closed"))}</p>` : ""}${content}</main>${state.user && state.kitchen && !publicLegal && !agreementGate ? `<footer class="app-dock">${selectionBar()}${addFoodDock()}<nav class="bottom-nav" aria-label="${E(t("kitchen"))}"><button data-action="go" data-path="kitchen" ${page === "kitchen" ? 'aria-current="page"' : ""}>${icon("home")}${E(t("kitchen"))}</button><button data-action="go" data-path="category/all" ${page === "category" ? 'aria-current="page"' : ""}>${icon("bag")}${E(t("inventory"))}</button><button data-action="go" data-path="recipes" ${page === "recipes" ? 'aria-current="page"' : ""}>${icon("book")}${E(t("recipes"))}</button></nav></footer>` : ""}`;
+  app.innerHTML = `<header class="topbar"><button class="brand" data-action="go" data-path="kitchen">${icon("leaf")}<span>Last Minute <b>Bites</b></span></button><div class="header-actions">${state.user ? button("go", t("settings"), "", 'data-path="settings"') : button("language", language() === "en" ? "繁體中文" : "English")}</div></header><main id="main" tabindex="-1">${offline ? `<p class="error">${E(t("offline"))} ${button("retry", t("retry"))}</p>` : ""}${state.user && state.kitchen && !publicLegal && !agreementGate && !["kitchen","kitchens"].includes(page) ? kitchenContext() : ""}${state.kitchen?.closed ? `<p class="warning party-closed" role="status">${E(t("party_closed"))}</p>` : ""}${updateNotice()}${content}</main>${state.user && state.kitchen && !publicLegal && !agreementGate ? `<footer class="app-dock">${selectionBar()}${addFoodDock()}<nav class="bottom-nav" aria-label="${E(t("kitchen"))}"><button data-action="go" data-path="kitchen" ${page === "kitchen" ? 'aria-current="page"' : ""}>${icon("home")}${E(t("kitchen"))}</button><button data-action="go" data-path="category/all" ${page === "category" ? 'aria-current="page"' : ""}>${icon("bag")}${E(t("inventory"))}</button><button data-action="go" data-path="recipes" ${page === "recipes" ? 'aria-current="page"' : ""}>${icon("book")}${E(t("recipes"))}</button></nav></footer>` : ""}`;
   const nextAuth = $('[data-form="auth"]');
   if (authDraft && nextAuth) {
     nextAuth.elements.email.value=authDraft.email;
@@ -1345,7 +1365,7 @@ function foodForm(id) {
       ingredient: "",
     };
   calculation = f?.date_source === "production" ? f.effective_date : null;
-  return `<div class="narrow">${back()}<h1>${E(t(f ? "edit" : "add"))}</h1>${!f ? `<section class="photo-panel"><label class="photo-upload">${E(t("photo"))}<input type="file" id="food-photo" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment"></label><p class="hint">${E(t("photo_hint"))}</p><div id="photo-results">${photoCandidates.length ? photoCandidateHTML() : ""}</div><p id="photo-error" class="error" role="alert"></p></section>` : ""}<form data-form="food" data-id="${f?.id || ""}" data-version="${f?.version || ""}">${field("name", t("name"), v.name, "text", 'required maxlength="120" autocomplete="off"')}<div id="food-classification" class="food-classification" role="status" aria-live="polite"></div><label class="check food-confirmation" id="food-confirmation" hidden><input type="checkbox" name="food_confirmed" ${v.food_verification?.confirmed ? "checked" : ""}>${E(t("food_confirm_label"))}</label><p class="hint">${E(t("batch_note"))}</p><div class="two-fields">${field("quantity", t("quantity"), v.quantity ?? "", "number", `required min="0.001" max="1000000" step="0.001" inputmode="decimal"`)}<label>${E(t("unit"))}<select name="unit">${quantityUnits.map((unit) => option(unit, t("unit_" + unit), v.unit || "pcs")).join("")}</select></label></div>${field("purchased_date", t("purchased_date"), f ? f.purchased_date || "" : state.today, "date")}<label>${E(t("date_information"))}<select name="date_source">${["unknown", "printed", "production", "personal"].map((k) => option(k, t(k === "unknown" ? "no_date" : k === "personal" ? "personal_date_source" : k), v.date_source)).join("")}</select></label><div id="dated-fields" ${v.date_source === "unknown" ? "hidden" : ""}><div id="package-label">${select("date_kind", t("label_type"), ["unspecified", "use_by", "best_before"], v.date_kind)}</div><div id="printed-fields" ${!["printed", "personal"].includes(v.date_source) ? "hidden" : ""}><label><span id="food-date-label">${E(t(v.date_source === "personal" ? "personal_date" : "date"))}</span><input type="date" name="effective_date" value="${E(v.effective_date || "")}"></label><p class="hint" id="personal-date-hint" ${v.date_source !== "personal" ? "hidden" : ""}>${E(t("personal_hint"))}</p></div><div id="production-fields" ${v.date_source !== "production" ? "hidden" : ""}>${field("production_date", t("production_date"), v.production_date || "", "date")}<div class="two-fields">${field("shelf_life", t("shelf_life"), v.shelf_life || "", "number", 'min="1" max="10000" step="1"')}${select("shelf_unit", t("shelf_life"), ["days", "months", "years"], v.shelf_unit || "days")}</div>${button("calculate", t("calculate"))}<p id="calculation-result" role="status">${calculation ? E(t("reference") + ": " + dateText(calculation)) : ""}</p><label class="check"><input type="checkbox" name="date_confirmed" ${calculation ? "checked" : ""}>${E(t("confirm_date"))}</label><details><summary>${E(t("calc_explanation"))}</summary><p>${E(t("calc_note"))}</p></details></div></div><div class="two-fields">${select("category", t("category"), cats, v.category)}${select("location", t("location"), ["fridge", "freezer", "pantry", "other"], v.location)}</div><input type="hidden" name="ingredient" value="${E(v.ingredient)}"><label>${E(t("note"))}<textarea name="note" maxlength="1000" rows="3">${E(v.note)}</textarea></label>${formError()}<div class="actions"><button class="primary" ${f?.status === "used" ? "disabled" : ""}>${E(t(f ? "save" : "add"))}</button>${button("go", t("cancel"), "", 'data-path="kitchen"')}</div>${f ? `<div class="record-actions">${f.status === "active" ? button("mark-used", t("consume")) : ""}${button("delete-food", t("delete"), "danger")}${button("reload-record", t("reload_record"), "quiet")}</div>` : ""}</form></div>`;
+  return `<div class="narrow">${back()}<h1>${E(t(f ? "edit" : "add"))}</h1>${!f ? `<section class="photo-panel"><label class="photo-upload">${E(t("photo"))}<input type="file" id="food-photo" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment"></label><p class="hint">${E(t("photo_hint"))}</p><div id="photo-results">${photoCandidates.length ? photoCandidateHTML() : ""}</div><p id="photo-error" class="error" role="alert"></p></section>` : ""}<form data-form="food" data-id="${f?.id || ""}" data-version="${f?.version || ""}">${field("name", t("name"), v.name, "text", 'required maxlength="120" autocomplete="off"')}<div id="food-classification" class="food-classification" role="status" aria-live="polite"></div><label class="check food-confirmation" id="food-confirmation" hidden><input type="checkbox" name="food_confirmed" ${v.food_verification?.confirmed ? "checked" : ""}>${E(t("food_confirm_label"))}</label><p class="hint">${E(t("batch_note"))}</p><div class="two-fields">${field("quantity", t("quantity"), v.quantity ?? "", "number", `${!f || f.quantity != null ? "required" : 'aria-describedby="quantity-unknown-note"'} min="0.001" max="1000000" step="0.001" inputmode="decimal"`)}<label>${E(t("unit"))}<select name="unit">${quantityUnits.map((unit) => option(unit, t("unit_" + unit), v.unit || "pcs")).join("")}</select></label></div>${f && f.quantity == null ? `<p id="quantity-unknown-note" class="hint">${E(t("quantity_keep_unknown"))}</p>` : ""}${field("purchased_date", t("purchased_date"), f ? f.purchased_date || "" : state.today, "date")}<label>${E(t("date_information"))}<select name="date_source">${["unknown", "printed", "production", "personal"].map((k) => option(k, t(k === "unknown" ? "no_date" : k === "personal" ? "personal_date_source" : k), v.date_source)).join("")}</select></label><div id="dated-fields" ${v.date_source === "unknown" ? "hidden" : ""}><div id="package-label">${select("date_kind", t("label_type"), ["unspecified", "use_by", "best_before"], v.date_kind)}</div><div id="printed-fields" ${!["printed", "personal"].includes(v.date_source) ? "hidden" : ""}><label><span id="food-date-label">${E(t(v.date_source === "personal" ? "personal_date" : "date"))}</span><input type="date" name="effective_date" value="${E(v.effective_date || "")}"></label><p class="hint" id="personal-date-hint" ${v.date_source !== "personal" ? "hidden" : ""}>${E(t("personal_hint"))}</p></div><div id="production-fields" ${v.date_source !== "production" ? "hidden" : ""}>${field("production_date", t("production_date"), v.production_date || "", "date")}<div class="two-fields">${field("shelf_life", t("shelf_life"), v.shelf_life || "", "number", 'min="1" max="10000" step="1"')}${select("shelf_unit", t("shelf_life"), ["days", "months", "years"], v.shelf_unit || "days")}</div>${button("calculate", t("calculate"))}<p id="calculation-result" role="status">${calculation ? E(t("reference") + ": " + dateText(calculation)) : ""}</p><label class="check"><input type="checkbox" name="date_confirmed" ${calculation ? "checked" : ""}>${E(t("confirm_date"))}</label><details><summary>${E(t("calc_explanation"))}</summary><p>${E(t("calc_note"))}</p></details></div></div><div class="two-fields">${select("category", t("category"), cats, v.category)}${select("location", t("location"), ["fridge", "freezer", "pantry", "other"], v.location)}</div><input type="hidden" name="ingredient" value="${E(v.ingredient)}"><label>${E(t("note"))}<textarea name="note" maxlength="1000" rows="3">${E(v.note)}</textarea></label>${formError()}<div class="actions"><button class="primary" ${f?.status === "used" ? "disabled" : ""}>${E(t(f ? "save" : "add"))}</button>${button("go", t("cancel"), "", 'data-path="kitchen"')}</div>${f ? `<div class="record-actions">${f.status === "active" ? button("mark-used", t("consume")) : ""}${button("delete-food", t("delete"), "danger")}${button("reload-record", t("reload_record"), "quiet")}</div>` : ""}</form></div>`;
 }
 function bindFoodForm() {
   const form = $('[data-form="food"]');
@@ -1819,12 +1839,72 @@ function transferForm() {
   return `<details class="privacy-section"><summary>${E(t("transfer_owner"))}</summary><p>${E(t("transfer_note"))}</p><form data-form="transfer-owner"><label>${E(t("members"))}<select name="user_id">${editors.map(m=>option(m.id,m.email,editors[0].id)).join("")}</select></label>${field("password",t("password_current"),"","password",'required maxlength="128" autocomplete="current-password"')}<label class="check"><input type="checkbox" name="confirmed" required>${E(t("destructive_confirm"))}</label>${formError()}<button class="danger full">${E(t("transfer_owner"))}</button></form></details>`;
 }
 async function ensureAI(kind) {
-  if (!state.consent?.accepted) {notify(t("agreement_required"));go("kitchen");return false;}
+  if (!state.consent?.accepted && !(await requestAgreement())) return false;
   const key=kind === "photo" ? "ai_photo" : "ai_text";
   if (state.consent[key]) return true;
   if (!(await confirmAction(t(kind === "photo" ? "ai_photo_prompt" : "ai_text_prompt"),t("ai_choice_notice")))) return false;
   const result=await api("privacy",{[key]:true});state.consent=result.consent;return true;
 }
+function updateNotice() {
+  return `<aside id="app-update" class="app-update" role="status" ${updateAvailable ? "" : "hidden"}><span>${E(t("app_update"))}</span>${button("reload-app",t("reload_app"),"quiet")}</aside>`;
+}
+function markAppUpdate() {
+  updateAvailable=true;
+  const box=$("#app-update");if (box) box.hidden=false;
+}
+async function checkAppUpdate() {
+  if (Date.now()-lastUpdateCheck<10000) return;
+  lastUpdateCheck=Date.now();
+  try {
+    const response=await fetch("/healthz",{cache:"no-store"});
+    const health=await response.json();
+    if (response.ok && health.version && health.version !== CLIENT_VERSION) markAppUpdate();
+  } catch {}
+}
+async function requestAgreement(force=false) {
+  if (!force && state.consent?.accepted) return true;
+  if (pendingAgreement) return pendingAgreement;
+  pendingAgreement=(async()=>{
+    const uid=state.user?.id;
+    if (force && state.consent) state.consent.accepted=false;
+    const policy=await api("legal",undefined,{recoverAgreement:false});
+    if (!uid || state.user?.id !== uid) return false;
+    state.legal={...state.legal,version:policy.version,contact:policy.contact};
+    const dialog=$("#agreement-dialog"), form=dialog.querySelector("form");
+    form.reset();$("#agreement-dialog-error").textContent="";
+    $("#agreement-dialog-title").textContent=t("terms_title");
+    $("#agreement-dialog-note").textContent=t("agreement_intro");
+    $("#agreement-dialog-links").innerHTML=legalLinks()+`<p class="hint">${E(t("legal_version"))}: ${E(policy.version)}</p>`;
+    $("#agreement-dialog-label").textContent=t("agree_terms");
+    $("#agreement-dialog-cancel").textContent=t("cancel");
+    $("#agreement-dialog-accept").textContent=t("agreement_accept");
+    return new Promise(resolve=>{
+      let accepted=false,busy=false;
+      const submit=async event=>{
+        event.preventDefault();
+        if (busy) return;
+        if (event.submitter?.value === "cancel") {dialog.close("cancel");return;}
+        if (!form.reportValidity()) return;
+        busy=true;$("#agreement-dialog-accept").disabled=true;
+        try {
+          const result=await api("legal/accept",{accepted:form.elements.accepted.checked,version:policy.version},{recoverAgreement:false});
+          if (state.user?.id !== uid) {dialog.close("cancel");return;}
+          state.consent=result.consent;accepted=true;dialog.close("accepted");
+        } catch(e) {$("#agreement-dialog-error").textContent=errorText(e);}
+        finally {busy=false;$("#agreement-dialog-accept").disabled=false;}
+      };
+      const preventCancel=event=>{if (busy) event.preventDefault();};
+      const closed=()=>{form.removeEventListener("submit",submit);dialog.removeEventListener("cancel",preventCancel);resolve(accepted);};
+      form.addEventListener("submit",submit);dialog.addEventListener("cancel",preventCancel);dialog.addEventListener("close",closed,{once:true});dialog.showModal();
+    });
+  })();
+  try {return await pendingAgreement;} finally {pendingAgreement=null;}
+}
+window.addEventListener("pageshow",()=>checkAppUpdate());
+document.addEventListener("visibilitychange",()=>{if (!document.hidden) checkAppUpdate();});
+navigator.serviceWorker?.addEventListener("controllerchange",()=>checkAppUpdate());
+for (const name of ["input","change"]) document.addEventListener(name,event=>{const form=event.target.closest("form");if (form) form.dataset.dirty="true";});
+
 async function clearLocalSessionData() {
   clearLocalSelections();
   try {
@@ -1903,7 +1983,7 @@ function reminders() {
   return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form><p class="hint">${E(t("push_kitchen_scope"))}</p><section id="push-panel" class="push-panel" aria-label="${E(t("push_title"))}">${pushPanelHTML()}</section></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 1.4</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 1.4.1</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
 async function confirmAction(title, message, typed = false) {
   const dialog = $("#confirm");
@@ -2101,7 +2181,7 @@ document.addEventListener("submit", async (event) => {
     error.textContent = errorText(err);
     if (form.dataset.form === "ai-recipes") displayRecipes();
     if (err.code === "agreement_required") notify(errorText(err));
-    if (["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(err.code))
+    if (["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(err.code) && !err.recoveryHandled)
       await refresh().catch(() => {});
   } finally {
     delete form.dataset.classifyingSubmit;
@@ -2116,6 +2196,9 @@ document.addEventListener("click", async (event) => {
   b.disabled = true;
   try {
     switch (a) {
+      case "reload-app":
+        if (![...document.querySelectorAll('form[data-dirty="true"]')].some(form=>form.getClientRects().length) || await confirmAction(t("reload_app"),t("discard"))) location.reload();
+        break;
       case "retry-legal":
         legalError=null;await loadLegalContent();break;
       case "export-data": {
@@ -2474,7 +2557,7 @@ document.addEventListener("click", async (event) => {
     const error = b.closest("form")?.querySelector(".error");
     if (error) error.textContent = errorText(err);
     else notify(errorText(err));
-    if (["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(err.code))
+    if (["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(err.code) && !err.recoveryHandled)
       await refresh().catch(() => {});
   } finally {
     b.disabled = false;
@@ -2556,6 +2639,7 @@ async function poll() {
         ["kitchen", "category"].includes(p) &&
         !document.activeElement?.matches("input,textarea,select") &&
         !$("#confirm").open &&
+        !$("#agreement-dialog").open &&
         !$("#scanner").open &&
         !$("#used-picker").open;
     await refresh(draw);
@@ -2817,7 +2901,7 @@ async function consumeFoods(foods, suggested = new Map()) {
       )
         ? t("consumption_conflict")
         : errorText(err);
-      if (["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(err.code))
+      if (["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(err.code) && !err.recoveryHandled)
         await refresh(false).catch(() => {});
     } finally {
       busy = false;

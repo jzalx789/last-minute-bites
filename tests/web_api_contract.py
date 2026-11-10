@@ -17,7 +17,7 @@ class Client(BaseClient):
         version=self.request('legal')[1]['version']
         return self.post('register',dict(email=email,password='test-password-123',confirm_password='test-password-123',timezone='Asia/Hong_Kong',terms_accepted=True,legal_version=version,ai_text=True,ai_photo=True))
     def request(self,path,data=None,headers=None):
-        defaults={"User-Agent":BROWSER_AGENT}
+        defaults={"User-Agent":BROWSER_AGENT,"X-LMB-Client-Version":"1.4.1"}
         if urlparse(self.base).hostname in {"127.0.0.1","localhost","::1"}:
             if not hasattr(self,"_local_test_ip"):self._local_test_ip="synthetic-api-"+uuid.uuid4().hex
             defaults["CF-Connecting-IP"]=self._local_test_ip

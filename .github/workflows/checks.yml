@@ -54,6 +54,7 @@ jobs:
           python tests/recipe_modes_browser.py
           python tests/multi_kitchen_browser.py
           python tests/privacy_browser.py
+          python tests/iphone_fixes_browser.py
           python tests/push_browser.py
           python tests/push_service_worker.py
           LMB_WEB_ENGINE=webkit python tests/auth_keyboard_browser.py
@@ -67,3 +68,4 @@ jobs:
           LMB_WEB_ENGINE=webkit python tests/recipe_modes_browser.py
           LMB_WEB_ENGINE=webkit python tests/multi_kitchen_browser.py
           LMB_WEB_ENGINE=webkit python tests/privacy_browser.py
+          LMB_WEB_ENGINE=webkit python tests/iphone_fixes_browser.py

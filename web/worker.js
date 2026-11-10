@@ -1,3 +1,4 @@
+import { APP_VERSION, clientErrorCode } from "./release.js";
 import { AccountService, ACCOUNT_SCHEMA, migrateAccount } from "./account.js";
 import { LEGAL_VERSION, LEGAL_CONTACT, legalDocuments } from "./legal.js";
 import { migrateKitchens, KitchenAccess, partyEnded } from "./kitchens.js";
@@ -196,7 +197,7 @@ export class KitchenStore extends DurableObject {
         if (url.pathname === "/healthz") {
           this.one("SELECT COUNT(*) AS count FROM users");
           return respond(
-            { status: "ok", version: "1.4", storage: "persistent-sqlite" },
+            { status: "ok", version: APP_VERSION, storage: "persistent-sqlite" },
             200,
             null,
             secure,
@@ -249,7 +250,7 @@ export class KitchenStore extends DurableObject {
       } catch (error) {
         if (error instanceof Problem)
           return respond(
-            { error: { code: error.code } },
+            { error: { code: clientErrorCode(error.code, request) } },
             error.status,
             null,
             secure,
@@ -538,7 +539,7 @@ export class KitchenStore extends DurableObject {
           error: {
             code:
               error instanceof Problem
-                ? error.code
+                ? clientErrorCode(error.code,request)
                 : "classification_unavailable",
           },
         },
@@ -947,7 +948,7 @@ export class KitchenStore extends DurableObject {
           error: {
             code:
               error instanceof Problem
-                ? error.code
+                ? clientErrorCode(error.code,request)
                 : image
                   ? "photo_failed"
                   : "ai_unavailable",
@@ -991,7 +992,7 @@ export class KitchenStore extends DurableObject {
       return { generation };
     }
     if (request.method === "GET" && path === "/api/state") {
-      const state = { csrf: this.session.csrf, user: null, web_app: true, legal: {version:LEGAL_VERSION,contact:LEGAL_CONTACT} };
+      const state = { app_version:APP_VERSION, csrf: this.session.csrf, user: null, web_app: true, legal: {version:LEGAL_VERSION,contact:LEGAL_CONTACT} };
       if (!uid) return state;
       const user = this.one("SELECT id,email FROM users WHERE id=?", uid),
         preferences = this.prefs(),
