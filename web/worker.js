@@ -1,3 +1,5 @@
+import { AccountService, ACCOUNT_SCHEMA, migrateAccount } from "./account.js";
+import { LEGAL_VERSION, LEGAL_CONTACT, legalDocuments } from "./legal.js";
 import { migrateKitchens, KitchenAccess, partyEnded } from "./kitchens.js";
 import { DurableObject } from "cloudflare:workers";
 import { PushService, PUSH_SCHEMA } from "./push-service.js";
@@ -45,6 +47,7 @@ import {
 
 const SCHEMA = `
 ${PUSH_SCHEMA}
+${ACCOUNT_SCHEMA}
 CREATE TABLE IF NOT EXISTS food_assessments(user_id INTEGER NOT NULL,kitchen_id INTEGER NOT NULL,name_key TEXT NOT NULL,data TEXT NOT NULL,created REAL NOT NULL,PRIMARY KEY(user_id,kitchen_id,name_key));
 CREATE TABLE IF NOT EXISTS recipe_generations(id TEXT PRIMARY KEY,user_id INTEGER NOT NULL,kitchen_id INTEGER NOT NULL,cache_key TEXT NOT NULL,data TEXT NOT NULL,created REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS ai_usage(day TEXT NOT NULL,kind TEXT NOT NULL,user_id INTEGER NOT NULL,count INTEGER NOT NULL,PRIMARY KEY(day,kind,user_id));
@@ -84,12 +87,14 @@ export class KitchenStore extends DurableObject {
     super(ctx, env);
     this.sql = ctx.storage.sql;
     this.kitchenAccess = new KitchenAccess(this);
+    this.account = new AccountService(this);
     this.attempts = new Map();
     this.aiBusy = new Set();
     this.pushService = new PushService(this, env);
     ctx.blockConcurrencyWhile(async () => {
       this.sql.exec(SCHEMA);
       migrateKitchens(ctx.storage);
+      migrateAccount(ctx.storage);
     });
   }
   rows(query, ...bindings) {
@@ -191,13 +196,14 @@ export class KitchenStore extends DurableObject {
         if (url.pathname === "/healthz") {
           this.one("SELECT COUNT(*) AS count FROM users");
           return respond(
-            { status: "ok", version: "1.3", storage: "persistent-sqlite" },
+            { status: "ok", version: "1.4", storage: "persistent-sqlite" },
             200,
             null,
             secure,
           );
         }
         this.sql.exec("DELETE FROM sessions WHERE expires<?", Date.now());
+        this.account.cleanup();
         const raw = /\blmb_session=([A-Za-z0-9_-]+)/.exec(
           request.headers.get("Cookie") || "",
         )?.[1];
@@ -288,6 +294,7 @@ export class KitchenStore extends DurableObject {
     return result.value;
   }
   async runPushSchedule(when) {
+    await this.locked(() => this.account.cleanup(when));
     return this.pushService.scheduled(when);
   }
   async pushTestFetch(request) {
@@ -425,6 +432,12 @@ export class KitchenStore extends DurableObject {
         if (known.status !== "uncertain" || known.source !== "rules")
           return { known };
         if (data.allow_ai === false) return { known };
+        this.account.requireTerms(uid);
+        if (!this.account.consent(uid).ai_text) {
+          const fallback = {...known,source:"unavailable",reason:"ai_disabled"};
+          this.saveAssessment(uid,kid,name,fallback);
+          return {known:fallback};
+        }
         if (!this.env.FOOD_AI || foodNameKey(name).length < 2) {
           const fallback = {
             ...known,
@@ -450,6 +463,7 @@ export class KitchenStore extends DurableObject {
           uid,
           kid,
           token: session.token,
+          consentRevision: this.account.consent(uid).revision,
           language: preferences.language,
         };
       });
@@ -508,6 +522,8 @@ export class KitchenStore extends DurableObject {
           403,
         );
         this.kitchenAccess.member({user_id:snapshot.uid}, snapshot.kid);
+        this.account.requireAI(snapshot.uid,"text");
+        check(this.account.consent(snapshot.uid).revision === snapshot.consentRevision,"privacy_changed",409);
         this.saveAssessment(
           snapshot.uid,
           snapshot.kid,
@@ -619,6 +635,7 @@ export class KitchenStore extends DurableObject {
         const auth = await this.aiAuth(request, image ? 1200000 : 16384),
           uid = auth.session.user_id,
           kid = auth.member.kitchen_id;
+        this.account.requireAI(uid,image ? "photo" : "text");
         check(this.env.FOOD_AI, image ? "photo_failed" : "ai_unavailable", 503);
         const input = { language: auth.preferences.language };
         let fingerprint, cacheKey, replacement, fullInput;
@@ -666,7 +683,6 @@ export class KitchenStore extends DurableObject {
           check(["selected", "all"].includes(scope));
           auth.data.scope = scope;
           if (mode !== "plan") check(allFoods.length > 0, "no_food");
-          check(allFoods.length <= 80, "invalid_input");
           const servings = auth.data.servings ?? 2,
             portion = auth.data.portion ?? "standard",
             maxMinutes = auth.data.max_minutes ?? null,
@@ -679,6 +695,7 @@ export class KitchenStore extends DurableObject {
           if (mode !== "plan") check(foods.length > 0, "preference_conflict");
           check(STYLES.includes(auth.data.style ?? "auto"));
           check(RECIPE_COUNTS.includes(auth.data.count ?? 2));
+          check(scope !== "all" || foods.length <= 80,"too_many_foods");
           const selected =
             auth.data.scope === "all"
               ? foods.map((f) => f.id)
@@ -778,6 +795,7 @@ export class KitchenStore extends DurableObject {
           uid,
           kid,
           hash: auth.session.token,
+          consentRevision: this.account.consent(uid).revision,
           input,
           fingerprint,
           cacheKey,
@@ -824,6 +842,8 @@ export class KitchenStore extends DurableObject {
           403,
         );
         this.kitchenAccess.member({user_id:snapshot.uid}, snapshot.kid);
+        this.account.requireAI(snapshot.uid,image ? "photo" : "text");
+        check(this.account.consent(snapshot.uid).revision === snapshot.consentRevision,"privacy_changed",409);
         let output;
         try {
           output = image
@@ -971,7 +991,7 @@ export class KitchenStore extends DurableObject {
       return { generation };
     }
     if (request.method === "GET" && path === "/api/state") {
-      const state = { csrf: this.session.csrf, user: null, web_app: true };
+      const state = { csrf: this.session.csrf, user: null, web_app: true, legal: {version:LEGAL_VERSION,contact:LEGAL_CONTACT} };
       if (!uid) return state;
       const user = this.one("SELECT id,email FROM users WHERE id=?", uid),
         preferences = this.prefs(),
@@ -980,6 +1000,7 @@ export class KitchenStore extends DurableObject {
       Object.assign(state, {
         user,
         preferences,
+        consent: this.account.consent(uid),
         today,
         kitchen: null,
         kitchens: this.kitchenAccess.list(uid),
@@ -1006,6 +1027,11 @@ export class KitchenStore extends DurableObject {
       }
       return state;
     }
+    if (path.startsWith("/api/account/") || path === "/api/privacy" || path === "/api/legal/accept" || path === "/api/kitchen/transfer") {
+      check(uid !== null, "unauthorized", 401);
+      const result = await this.account.route(this.session, this.requestKitchenId, path, data, request.method);
+      if (result) return result;
+    }
     if (request.method === "GET" && path === "/api/push/config") {
       check(uid !== null, "unauthorized", 401);
       this.member();
@@ -1030,6 +1056,7 @@ export class KitchenStore extends DurableObject {
       const user = this.one("SELECT * FROM users WHERE email=?", email);
       let id;
       if (path.endsWith("register")) {
+        check(data.terms_accepted === true && data.legal_version === LEGAL_VERSION,"agreement_required",428);
         check(data.confirm_password === password, "password_mismatch");
         check(!user, "registration_unavailable", 409);
         const hashed = await passwordHash(password),
@@ -1051,6 +1078,8 @@ export class KitchenStore extends DurableObject {
             id,
             JSON.stringify(preferences),
           );
+          this.account.accept(id,{accepted:true,version:data.legal_version});
+          this.account.privacy(id,{ai_text:data.ai_text === true,ai_photo:data.ai_photo === true});
           return id;
         });
       } else {
@@ -1093,6 +1122,7 @@ export class KitchenStore extends DurableObject {
     }
     if (path === "/api/push/unsubscribe")
       return this.pushService.unsubscribe(this.session, data);
+    if (!["/api/kitchen/switch","/api/kitchen/leave"].includes(path)) this.account.requireTerms(uid);
     if (path === "/api/push/subscribe") {
       this.rate("push_subscribe:" + uid, 10);
       return this.pushService.subscribe(this.session, this.member(), data);
@@ -1193,7 +1223,7 @@ export class KitchenStore extends DurableObject {
           expires: invitation.expires / 1000,
         };
       }
-      const member = this.member(),
+      const member = this.member(false,path === "/api/kitchen/leave" || path === "/api/member/remove"),
         kid = member.kitchen_id;
       if (path === "/api/food/consume") {
         check(data.confirmed === true, "confirmation_required");
@@ -1272,7 +1302,7 @@ export class KitchenStore extends DurableObject {
         return { ok: true, changed: rows.length };
       }
       if (path === "/api/member/remove") {
-        this.member(true);
+        this.member(true,true);
         integer(data.user_id);
         check(data.confirmed === true, "confirmation_required");
         this.sql.exec(
@@ -1411,6 +1441,7 @@ export default {
   },
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
+    if (path === "/api/legal" && request.method === "GET") return respond(legalDocuments());
     if (path.startsWith("/api/") || path === "/healthz") {
       // Finish bounded request-body reads before forwarding to the actor. An
       // early auth/CSRF rejection must not race the incoming network stream.

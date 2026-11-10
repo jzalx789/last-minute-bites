@@ -1954,3 +1954,19 @@ details p {
 .party-source-list li { display:flex; align-items:center; justify-content:space-between; gap:.6rem; border-bottom:1px solid #d7e4d9; padding:.5rem 0; }
 .party-source-list strong { min-width:0; overflow-wrap:anywhere; }
 .recipe-fields { border:0; margin:0; padding:0; min-width:0; }
+
+.legal-links { font-size:.85rem; line-height:1.6; overflow-wrap:anywhere; }
+.legal-links a { color:var(--green); text-decoration:underline; }
+.legal-document { overflow-wrap:anywhere; }
+.legal-document section { margin:1.25rem 0; }
+.legal-document p { line-height:1.65; }
+.privacy-section { margin:1.25rem 0; padding-top:1rem; border-top:1px solid var(--line); min-width:0; }
+.privacy-section > button, .privacy-section > a { margin-top:.6rem; }
+.privacy-section summary { min-height:44px; font-weight:700; cursor:pointer; }
+.permission-list { margin:.75rem 0; }
+.permission-list dt { font-weight:700; }
+.permission-list dd { margin:.25rem 0 1rem; }
+.account-email { overflow-wrap:anywhere; }
+.agreement-check { align-items:start; }
+
+#ownership-blockers li, .privacy-section p { overflow-wrap:anywhere; }

@@ -62,6 +62,56 @@ const words = {
     "登入後可與冰箱成員共享食材紀錄。",
   ],
   create_kitchen: ["Create a kitchen", "建立冰箱"],
+  privacy_data: ["Privacy & data", "隱私與資料"],
+  account_security: ["Account & security", "帳戶與安全"],
+  terms_title: ["Terms of use", "用戶協議"],
+  privacy_policy: ["Privacy policy", "隱私政策"],
+  agree_terms: ["I agree to the Terms of use and acknowledge the Privacy policy.", "我同意用戶協議，並已知悉隱私政策。"],
+  agreement_required: ["Please review and accept the current agreement first.", "請先閱讀並同意目前版本的協議。"],
+  agreement_intro: ["Please review the updated terms. Optional AI and device permissions are separate. You can still export data or delete your account without accepting.", "請閱讀更新的條款。自選 AI 與裝置權限會分開處理；不接受仍可匯出資料或刪除帳戶。"],
+  agreement_accept: ["Agree and continue", "同意並繼續"],
+  legal_version: ["Agreement version", "協議版本"],
+  contact_privacy: ["Privacy enquiries", "私隱查詢"],
+  ai_text_choice: ["Allow text AI for recipes and unfamiliar food names", "允許文字 AI 生成食譜及判斷陌生食物名稱"],
+  ai_photo_choice: ["Allow AI processing of photos I choose", "允許 AI 處理我選取的照片"],
+  ai_choice_notice: ["DeepSeek receives the food data or reduced photo needed for the feature. Processing may occur outside your location, including China. Providers have their own retention/use policies. Do not send sensitive information. Either choice is optional; turning one off clears your saved AI results in this app.", "DeepSeek 會接收功能所需食材資料或縮小後照片，可能在你所在地以外（包括中國）處理，供應商有其保留與使用政策。請勿提交敏感資料。兩項均可拒絕；關閉任何一項會清除本 App 的個人 AI 結果。"],
+  classification_privacy: ["Text AI is off. Confirm this is food to enter it manually, or change Privacy & data.", "文字 AI 已關閉。確認是食物後可手動新增，或到「隱私與資料」更改選項。"],
+  privacy_changed: ["Privacy choices changed while processing. Review them before trying again.", "處理期間隱私選項已改變，請檢查後再試。"],
+  ai_consent_required: ["AI is off. You can enable the relevant option in Privacy & data.", "AI 尚未啟用，可到「隱私與資料」開啟所需選項。"],
+  ai_text_prompt: ["Enable text AI?", "啟用文字 AI？"],
+  ai_photo_prompt: ["Send this photo to AI?", "將這張照片交給 AI？"],
+  permissions_title: ["Device permissions", "裝置權限"],
+  permission_camera: ["Camera · invitation QR only", "相機・只用於邀請 QR 掃描"],
+  permission_notification: ["Notifications", "通知"],
+  permission_note: ["Permission is requested only when you use the feature. Change camera/notification access in browser or system settings. We do not request location or microphone. Photo selection does not grant background access to your whole album.", "只有使用功能時才詢問權限。相機／通知可在瀏覽器或系統設定更改。我們不要求定位或麥克風；選取照片不會授予背景存取整個相簿的權限。"],
+  permission_granted: ["Allowed", "已允許"],
+  permission_denied: ["Blocked", "已封鎖"],
+  permission_prompt: ["Ask when used", "使用時詢問"],
+  permission_unknown: ["Check browser settings", "請在瀏覽器設定查看"],
+  permission_unsupported: ["Unavailable in this browser", "此瀏覽器不支援"],
+  export_data: ["Download my data", "下載我的資料"],
+  export_note: ["Includes your account, choices, accessible kitchen food and personal recipes. The download contains private information; keep it secure.", "包含你的帳戶、選項、有權查看的廚房食材及個人食譜。下載檔包含私人資料，請妥善保管。"],
+  clear_ai_history: ["Clear my AI history", "清除我的 AI 歷史"],
+  clear_ai_history_note: ["Delete your saved recipes and name-assessment cache? Shared food records stay available.", "刪除你儲存的食譜與名稱判斷快取？共享食材紀錄會保留。"],
+  clear_device: ["Sign out and clear this device", "登出並清除此裝置暫存"],
+  clear_device_note: ["Sign out this session, stop its server push subscription, and remove this app’s local selections and shell cache? Downloaded files and your server account are separate.", "登出此登入、停止其伺服器推播訂閱，並移除本 App 的本機選材與介面快取？已下載檔案及伺服器帳戶須另行管理。"],
+  password_current: ["Current password", "目前密碼"],
+  password_new: ["New password", "新密碼"],
+  password_change: ["Change password", "更改密碼"],
+  password_unchanged: ["Choose a different new password.", "請設定不同的新密碼。"],
+  password_changed: ["Password updated; other sign-ins were signed out.", "密碼已更新，其他登入已登出。"],
+  active_sessions: ["Active sign-ins", "有效登入數量"],
+  logout_all: ["Sign out all devices", "登出所有裝置"],
+  delete_account: ["Delete account", "刪除帳戶"],
+  delete_account_note: ["Permanently deletes your account, personal history, sessions and owned kitchens with no other members. Food in other members’ kitchens remains. Shared source grants stop. Export anything you need first; provider backups and copies held by others cannot be recalled immediately.", "永久刪除帳戶、個人歷史、登入與沒有其他成員的自有廚房。其他成員廚房的食物會保留，來源分享會停止。請先匯出所需資料；供應商備份與他人持有的副本不能即時收回。"],
+  delete_email: ["Type your account email to confirm", "輸入帳戶電郵以確認"],
+  destructive_confirm: ["I understand and confirm this action.", "我已理解並確認此操作。"],
+  transfer_owner: ["Transfer kitchen ownership", "轉移廚房擁有權"],
+  transfer_note: ["Choose an existing Editor as the new Owner. You will become an Editor. Sharing grants from this source kitchen are withdrawn and must be granted again by the new Owner.", "選擇現有編輯者成為新擁有者，你會變為編輯者。此來源廚房的分享會撤回，須由新擁有者重新授予。"],
+  transfer_required: ["Transfer ownership of kitchens with other members before deleting your account.", "刪除帳戶前，請先轉移有其他成員廚房的擁有權。"],
+  member_not_found: ["Choose an existing Editor in this kitchen.", "請選擇此廚房的現有編輯者。"],
+  too_many_foods: ["Select up to 80 ingredients instead of using all stock.", "請改為選用不多於 80 項食材，避免使用全部庫存。"],
+  reauth_note: ["Enter your password for sensitive changes. Password changes sign out other sessions. There is no automated email password recovery in this prototype.", "敏感操作須再次輸入密碼，更改密碼會登出其他登入。本原型沒有自動電郵重設密碼功能。"],
   kitchens: ["Your kitchens", "我的廚房"],
   switch_kitchen: ["Switch / add kitchen", "切換／加入廚房"],
   kitchen_switched: ["Kitchen switched", "已切換廚房"],
@@ -1053,6 +1103,8 @@ function addFoodDock() {
 }
 function render(keepScroll = false) {
   if (!state) return;
+  const oldAuth = !state.user ? $('[data-form="auth"]') : null;
+  const authDraft = oldAuth ? {mode:oldAuth.dataset.authMode,version:oldAuth.dataset.legalVersion,email:oldAuth.elements.email.value,password:oldAuth.elements.password.value,confirm:oldAuth.elements.confirm_password?.value,accepted:oldAuth.elements.terms_accepted?.checked} : null;
   const wasAuth = document.documentElement.classList.contains("auth-screen");
   document.documentElement.classList.toggle("auth-screen", !state.user);
   const scrollTop = keepScroll ? $("#main")?.scrollTop || 0 : 0;
@@ -1064,11 +1116,17 @@ function render(keepScroll = false) {
   );
   $(".skip").textContent = t("skip");
   const [page = "kitchen", arg] = route();
+  const publicLegal = ["terms","privacy-policy"].includes(page);
+  const agreementGate = state.web_app && state.user && !state.consent?.accepted && !["privacy","account","settings","preferences","shared","help","terms","privacy-policy"].includes(page);
   let content;
-  if (!state.user) content = auth();
+  if (publicLegal) content = legalPage(page);
+  else if (!state.user) content = auth();
+  else if (agreementGate) content = agreementPage();
+  else if (page === "privacy") content = privacyPage();
+  else if (page === "account") content = accountPage();
   else if (
     !state.kitchen &&
-    !["settings", "preferences", "help"].includes(page)
+    !["settings", "preferences", "help","privacy","account"].includes(page)
   )
     content = setup();
   else if (page === "kitchens") content = setup();
@@ -1082,10 +1140,22 @@ function render(keepScroll = false) {
   else if (page === "reminders") content = reminders();
   else if (page === "help") content = help();
   else content = kitchen();
-  app.innerHTML = `<header class="topbar"><button class="brand" data-action="go" data-path="kitchen">${icon("leaf")}<span>Last Minute <b>Bites</b></span></button><div class="header-actions">${state.user ? button("go", t("settings"), "", 'data-path="settings"') : button("language", language() === "en" ? "繁體中文" : "English")}</div></header><main id="main" tabindex="-1">${offline ? `<p class="error">${E(t("offline"))} ${button("retry", t("retry"))}</p>` : ""}${state.user && state.kitchen && !["kitchen","kitchens"].includes(page) ? kitchenContext() : ""}${state.kitchen?.closed ? `<p class="warning party-closed" role="status">${E(t("party_closed"))}</p>` : ""}${content}</main>${state.user && state.kitchen ? `<footer class="app-dock">${selectionBar()}${addFoodDock()}<nav class="bottom-nav" aria-label="${E(t("kitchen"))}"><button data-action="go" data-path="kitchen" ${page === "kitchen" ? 'aria-current="page"' : ""}>${icon("home")}${E(t("kitchen"))}</button><button data-action="go" data-path="category/all" ${page === "category" ? 'aria-current="page"' : ""}>${icon("bag")}${E(t("inventory"))}</button><button data-action="go" data-path="recipes" ${page === "recipes" ? 'aria-current="page"' : ""}>${icon("book")}${E(t("recipes"))}</button></nav></footer>` : ""}`;
+  app.innerHTML = `<header class="topbar"><button class="brand" data-action="go" data-path="kitchen">${icon("leaf")}<span>Last Minute <b>Bites</b></span></button><div class="header-actions">${state.user ? button("go", t("settings"), "", 'data-path="settings"') : button("language", language() === "en" ? "繁體中文" : "English")}</div></header><main id="main" tabindex="-1">${offline ? `<p class="error">${E(t("offline"))} ${button("retry", t("retry"))}</p>` : ""}${state.user && state.kitchen && !publicLegal && !agreementGate && !["kitchen","kitchens"].includes(page) ? kitchenContext() : ""}${state.kitchen?.closed ? `<p class="warning party-closed" role="status">${E(t("party_closed"))}</p>` : ""}${content}</main>${state.user && state.kitchen && !publicLegal && !agreementGate ? `<footer class="app-dock">${selectionBar()}${addFoodDock()}<nav class="bottom-nav" aria-label="${E(t("kitchen"))}"><button data-action="go" data-path="kitchen" ${page === "kitchen" ? 'aria-current="page"' : ""}>${icon("home")}${E(t("kitchen"))}</button><button data-action="go" data-path="category/all" ${page === "category" ? 'aria-current="page"' : ""}>${icon("bag")}${E(t("inventory"))}</button><button data-action="go" data-path="recipes" ${page === "recipes" ? 'aria-current="page"' : ""}>${icon("book")}${E(t("recipes"))}</button></nav></footer>` : ""}`;
+  const nextAuth = $('[data-form="auth"]');
+  if (authDraft && nextAuth) {
+    nextAuth.elements.email.value=authDraft.email;
+    if (authDraft.mode === authMode) {
+      nextAuth.elements.password.value=authDraft.password;
+      if (nextAuth.elements.confirm_password) nextAuth.elements.confirm_password.value=authDraft.confirm || "";
+      if (nextAuth.elements.terms_accepted && authDraft.version === state.legal?.version) nextAuth.elements.terms_accepted.checked=!!authDraft.accepted;
+    }
+  }
   if ($("#date-reminders")) $("#date-reminders").open = reminderOpen;
   if (page === "food") bindFoodForm();
   if (page === "reminders") loadPushStatus();
+  if (page === "privacy") loadPermissionState();
+  if (page === "account" && state.user) loadAccountStatus();
+  if (publicLegal && !legalContent && !legalLoading && !legalError) loadLegalContent();
   if (page === "recipes") displayRecipes(arg);
   if ($("#main")) $("#main").scrollTop = scrollTop;
   fitViewport();
@@ -1100,7 +1170,7 @@ function render(keepScroll = false) {
     loadRecipes(arg);
 }
 function auth() {
-  return `<div class="auth-layout"><section class="auth-story"><div class="little-leaf">${icon("leaf")}</div><h1>${E(t("welcome"))}</h1><p>${E(t("intro"))}</p><div class="mini-fridge" aria-hidden="true"><span></span><span></span></div></section><section class="auth-panel"><div class="switcher">${button("auth-login", t("sign_in"), authMode === "login" ? "chosen" : "")}${button("auth-register", t("register"), authMode === "register" ? "chosen" : "")}</div><h2>${E(t(authMode === "login" ? "sign_in" : "register"))}</h2><p>${E(t("auth_hint"))}</p><form data-form="auth">${field("email", t("email"), "", "email", 'required maxlength="254" autocomplete="username"')}${field("password", t("password"), "", "password", `required minlength="10" maxlength="128" autocomplete="${authMode === "login" ? "current-password" : "new-password"}"`)}${authMode === "register" ? field("confirm_password", t("confirm_password"), "", "password", 'required minlength="10" maxlength="128" autocomplete="new-password"') : ""}<p class="hint">${E(t("password_hint"))}</p><label class="check"><input type="checkbox" data-show-password>${E(t("show_password"))}</label>${formError()}<button class="primary full">${E(t(authMode === "login" ? "sign_in" : "register"))}</button></form></section></div>`;
+  return `<div class="auth-layout"><section class="auth-story"><div class="little-leaf">${icon("leaf")}</div><h1>${E(t("welcome"))}</h1><p>${E(t("intro"))}</p><div class="mini-fridge" aria-hidden="true"><span></span><span></span></div></section><section class="auth-panel"><div class="switcher">${button("auth-login", t("sign_in"), authMode === "login" ? "chosen" : "")}${button("auth-register", t("register"), authMode === "register" ? "chosen" : "")}</div><h2>${E(t(authMode === "login" ? "sign_in" : "register"))}</h2><p>${E(t("auth_hint"))}</p><form data-form="auth" data-auth-mode="${authMode}" data-legal-version="${E(state.legal?.version || "")}">${field("email", t("email"), "", "email", 'required maxlength="254" autocomplete="username"')}${field("password", t("password"), "", "password", `required minlength="10" maxlength="128" autocomplete="${authMode === "login" ? "current-password" : "new-password"}"`)}${authMode === "register" ? field("confirm_password", t("confirm_password"), "", "password", 'required minlength="10" maxlength="128" autocomplete="new-password"') : ""}<p class="hint">${E(t("password_hint"))}</p>${authMode === "register" ? `<label class="check agreement-check"><input type="checkbox" name="terms_accepted" required>${E(t("agree_terms"))}</label>` : ""}${legalLinks()}<label class="check"><input type="checkbox" data-show-password>${E(t("show_password"))}</label>${formError()}<button class="primary full">${E(t(authMode === "login" ? "sign_in" : "register"))}</button></form></section></div>`;
 }
 function setup() {
   return `<section class="page-heading"><h1>${E(t(state.kitchen ? "kitchens" : "welcome_kitchen"))}</h1><p>${E(t("setup_intro"))}</p><details><summary>${E(t("help"))}</summary><p>${E(t("help_steps"))}</p></details></section>${kitchenList()}${partyCreateForm()}<div class="two-column"><section class="panel"><h2>${E(t("create_kitchen"))}</h2><form data-form="create-kitchen">${field("name", t("kitchen_name"), "", "text", 'required maxlength="80"')}${formError()}<button class="primary">${E(t("create_kitchen"))}</button></form></section><section class="panel"><h2>${E(t("join_kitchen"))}</h2><form data-form="preview-invite">${field("code", t("invite_code"), invitePreview?.code || "", "text", 'required maxlength="100" autocomplete="off"')}${formError()}<div class="actions"><button>${E(t("preview_invite"))}</button>${button("scan-invite", t("scan_invite"))}</div></form>${invitePreview ? `<div class="invitation-preview"><h3>${E(invitePreview.name)}</h3><p>${E(t("preview_note"))}</p>${button("accept-invite", t("join_confirm"), "primary")}</div>` : ""}</section></div>${button("sign-out", t("sign_out"), "quiet")}`;
@@ -1371,7 +1441,9 @@ function bindFoodClassification(form) {
         blocked
           ? "not_food"
           : uncertain
-            ? assessment.source === "unavailable"
+            ? assessment.reason === "ai_disabled"
+              ? "classification_privacy"
+              : assessment.source === "unavailable"
               ? "classification_unavailable"
               : "food_confirmation_required"
             : "food_name_incomplete",
@@ -1698,13 +1770,87 @@ function displayRecipes(id) {
   root.innerHTML = `${status}<div class="recipe-source">${E(t("ai_provider"))}<br>${E(recipeSummary(recipeResult))}</div>${recipeResult.stale ? `<p class="warning">${E(t("generation_stale"))}</p>` : ""}<div class="recipe-grid">${recipes.map((r) => `<article class="recipe-card"><div class="recipe-art">${icon(r.kind === "soup" ? "bowl" : r.kind === "meat" ? "fish" : r.kind === "main" ? "bowl" : "leaf")}</div><div class="recipe-copy"><span class="dish-tag">${E(t("recipe_dish"))} ${r.id} · ${E(t("style_" + r.kind))}</span><h2>${E(r.title)}</h2><p>${r.minutes} ${E(t("minutes"))} · ${r.servings} ${E(t("servings"))}</p><p class="recipe-used">${r.uses.map((f) => E(f.name) + (typeof f.quantity === "number" ? " · " + E(amountText(f.quantity, f.unit)) : "")).join(" / ")}</p>${recipeSeasoningsHTML(r, true)}${recipePastDatesHTML(r)}${recipeResult.options?.mode !== "use_up" && r.pairing ? `<p class="hint">${E(r.pairing)}</p>` : ""}<div class="actions">${button("recipe-detail", t("details"), "primary", `data-id="${r.id}"`)}${recipeSwapButton(r)}${r.uses.length && !state.kitchen.closed ? button("cooked-recipe", t("cooked"), "", `data-id="${r.id}"`) : ""}</div></div></article>`).join("")}</div>${shoppingHTML(recipeResult)}<p class="hint">${E(t("ai_note"))}</p>`;
 }
 
+let legalContent = null, legalLoading = false, legalError = null;
+function legalLinks() {
+  return `<p class="legal-links"><a href="/#terms" target="_blank" rel="noopener">${E(t("terms_title"))}</a><span aria-hidden="true"> · </span><a href="/#privacy-policy" target="_blank" rel="noopener">${E(t("privacy_policy"))}</a></p>`;
+}
+async function loadLegalContent() {
+  if (legalLoading) return;
+  legalLoading=true;
+  try {legalContent=await api("legal");legalError=null;} catch(e) {legalError=e;}
+  finally {legalLoading=false;if (["terms","privacy-policy"].includes(route()[0])) render(true);}
+}
+function legalPage(page) {
+  if (!legalContent) return `<div class="narrow">${back(state.user ? "privacy" : "kitchen")}<h1>${E(t(page === "terms" ? "terms_title" : "privacy_policy"))}</h1>${legalError ? `<p class="error">${E(errorText(legalError))}</p>${button("retry-legal",t("retry"))}` : `<p role="status">${E(t("loading"))}</p>`}</div>`;
+  const lang=language(), doc=page === "terms" ? legalContent.terms : legalContent.privacy;
+  return `<article class="narrow legal-document">${back(state.user ? "privacy" : "kitchen")}<h1>${E(t(page === "terms" ? "terms_title" : "privacy_policy"))}</h1><p class="hint">${E(legalContent.operator[lang])} · ${E(legalContent.version)} · ${E(legalContent.effective_date)}</p>${doc.map(s=>`<section><h2>${E(s.title[lang])}</h2><p>${E(s.body[lang])}</p></section>`).join("")}<p>${E(t("contact_privacy"))}: <a href="mailto:${E(legalContent.contact)}">${E(legalContent.contact)}</a></p>${page === "privacy-policy" ? `<ul>${legalContent.sources.map(s=>`<li><a href="${E(s.url)}" target="_blank" rel="noopener noreferrer">${E(s.name)}</a></li>`).join("")}</ul>` : ""}</article>`;
+}
+function agreementPage() {
+  return `<div class="narrow"><h1>${E(t("terms_title"))}</h1><p>${E(t("agreement_intro"))}</p>${legalLinks()}<p class="hint">${E(t("legal_version"))}: ${E(state.legal.version)}</p><form data-form="agreement"><label class="check"><input type="checkbox" name="accepted" required>${E(t("agree_terms"))}</label>${formError()}<button class="primary full">${E(t("agreement_accept"))}</button></form>${button("go",t("privacy_data"),"full",'data-path="privacy"')}${button("sign-out",t("sign_out"),"quiet")}</div>`;
+}
+function privacyPage() {
+  const c=state.consent || {};
+  return `<div class="narrow"><h1>${E(t("privacy_data"))}</h1>${back("settings")}<p><a href="mailto:${E(state.legal.contact)}">${E(state.legal.contact)}</a></p>${legalLinks()}<p class="hint">${E(t("legal_version"))}: ${E(c.version || state.legal.version)}${c.accepted_at ? " · "+E(new Date(c.accepted_at).toLocaleString(language())) : ""}</p>${!c.accepted ? `<p class="warning">${E(t("agreement_required"))}</p>${button("go",t("agreement_accept"),"full",'data-path="kitchen"')}` : ""}<form data-form="privacy"><p class="hint">${E(t("ai_choice_notice"))}</p><label class="check"><input type="checkbox" name="ai_text" ${c.ai_text ? "checked" : ""}>${E(t("ai_text_choice"))}</label><label class="check"><input type="checkbox" name="ai_photo" ${c.ai_photo ? "checked" : ""}>${E(t("ai_photo_choice"))}</label>${formError()}<button class="primary">${E(t("save"))}</button></form><section class="privacy-section"><h2>${E(t("permissions_title"))}</h2><p>${E(t("permission_note"))}</p><dl class="permission-list"><dt>${E(t("permission_camera"))}</dt><dd id="camera-permission">${E(t("permission_unknown"))}</dd><dt>${E(t("permission_notification"))}</dt><dd id="notification-permission">${E(t("permission_unknown"))}</dd></dl>${state.kitchen && !state.kitchen.closed ? button("go",t("reminders"),"full",'data-path="reminders"') : ""}</section><section class="privacy-section"><h2>${E(t("export_data"))}</h2><p class="hint">${E(t("export_note"))}</p>${button("export-data",t("export_data"),"full")}${button("clear-ai-history",t("clear_ai_history"),"full")}${button("clear-device",t("clear_device"),"full")}${button("go",t("account_security"),"full",'data-path="account"')}</section></div>`;
+}
+async function loadPermissionState() {
+  const uid=state.user.id;
+  const permissionText=value=>t("permission_"+({default:"prompt",prompt:"prompt",granted:"granted",denied:"denied",unsupported:"unsupported"}[value] || "unknown"));
+  if ($("#notification-permission")) $("#notification-permission").textContent=permissionText("Notification" in window ? Notification.permission : "unsupported");
+  try {
+    const result=await navigator.permissions?.query({name:"camera"});
+    if (state.user?.id === uid && $("#camera-permission")) $("#camera-permission").textContent=permissionText(result?.state);
+  } catch {}
+}
+function accountPage() {
+  return `<div class="narrow">${back("settings")}<h1>${E(t("account_security"))}</h1><p class="account-email">${E(state.user.email)}</p><p class="hint">${E(t("reauth_note"))}</p><p id="account-session-count" role="status"></p><section class="privacy-section"><h2>${E(t("password_change"))}</h2><form data-form="password">${field("password",t("password_current"),"","password",'required maxlength="128" autocomplete="current-password"')}${field("new_password",t("password_new"),"","password",'required minlength="10" maxlength="128" autocomplete="new-password"')}${field("confirm_password",t("confirm_password"),"","password",'required minlength="10" maxlength="128" autocomplete="new-password"')}${formError()}<button class="primary full">${E(t("password_change"))}</button></form></section><section class="privacy-section"><h2>${E(t("logout_all"))}</h2><form data-form="logout-all">${field("password",t("password_current"),"","password",'required maxlength="128" autocomplete="current-password"')}<label class="check"><input name="confirmed" type="checkbox" required>${E(t("destructive_confirm"))}</label>${formError()}<button class="full">${E(t("logout_all"))}</button></form></section><section class="privacy-section"><h2>${E(t("delete_account"))}</h2><p>${E(t("delete_account_note"))}</p><div id="ownership-blockers"></div><form data-form="delete-account">${field("email",t("delete_email"),"","email",'required autocomplete="off"')}${field("password",t("password_current"),"","password",'required maxlength="128" autocomplete="current-password"')}<label class="check"><input name="confirmed" type="checkbox" required>${E(t("destructive_confirm"))}</label>${formError()}<button class="danger full">${E(t("delete_account"))}</button></form></section></div>`;
+}
+async function loadAccountStatus() {
+  const uid=state.user.id;
+  try {
+    const result=await api("account/status");if (state.user?.id !== uid || !$("#account-session-count")) return;
+    $("#account-session-count").textContent=t("active_sessions")+": "+result.sessions;
+    const blockers=result.owned.filter(k=>k.other_members>0);
+    if (blockers.length) $("#ownership-blockers").innerHTML=`<p class="warning">${E(t("transfer_required"))}</p><ul>${blockers.map(k=>`<li>${E(k.name)} ${button("manage-owner",t("transfer_owner"),"quiet",`data-id="${k.id}"`)}</li>`).join("")}</ul><p>${E(t("shared"))} → ${E(t("transfer_owner"))}</p>`;
+  } catch(e) {if ($("#account-session-count")) $("#account-session-count").textContent=errorText(e);}
+}
+function transferForm() {
+  const editors=state.members.filter(m=>m.role === "editor");
+  if (!editors.length) return "";
+  return `<details class="privacy-section"><summary>${E(t("transfer_owner"))}</summary><p>${E(t("transfer_note"))}</p><form data-form="transfer-owner"><label>${E(t("members"))}<select name="user_id">${editors.map(m=>option(m.id,m.email,editors[0].id)).join("")}</select></label>${field("password",t("password_current"),"","password",'required maxlength="128" autocomplete="current-password"')}<label class="check"><input type="checkbox" name="confirmed" required>${E(t("destructive_confirm"))}</label>${formError()}<button class="danger full">${E(t("transfer_owner"))}</button></form></details>`;
+}
+async function ensureAI(kind) {
+  if (!state.consent?.accepted) {notify(t("agreement_required"));go("kitchen");return false;}
+  const key=kind === "photo" ? "ai_photo" : "ai_text";
+  if (state.consent[key]) return true;
+  if (!(await confirmAction(t(kind === "photo" ? "ai_photo_prompt" : "ai_text_prompt"),t("ai_choice_notice")))) return false;
+  const result=await api("privacy",{[key]:true});state.consent=result.consent;return true;
+}
+async function clearLocalSessionData() {
+  clearLocalSelections();
+  try {
+    const registration=await navigator.serviceWorker?.getRegistration("/");
+    const sub=await registration?.pushManager?.getSubscription();
+    if (sub) await sub.unsubscribe();
+  } catch {}
+}
+function clearLocalSelections() {
+  selection.clear();
+  for (const kind of ["sessionStorage","localStorage"]) try {
+    const storage=window[kind];
+    for (const key of Object.keys(storage)) if (key.startsWith("lmb-")) storage.removeItem(key);
+  } catch {}
+}
+
 const settingsLink = (path, key) =>
   `<button class="settings-link" data-action="go" data-path="${path}"><span>${E(t(key))}</span><span aria-hidden="true">›</span></button>`;
 function settings() {
-  return `<div class="narrow">${back()}<h1>${E(t("settings"))}</h1>${settingsLink("kitchens", "switch_kitchen")}${state.kitchen?.kind === "party" ? settingsLink("party","party") : ""}${state.kitchen ? `<h2>${E(t("kitchen"))}</h2><p>${E(state.kitchen.name)} · ${E(t(state.kitchen.role))}</p>${settingsLink("shared", "shared")}` : ""}<h2>${E(t("personal"))}</h2>${settingsLink("preferences", "preferences")}${state.kitchen ? settingsLink("reminders", "reminders") : ""}<h2>${E(t("help"))}</h2>${settingsLink("help", "help")}${state.web_app ? "" : button("install", t("install"), "settings-link")}<p class="hint" id="install-guide" hidden>${E(t("install_note"))}</p>${state.kitchen?.role === "owner" && !state.kitchen.closed && state.kitchen.kind !== "party" ? `<h2>${E(t("kitchen_data"))}</h2>${button("clear-kitchen", t("clear_kitchen"), "danger full")}` : ""}<hr><p class="hint">${E(t("signout_note"))}</p>${button("sign-out", t("sign_out"), "full")}</div>`;
+  return `<div class="narrow">${back()}<h1>${E(t("settings"))}</h1>${settingsLink("kitchens", "switch_kitchen")}${state.kitchen?.kind === "party" ? settingsLink("party","party") : ""}${state.kitchen ? `<h2>${E(t("kitchen"))}</h2><p>${E(state.kitchen.name)} · ${E(t(state.kitchen.role))}</p>${settingsLink("shared", "shared")}` : ""}<h2>${E(t("personal"))}</h2>${settingsLink("preferences", "preferences")}${settingsLink("privacy","privacy_data")}${settingsLink("account","account_security")}${settingsLink("terms","terms_title")}${settingsLink("privacy-policy","privacy_policy")}${state.kitchen ? settingsLink("reminders", "reminders") : ""}<h2>${E(t("help"))}</h2>${settingsLink("help", "help")}${state.web_app ? "" : button("install", t("install"), "settings-link")}<p class="hint" id="install-guide" hidden>${E(t("install_note"))}</p>${state.kitchen?.role === "owner" && !state.kitchen.closed && state.kitchen.kind !== "party" ? `<h2>${E(t("kitchen_data"))}</h2>${button("clear-kitchen", t("clear_kitchen"), "danger full")}` : ""}<hr><p class="hint">${E(t("signout_note"))}</p>${button("sign-out", t("sign_out"), "full")}</div>`;
 }
 function shared() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("shared"))}</h1><h2>${E(state.kitchen.name)}</h2><h3>${E(t("members"))}</h3><ul class="member-list">${state.members.map((m) => `<li><span>${E(m.email)}<small>${E(t(m.role))}</small></span>${state.kitchen.role === "owner" && m.role === "editor" ? button("remove-member", t("remove"), "danger", `data-id="${m.id}"`) : ""}</li>`).join("")}</ul>${state.kitchen.closed ? "" : state.kitchen.role === "owner" ? `<h3>${E(t("invite_editor"))}</h3><p>${E(t(state.kitchen.kind === "party" ? "party_invite_policy" : "invite_policy"))}</p>${button("invite", t("invite_editor"), "primary")}<div id="invite-output" aria-live="polite"></div>` : `<p>${E(t("preview_note"))}</p>${button("leave", t("leave"), "danger")}`}</div>`;
+  const owner=state.kitchen.role === "owner", agreed=!!state.consent?.accepted;
+  const members=state.members.map(m=>`<li><span>${E(m.email)}<small>${E(t(m.role))}</small></span>${owner && agreed && m.role === "editor" ? button("remove-member",t("remove"),"danger",`data-id="${m.id}"`) : ""}</li>`).join("");
+  const invite=owner && agreed && !state.kitchen.closed ? `<h3>${E(t("invite_editor"))}</h3><p>${E(t(state.kitchen.kind === "party" ? "party_invite_policy" : "invite_policy"))}</p>${button("invite",t("invite_editor"),"primary")}<div id="invite-output" aria-live="polite"></div>` : "";
+  return `<div class="narrow">${back("settings")}<h1>${E(t("shared"))}</h1><h2>${E(state.kitchen.name)}</h2><h3>${E(t("members"))}</h3><ul class="member-list">${members}</ul>${invite}${owner ? transferForm() : `<p>${E(t("preview_note"))}</p>${button("leave",t("leave"),"danger")}`}</div>`;
 }
 function preferences() {
   const p = state.preferences;
@@ -1757,7 +1903,7 @@ function reminders() {
   return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form><p class="hint">${E(t("push_kitchen_scope"))}</p><section id="push-panel" class="push-panel" aria-label="${E(t("push_title"))}">${pushPanelHTML()}</section></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 1.3</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 1.4</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
 async function confirmAction(title, message, typed = false) {
   const dialog = $("#confirm");
@@ -1812,7 +1958,26 @@ document.addEventListener("submit", async (event) => {
   const data = Object.fromEntries(new FormData(form));
   try {
     switch (form.dataset.form) {
+      case "agreement":
+        await api("legal/accept",{accepted:form.elements.accepted.checked,version:state.legal.version});
+        await refresh(false);go("kitchen");render();break;
+      case "privacy": {
+        const result = await api("privacy",{ai_text:form.elements.ai_text.checked,ai_photo:form.elements.ai_photo.checked});
+        state.consent=result.consent;recipeSeq++;recipeResult=null;recipeHistoryLoaded=false;photoCandidates=[];
+        await refresh();notify(t("saved"));break;
+      }
+      case "password":
+        await api("account/password",data);form.reset();await loadAccountStatus();notify(t("password_changed"));break;
+      case "logout-all":
+      case "delete-account": {
+        await api(form.dataset.form === "logout-all" ? "account/logout-all" : "account/delete",{...data,confirmed:form.elements.confirmed.checked});
+        await clearLocalSessionData();activeKitchenId=null;contextEpoch++;await refresh(false);go("kitchen");render();break;
+      }
+      case "transfer-owner":
+        await api("kitchen/transfer",{...data,user_id:Number(data.user_id),confirmed:form.elements.confirmed.checked});
+        await refresh();notify(t("saved"));break;
       case "ai-recipes": {
+        if (!(await ensureAI("text"))) break;
         recipeOptions = readRecipeOptions();
         recipeDraft = true;
         if (
@@ -1821,7 +1986,7 @@ document.addEventListener("submit", async (event) => {
           recipeOptions.mode !== "plan"
         )
           throw { code: "recipe_empty_choice" };
-        recipeSeq++;
+        const requestSeq=++recipeSeq;
         recipeBusy = true;
         displayRecipes();
         const uid = state.user.id,
@@ -1834,7 +1999,7 @@ document.addEventListener("submit", async (event) => {
             regenerate: !!recipeResult,
           });
           if (
-            state.user?.id === uid &&
+            requestSeq === recipeSeq && state.user?.id === uid &&
             state.kitchen?.id === kid &&
             state.preferences.language === language
           ) {
@@ -1855,6 +2020,8 @@ document.addEventListener("submit", async (event) => {
         await api(authMode === "login" ? "login" : "register", {
           ...data,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          terms_accepted: form.elements.terms_accepted?.checked === true,
+          legal_version: state.legal?.version,
         });
         await refresh(false);
         go("kitchen");
@@ -1933,7 +2100,8 @@ document.addEventListener("submit", async (event) => {
     recipeBusy = false;
     error.textContent = errorText(err);
     if (form.dataset.form === "ai-recipes") displayRecipes();
-    if (["no_kitchen", "unauthorized", "party_ended"].includes(err.code))
+    if (err.code === "agreement_required") notify(errorText(err));
+    if (["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(err.code))
       await refresh().catch(() => {});
   } finally {
     delete form.dataset.classifyingSubmit;
@@ -1948,6 +2116,24 @@ document.addEventListener("click", async (event) => {
   b.disabled = true;
   try {
     switch (a) {
+      case "retry-legal":
+        legalError=null;await loadLegalContent();break;
+      case "export-data": {
+        const data=await api("account/export");
+        const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));
+        const link=document.createElement("a");link.href=url;link.download="last-minute-bites-data.json";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);break;
+      }
+      case "clear-ai-history":
+        if (await confirmAction(t("clear_ai_history"),t("clear_ai_history_note"))) {
+          await api("account/history/clear",{confirmed:true});recipeSeq++;recipeResult=null;recipeHistoryLoaded=false;photoCandidates=[];notify(t("saved"));
+        }break;
+      case "clear-device":
+        if (await confirmAction(t("clear_device"),t("clear_device_note"))) {
+          await api("logout",{});await clearLocalSessionData();
+          if ("caches" in window) for (const name of await caches.keys()) if (name.startsWith("lmb-shell-")) await caches.delete(name);
+          activeKitchenId=null;contextEpoch++;await refresh(false);go("kitchen");render();
+        }break;
+      case "manage-owner":
       case "switch-kitchen":
         await api("kitchen/switch", {kitchen_id:Number(b.dataset.id)});
         activeKitchenId = Number(b.dataset.id);
@@ -1955,7 +2141,7 @@ document.addEventListener("click", async (event) => {
         switchingKitchen = true;
         await refresh(false);
         switchingKitchen = false;
-        go("kitchen");
+        go(a === "manage-owner" ? "shared" : "kitchen");
         render();
         break;
       case "party-unshare":
@@ -2102,6 +2288,7 @@ document.addEventListener("click", async (event) => {
         break;
       }
       case "replace-recipe": {
+        if (!(await ensureAI("text"))) break;
         if (
           recipeBusy ||
           !recipeResult ||
@@ -2184,10 +2371,10 @@ document.addEventListener("click", async (event) => {
       }
       case "sign-out":
         await api("logout", {});
+        await clearLocalSessionData();
         activeKitchenId = null;
         contextEpoch++;
         selection.clear();
-        storeSelection();
         await refresh(false);
         go("kitchen");
         render();
@@ -2287,7 +2474,7 @@ document.addEventListener("click", async (event) => {
     const error = b.closest("form")?.querySelector(".error");
     if (error) error.textContent = errorText(err);
     else notify(errorText(err));
-    if (["no_kitchen", "unauthorized", "party_ended"].includes(err.code))
+    if (["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(err.code))
       await refresh().catch(() => {});
   } finally {
     b.disabled = false;
@@ -2630,7 +2817,7 @@ async function consumeFoods(foods, suggested = new Map()) {
       )
         ? t("consumption_conflict")
         : errorText(err);
-      if (["no_kitchen", "unauthorized", "party_ended"].includes(err.code))
+      if (["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(err.code))
         await refresh(false).catch(() => {});
     } finally {
       busy = false;
@@ -2678,6 +2865,7 @@ async function recognizePhoto(file) {
   output.innerHTML = `<p role="status">${E(t("photo_busy"))}</p>`;
   let objectUrl;
   try {
+    if (!(await ensureAI("photo"))) { output.innerHTML=""; return; }
     objectUrl = URL.createObjectURL(file);
     const image = await new Promise((resolve, reject) => {
       const image = new Image();
@@ -2718,6 +2906,7 @@ async function recognizePhoto(file) {
   } finally {
     photoBusy = false;
     input.disabled = false;
+    input.value = "";
     if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
 }

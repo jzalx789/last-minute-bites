@@ -1,12 +1,12 @@
 """AI boundary tests using an explicitly test-only local service binding."""
 from pathlib import Path
-import sys,uuid,base64,io,time
+import sys,uuid,base64,io,time,os
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from web_api_contract import Client
 
-base='http://127.0.0.1:8790'
+base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8790');assert base.startswith('http://127.0.0.1:')
 owner,other=Client(base),Client(base)
 suffix=uuid.uuid4().hex[:10]
 owner.register('ai-'+suffix+'@example.test');other.register('other-ai-'+suffix+'@example.test')

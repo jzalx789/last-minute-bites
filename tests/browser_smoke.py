@@ -34,10 +34,13 @@ def register(page, base, email):
     page.locator('[name=email]').fill(email)
     page.locator('[name=password]').fill('browser-test-password')
     page.locator('[name=confirm_password]').fill('browser-test-password')
+    if page.locator('[name=terms_accepted]').count():page.locator('[name=terms_accepted]').check()
     with page.expect_response(lambda r:r.url.endswith('/api/register')) as response:
         page.locator('[data-form=auth] button.primary').click()
     assert response.value.status==200,response.value.json()
     expect(page.locator('h1')).to_have_text('Make room for good food.')
+    if page.evaluate('!!state.web_app'):
+        page.evaluate('async () => {const r=await api("privacy",{ai_text:true,ai_photo:true});state.consent=r.consent;}')
 
 
 def set_stock(page, quantity=1, unit='pcs', purchased_date=None):

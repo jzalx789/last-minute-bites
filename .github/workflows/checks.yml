@@ -39,6 +39,8 @@ jobs:
           python tests/recipe_builder_api.py
           python tests/recipe_modes_api.py
           python tests/multi_kitchen_api.py
+          python tests/privacy_api.py
+          python tests/large_inventory_api.py
           python tests/push_api_contract.py
           python tests/web_browser.py
           python tests/auth_keyboard_browser.py
@@ -51,6 +53,7 @@ jobs:
           python tests/recipe_builder_browser.py
           python tests/recipe_modes_browser.py
           python tests/multi_kitchen_browser.py
+          python tests/privacy_browser.py
           python tests/push_browser.py
           python tests/push_service_worker.py
           LMB_WEB_ENGINE=webkit python tests/auth_keyboard_browser.py
@@ -63,3 +66,4 @@ jobs:
           LMB_WEB_ENGINE=webkit python tests/recipe_builder_browser.py
           LMB_WEB_ENGINE=webkit python tests/recipe_modes_browser.py
           LMB_WEB_ENGINE=webkit python tests/multi_kitchen_browser.py
+          LMB_WEB_ENGINE=webkit python tests/privacy_browser.py

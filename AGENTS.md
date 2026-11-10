@@ -34,6 +34,7 @@ records. Keep changes proportional to the user's task; preserve unrelated work.
 | UI, hash routes, forms, selection and viewport / keyboard behavior | `static/app.js`, `static/index.html`, `static/style.css` |
 | Installation, QR tools, browser notifications and shell cache | `static/mobile.js`, `static/notifications.js`, `static/sw.js` |
 | HTTP API, authentication, CSRF, actor locks, SQL and AI snapshots | `web/worker.js` |
+| Versioned policies, AI choices, data export and account lifecycle | `web/legal.js`, `web/account.js` |
 | Multi-kitchen migration, membership context, party grants / expiry | `web/kitchens.js` |
 | Date / quantity / consumption / password primitives | `web/domain.js` |
 | Recipe prompt, schema validation and one-dish replacement | `web/ai.js` |
@@ -124,6 +125,33 @@ Preserve the displayed order and default UI recommendation:
 - Service worker caches the public shell only, never API results or private user
   data. Bump its shell cache version when changing cached UI assets.
 
+## Privacy and account lifecycle
+
+- Canonical bilingual policy text and `LEGAL_VERSION` are in `web/legal.js`.
+  Material policy changes need a new version and explicit re-acceptance; never
+  backfill legacy accounts as having agreed. Keep the public privacy contact
+  accurate and do not invent a registered company identity or legal certification.
+- Text AI and photo AI are separate, default-off choices stored server-side.
+  Refusing AI must preserve manual food entry. Validate choices before provider
+  requests and after completion, including the consent revision, so withdrawal,
+  re-enabling, or clearing history cannot resurrect an older in-flight result.
+- Public policy pages and authenticated export/deletion controls stay accessible
+  even when the user has not accepted a new agreement. Normal registration and
+  protected mutations require the current version. Never pre-check agreement.
+- Export only the user's account and currently accessible food/history, excluding
+  password hashes, tokens, private push keys and other members' account profiles.
+- Password changes and sensitive account actions require re-authentication and
+  rate limiting. Delete only the caller's data; block deletion while they own
+  kitchens with other members, offer explicit ownership transfer, and revoke
+  source grants. Keep deletion atomic if any foreign-key constraint fails.
+- Account deletion removes identifiable quota rows but retains an anonymous
+  daily aggregate, so re-registration cannot reset the site-wide provider budget.
+- Do not imply app settings revoke OS permission or recall already transmitted
+  provider data. Do not add marketing-cookie consent for non-existent tracking.
+  Do not fake email verification/password-reset delivery; no mail service exists.
+- Review `docs/LEGAL_REVIEW.md` before claims about commercial readiness. Policy
+  text, tests and warnings cannot guarantee compliance or exclude mandatory rights.
+
 ## Data and secrets
 
 - Preserve production accounts, memberships, food and active sessions. Do not
@@ -169,6 +197,8 @@ if `/usr/bin/chromium` is absent; README.md gives the command. Examples:
 
 | Change | Relevant acceptance files under `tests/` |
 | --- | --- |
+| Privacy, agreements, account deletion, passwords | `web/account.test.mjs`, `privacy_api.py`, `privacy_browser.py` |
+| Large inventories / selected recipes | `large_inventory_api.py` |
 | Kitchens, grants, session context, migrations | `web/kitchens.test.mjs`, `multi_kitchen_api.py`, `multi_kitchen_browser.py` |
 | Recipe modes / selection / replacement | `recipe_modes_api.py`, `recipe_modes_browser.py`, `recipe_builder_api.py`, `recipe_builder_browser.py` |
 | Food amounts / use / restore | `stock_api_contract.py`, `stock_browser.py`, `consume_browser.py` |

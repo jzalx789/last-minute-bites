@@ -88,9 +88,11 @@ assert fb['id'] not in {f['id'] for f in a.state()['foods']}
 
 # Closed parties retain saved recipes and memberships, revoke live sharing and
 # invitations, and reject changes at the server (even bypassing disabled UI).
+c.post('invitation/accept',dict(code=code,confirmed=True))
 a.post('party/end',dict(confirmed=True))
 assert a.state()['kitchen']['closed'] and a.state()['kitchen']['sources']==[]
 assert a.state()['foods']==[]
+c.post('kitchen/leave',dict(confirmed=True));assert c.state()['kitchen']['id']==kc
 assert a.request('recipes/history')[1]['generation']['id']==g['id']
 for endpoint,data in [('food/create',dict(name='Egg')),('recipes/generate',body),('party/source/add',dict(source_id=ka,confirmed=True)),('invitation/replace',{})]:a.post(endpoint,data,409)
 c.post('invitation/accept',dict(code=code,confirmed=True),404)

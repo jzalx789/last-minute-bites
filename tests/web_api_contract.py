@@ -13,6 +13,9 @@ from test_app import Client as BaseClient
 BROWSER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"
 
 class Client(BaseClient):
+    def register(self,email):
+        version=self.request('legal')[1]['version']
+        return self.post('register',dict(email=email,password='test-password-123',confirm_password='test-password-123',timezone='Asia/Hong_Kong',terms_accepted=True,legal_version=version,ai_text=True,ai_photo=True))
     def request(self,path,data=None,headers=None):
         defaults={"User-Agent":BROWSER_AGENT}
         if urlparse(self.base).hostname in {"127.0.0.1","localhost","::1"}:

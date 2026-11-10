@@ -36,6 +36,7 @@ with sync_playwright() as p:
  expect(page.locator('[name=email]')).to_have_value(email);expect(page.locator('[name=password]')).to_have_value(password);expect(page.locator('[name=confirm_password]')).to_have_value(password)
  page.locator('[data-show-password]').check();expect(page.locator('[name=password]')).to_have_attribute('type','text');page.locator('[data-show-password]').uncheck()
  page.locator('[name=confirm_password]').scroll_into_view_if_needed();page.screenshot(path=str(artifacts/'register-short-keyboard.png'))
+ page.locator('[name=terms_accepted]').check()
  with page.expect_response(lambda r:r.url.endswith('/api/register')) as response:page.locator('[data-form=auth] button.primary').click()
  assert response.value.status==200,response.value.json();expect(page.locator('[data-form=create-kitchen]')).to_be_visible();assert not page.locator('html').evaluate("e=>e.classList.contains('auth-screen')")
  page.evaluate('__keyboardViewport(null,null)');page.set_viewport_size({'width':390,'height':844});page.locator('[data-form=create-kitchen] [name=name]').fill('Keyboard regression kitchen');page.locator('[data-form=create-kitchen] button').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?');expect(page.locator('.app-dock')).to_be_visible();assert page.evaluate('scrollY===0')

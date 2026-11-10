@@ -2,7 +2,7 @@
 
 以減少食物浪費為目標的課程 Web／PWA prototype。使用者可管理食材批次與份量、共享廚房、生成 DeepSeek 食譜，並在聚會中整合已同意分享的食材。
 
-目前版本：**1.3**（交接資訊更新：2026-11-09，香港時間）。
+目前版本：**1.4**（交接資訊更新：2026-11-10，香港時間）。
 
 | 入口 | 連結／位置 |
 | --- | --- |
@@ -78,6 +78,7 @@ web/node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --inspector-port 9230 
 | 照片選取、縮圖及結果確認 | `static/app.js` |
 | 通知權限、瀏覽器訂閱、PWA 背景事件 | [static/notifications.js](static/notifications.js)、[static/sw.js](static/sw.js)、[static/manifest.webmanifest](static/manifest.webmanifest) |
 | HTTP API、登入、CSRF、SQLite 操作、AI 呼叫前後驗證 | [web/worker.js](web/worker.js) |
+| 協議、可選 AI 授權、資料匯出、密碼／刪帳 | [web/account.js](web/account.js)、[web/legal.js](web/legal.js) |
 | 多廚房、聚會來源權限、一次性資料遷移 | [web/kitchens.js](web/kitchens.js) |
 | 日期、份量、消耗／復原、密碼與共用驗證 | [web/domain.js](web/domain.js) |
 | 食譜 prompt、三種模式、結果合約、單道替換 | [web/ai.js](web/ai.js) |
@@ -108,7 +109,7 @@ web/node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --inspector-port 9230 
 
 常備調味料目前為鹽、糖、油、醬油、醋、胡椒、乾辣椒，可逐項取消。模型回覆分成 `uses`（庫存）、`seasonings`（允許的常備調味料）和 `additional`（需補購），後端會驗證來源與數量。這些模式中的「安全局限」是庫存限制，不是食物安全認證。
 
-食譜只在明確按下生成或換一道時呼叫模型；背景更新不觸發生成。失敗會顯示錯誤並保留既有結果，不用固定食譜代替 AI。配額與輸入限制以 `web/worker.js` 的 `consumeAI()`／`aiFetch()` 為準；目前一次生成要求可選庫存不超過 80 筆，聚會來源也計入。
+食譜只在明確按下生成或換一道時呼叫模型；背景更新不觸發生成。失敗會顯示錯誤並保留既有結果，不用固定食譜代替 AI。配額與輸入限制以 `web/worker.js` 的 `consumeAI()`／`aiFetch()` 為準；目前一次最多選用 80 項食材；庫存總數超過 80 筆仍可選擇部分食材生成，使用全部庫存超限時會提示改為手選。
 
 ### 多廚房與聚會
 
@@ -123,6 +124,17 @@ web/node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --inspector-port 9230 
 一般瀏覽免安裝；iPhone／iPad 推播須先加入主畫面並從圖示開啟，再由使用者允許通知。伺服器每 5 分鐘檢查，在使用者設定時區約上午 9 點合併提醒，每裝置每天一次。只提醒仍有剩餘的相關日期紀錄，鎖定畫面不列食材名稱與數量。
 
 目前每裝置的推播訂閱綁定一個廚房；切換後可在提醒頁明確重新啟用。登出、登入到期、撤權或聚會結束會停止相應通知。協定、模擬權限及測試傳輸有自動驗收；**這些測試不代表實際 iPhone 收件已驗證**。真機仍須授權並按「發送測試通知」確認。
+
+## 帳戶、隱私與協議
+
+- 公開文件：[用戶協議](https://last-minute-bites-demo.jzalx789.workers.dev/#terms)、[隱私政策](https://last-minute-bites-demo.jzalx789.workers.dev/#privacy-policy)。聯絡電郵為 **Bite.limited@gmail.com**，營運者標示為 Last Minute Bites 專案團隊，不宣稱已註冊公司身份。
+- 註冊須主動勾選協議，後端記錄版本與時間；既有帳戶不會被視作已同意，更新後首次使用受保護功能須確認新版。拒絕仍能進入資料控制、匯出及刪帳，不會自動授予相機、通知或 AI 權限。
+- 文字 AI 與照片 AI 預設分別關閉，可在首次使用時確認，或設定 → 隱私與資料更改。手動庫存與常見名稱規則仍可用。啟用前會說明 DeepSeek、資料種類、可能的跨境處理及供應商政策；不承諾第三方永不保留或訓練資料。
+- 撤回 AI 會阻止新請求並清除個人 AI 結果；處理中請求的回覆也檢查授權與修訂號。清除歷史、撤回後重新啟用等操作，不會讓舊回覆再次存回。已送至供應商的請求不能撤銷。
+- 可下載帳戶、偏好、同意紀錄、有權查看的食材及個人食譜 JSON，沒有密碼雜湊、登入 token、推播私人金鑰或其他成員帳戶檔案。下載包含私人內容，應妥善保管。
+- 帳戶與安全可更改密碼（撤銷其他登入）、以密碼確認登出全部裝置，以及刪除帳戶。有其他成員的自有廚房須先在共享廚房頁轉移擁有權；來源分享亦會撤回。刪除只處理本人與其沒有其他成員的自有廚房，不能抹除他人庫存或已下載副本。
+- 相機／通知只在使用功能時詢問。隱私頁讀取可取得的權限狀態，不自行索權；不支援查詢時提示在瀏覽器設定查看。另可登出並清除此 App 的本機選材／公開介面快取。
+- 原型尚未提供電郵驗證或自動忘記密碼郵件，不會顯示虛假的「重設信已寄出」。法定營運者身份、供應商 API 保留／訓練條款、備份刪除及正式商用法律審閱見 [docs/LEGAL_REVIEW.md](docs/LEGAL_REVIEW.md)。協議不能保證免除法律責任。
 
 ## 測試與交付
 
@@ -145,12 +157,16 @@ export LMB_WEB_BASE_URL=http://127.0.0.1:8790
 export LMB_TEST_CHROMIUM="$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
 python tests/web_api_contract.py
 python tests/multi_kitchen_api.py
+python tests/privacy_api.py
+python tests/large_inventory_api.py
 python tests/recipe_modes_api.py
 python tests/multi_kitchen_browser.py
 LMB_WEB_ENGINE=webkit python tests/multi_kitchen_browser.py
+python tests/privacy_browser.py
+LMB_WEB_ENGINE=webkit python tests/privacy_browser.py
 ```
 
-這是接手時的重點驗收；完整 API、Chrome／WebKit、鍵盤、過期提醒、分類、份量、食譜與通知測試清單見 [checks.yml](.github/workflows/checks.yml)。`tests/browser_smoke.py` 提供共用 helper，但它的舊獨立主流程不是目前 Worker 版本的完整驗收入口。
+測試 helper 會為合成帳戶明確同意協議並啟用測試所需 AI；`privacy_browser.py` 另外驗證真實 UI 的預設關閉、取消與分開確認。這是接手時的重點驗收；完整 API、Chrome／WebKit、鍵盤、過期提醒、分類、份量、食譜與通知測試清單見 [checks.yml](.github/workflows/checks.yml)。`tests/browser_smoke.py` 提供共用 helper，但它的舊獨立主流程不是目前 Worker 版本的完整驗收入口。
 
 `tests/live_ai_browser.py`、`tests/live_classification.py`、`tests/live_recipe_builder.py` 會使用真實服務，分別須明確設定 `LMB_LIVE_AI=1`、`LMB_LIVE_FOOD=1`、`LMB_LIVE_RECIPES=1`，並閱讀各腳本的額外輸入要求。它們可能產生帳號、資料和模型費用，不屬於一般本機／CI 流程。不要把正式網址用在預期隔離的 API 測試中。
 
