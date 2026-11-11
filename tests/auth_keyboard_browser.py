@@ -5,7 +5,7 @@ import os,sys,uuid
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from browser_smoke import click,navigate,read_state
+from browser_smoke import launch_browser,click,navigate,read_state
 base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8794')
 artifacts=Path(__file__).resolve().parents[1]/'artifacts/auth-keyboard';artifacts.mkdir(parents=True,exist_ok=True)
 KEYBOARD=r'''(()=>{
@@ -18,7 +18,7 @@ KEYBOARD=r'''(()=>{
  window.__keyboardViewport=(h,top)=>{height=h;offset=top;vv.dispatchEvent(new Event('resize'));vv.dispatchEvent(new Event('scroll'));};
 })();'''
 with sync_playwright() as p:
- b=p.webkit.launch(executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE',p.webkit.executable_path),headless=True) if os.getenv('LMB_WEB_ENGINE')=='webkit' else p.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox'])
+ b=launch_browser(p)
  context=b.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,extra_http_headers=({'CF-Connecting-IP':'synthetic-auth-keyboard'} if base.startswith('http://127.0.0.1:') else {}));context.add_init_script(KEYBOARD);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.goto(base);expect(page.locator('[data-form=auth]')).to_be_visible();click(page,'auth-register');expect(page.locator('[name=confirm_password]')).to_be_visible()
  email='keyboard-'+uuid.uuid4().hex[:10]+'@example.test';password='synthetic-keyboard-password'

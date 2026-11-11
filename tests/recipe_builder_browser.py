@@ -3,11 +3,11 @@ import os,sys,uuid
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from browser_smoke import register,click,navigate,read_state,request
+from browser_smoke import launch_browser,register,click,navigate,read_state,request
 base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8790');assert base.startswith('http://127.0.0.1:')
 artifacts=Path(__file__).resolve().parents[1]/'artifacts/recipe-builder';artifacts.mkdir(parents=True,exist_ok=True)
 with sync_playwright() as p:
- b=p.webkit.launch(executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE',p.webkit.executable_path),headless=True) if os.getenv('LMB_WEB_ENGINE')=='webkit' else p.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox'])
+ b=launch_browser(p)
  # Block service workers only in this fault-injection test so page.route can intercept API requests.
  page=b.new_page(service_workers='block',viewport={'width':390,'height':844},is_mobile=True,has_touch=True);errors=[];calls=[]
  page.on('pageerror',lambda e:errors.append(str(e)));page.on('request',lambda r:calls.append(r.url) if r.url.endswith(('/api/recipes/generate','/api/recipes/replace')) else None)

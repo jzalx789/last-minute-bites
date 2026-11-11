@@ -3,7 +3,7 @@ import os,sys,uuid
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from browser_smoke import register,click,navigate,confirm
+from browser_smoke import launch_browser,register,click,navigate,confirm
 base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8794')
 assert base.startswith('http://127.0.0.1:')
 art=Path(__file__).resolve().parents[1]/'artifacts/party';art.mkdir(parents=True,exist_ok=True)
@@ -24,7 +24,7 @@ def fit(p):
         if box:assert box['x']>=-1 and box['x']+box['width']<=p.viewport_size['width']+1,(box,p.viewport_size)
 errors=[]
 with sync_playwright() as pw:
-    browser=pw.webkit.launch(executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE',pw.webkit.executable_path),headless=True) if os.getenv('LMB_WEB_ENGINE')=='webkit' else pw.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox'])
+    browser=launch_browser(pw)
     one=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
     two=browser.new_context(viewport={'width':360,'height':800},is_mobile=True,has_touch=True)
     a,b=one.new_page(),two.new_page()

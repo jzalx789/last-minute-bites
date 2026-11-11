@@ -1,5 +1,5 @@
 /* Cache only the public app shell. Never store API results, accounts or kitchen data. */
-const CACHE = "lmb-shell-v14-1";
+const CACHE = "lmb-shell-v14-2";
 const SHELL = [
   "/",
   "/app.js",
@@ -45,12 +45,8 @@ self.addEventListener("fetch", (event) => {
   )
     return;
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Only the install handler writes caches, keeping app versions internally consistent.
-        return response;
-      })
-      .catch(() => caches.match(url.pathname)),
+    // Only installation writes caches, keeping the shell version consistent.
+    fetch(event.request).catch(() => caches.match(url.pathname)),
   );
 });
 

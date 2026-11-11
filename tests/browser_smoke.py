@@ -15,6 +15,20 @@ ARTIFACTS = ROOT / 'artifacts'
 ARTIFACTS.mkdir(exist_ok=True)
 
 
+def launch_browser(playwright):
+    """Use the selected engine, with optional externally installed executables."""
+    if os.getenv('LMB_WEB_ENGINE') == 'webkit':
+        return playwright.webkit.launch(
+            executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE', playwright.webkit.executable_path),
+            headless=True,
+        )
+    return playwright.chromium.launch(
+        executable_path=os.getenv('LMB_TEST_CHROMIUM', playwright.chromium.executable_path),
+        headless=True,
+        args=['--no-sandbox'],
+    )
+
+
 def click(page, action, extra=''):
     page.locator(f'[data-action="{action}"]{extra}').first.click()
 

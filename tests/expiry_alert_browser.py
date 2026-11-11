@@ -3,11 +3,11 @@ import os,sys,uuid,datetime
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from browser_smoke import register,navigate,click,request,read_state,confirm
+from browser_smoke import launch_browser,register,navigate,click,request,read_state,confirm
 base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8794')
 artifacts=Path(__file__).resolve().parents[1]/'artifacts/expiry';artifacts.mkdir(parents=True,exist_ok=True)
 with sync_playwright() as p:
- b=p.webkit.launch(executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE',p.webkit.executable_path),headless=True) if os.getenv('LMB_WEB_ENGINE')=='webkit' else p.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox'])
+ b=launch_browser(p)
  page=b.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True);errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  register(page,base,'expiry-'+uuid.uuid4().hex[:12]+'@example.test')
  page.locator('[data-form=create-kitchen] [name=name]').fill('Expiry warning checks');page.locator('[data-form=create-kitchen] button').click();expect(page.locator('.app-dock')).to_be_visible()

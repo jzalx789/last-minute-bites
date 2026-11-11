@@ -6,7 +6,7 @@ from pathlib import Path
 from PIL import Image
 from playwright.sync_api import sync_playwright,expect
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from browser_smoke import set_stock,click,navigate,register,confirm
+from browser_smoke import launch_browser,set_stock,click,navigate,register,confirm
 base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8790')
 assert base.startswith('http://127.0.0.1:'), 'Fixture browser tests require the local test-only service; use live_ai_browser.py for explicit real inference.'
 artifacts=Path(__file__).resolve().parents[1]/'artifacts/fixes';artifacts.mkdir(parents=True,exist_ok=True)
@@ -22,7 +22,7 @@ def assert_dock_layout(page):
         return m.height>0 && d.height>0 && m.bottom<=d.top+1;
     }""", timeout=5000)
 with tempfile.TemporaryDirectory() as directory,sync_playwright() as p:
-    browser=p.webkit.launch(executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE',p.webkit.executable_path),headless=True) if os.getenv('LMB_WEB_ENGINE')=='webkit' else p.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox'])
+    browser=launch_browser(p)
     context=browser.new_context(viewport={'width':320,'height':568},is_mobile=True,has_touch=True)
     page=context.new_page();page.on('pageerror',lambda error:errors.append(str(error)));page.on('request',lambda r:generations.append(r.url) if r.url.endswith('/api/recipes/generate') else None)
     register(page,base,'fixes-'+uuid.uuid4().hex[:10]+'@example.test')

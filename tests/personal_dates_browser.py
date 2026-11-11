@@ -5,11 +5,11 @@ import os,sys,uuid
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from browser_smoke import register,click,navigate,set_stock,read_state,request
+from browser_smoke import launch_browser,register,click,navigate,set_stock,read_state,request
 base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8790')
 artifacts=Path(__file__).resolve().parents[1]/'artifacts/personal-dates';artifacts.mkdir(parents=True,exist_ok=True)
 with sync_playwright() as p:
- b=p.webkit.launch(executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE',p.webkit.executable_path),headless=True) if os.getenv('LMB_WEB_ENGINE')=='webkit' else p.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox'])
+ b=launch_browser(p)
  page=b.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True);errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  register(page,base,'personal-dates-'+uuid.uuid4().hex[:10]+'@example.test');page.locator('[data-form=create-kitchen] [name=name]').fill('Self-managed dates');page.locator('[data-form=create-kitchen] button').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
  click(page,'add');page.locator('[name=name]').fill('薯片');set_stock(page,1,'pack');page.locator('[name=date_source]').select_option('personal')

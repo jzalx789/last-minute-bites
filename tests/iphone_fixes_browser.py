@@ -3,13 +3,14 @@ import os,sys,uuid,json
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from browser_smoke import register,navigate,click,confirm,set_stock
+from browser_smoke import launch_browser,register,navigate,click,confirm,set_stock
 base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8794');assert base.startswith('http://127.0.0.1:')
 art=Path(__file__).resolve().parents[1]/'artifacts/iphone-fixes';art.mkdir(parents=True,exist_ok=True)
 errors=[]
 def blocked_once(page,path):
  page.route('**/api/'+path,lambda route:route.fulfill(status=428,content_type='application/json',body=json.dumps({'error':{'code':'agreement_required'}})),times=1)
 def accept_recovery(page):
+ # This completes consent only; the replay and its UI refresh are still pending.
  expect(page.locator('#agreement-dialog')).to_be_visible()
  expect(page.locator('#agreement-dialog [name=accepted]')).not_to_be_checked()
  page.locator('#agreement-dialog [name=accepted]').check();page.locator('#agreement-dialog-accept').click()
@@ -21,7 +22,7 @@ def fit_dates(page):
   bounds=field.bounding_box();parent=field.locator('..').bounding_box()
   assert bounds['x']>=parent['x']-1 and bounds['x']+bounds['width']<=parent['x']+parent['width']+1,(bounds,parent)
 with sync_playwright() as p:
- b=p.webkit.launch(executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE',p.webkit.executable_path),headless=True) if os.getenv('LMB_WEB_ENGINE')=='webkit' else p.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox'])
+ b=launch_browser(p)
  ctx=b.new_context(viewport={'width':375,'height':812},is_mobile=True,has_touch=True,service_workers='block')
  page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
  register(page,base,'iphone-qa-'+uuid.uuid4().hex[:12]+'@example.test')
@@ -60,10 +61,33 @@ with sync_playwright() as p:
  navigate(page,'category/all');click(page,'row-used',f'[data-id="{milk}"]');expect(page.locator('#used-picker')).to_be_visible()
  page.locator('[data-consume-amount]').fill('1');blocked_once(page,'food/consume');page.locator('#used-confirm').click();accept_recovery(page)
  expect(page.locator('#used-picker')).not_to_be_visible();assert next(f for f in state(page)['foods'] if f['id']==milk)['status']=='used'
- page.locator('#inventory-status').select_option('used');blocked_once(page,'food/batch');click(page,'row-restore',f'[data-id="{milk}"]');confirm(page);accept_recovery(page)
- assert next(f for f in state(page)['foods'] if f['id']==milk)['quantity']==1
+ page.locator('#inventory-status').select_option('used')
+ used=next(f for f in state(page)['foods'] if f['id']==milk)
+ # Hold the replay until consent closes, making the CI race deterministic.
+ page.evaluate("""() => {
+  const originalFetch=window.fetch;
+  window.restoreRequests=0;
+  window.fetch=async (...args) => {
+   if (args[0]==='/api/food/batch' && ++window.restoreRequests===2) {
+    window.fetch=originalFetch;
+    await new Promise(resolve=>window.resumeRestore=resolve);
+   }
+   return originalFetch(...args);
+  };
+ }""")
+ blocked_once(page,'food/batch');click(page,'row-restore',f'[data-id="{milk}"]');confirm(page);accept_recovery(page)
+ page.wait_for_function('typeof window.resumeRestore === "function"')
+ assert next(f for f in state(page)['foods'] if f['id']==milk)['quantity']==0
+ page.evaluate('window.resumeRestore()')
+ # Wait for the restored row to leave the Used filter, not just consent closure.
+ expect(page.locator(f'[data-food-id="{milk}"]')).not_to_be_visible()
+ restored=next(f for f in state(page)['foods'] if f['id']==milk)
+ assert restored['quantity']==1 and restored['status']=='active'
+ assert restored['version']==used['version']+1
+ assert page.evaluate('window.restoreRequests')==2
  # Preferences save after consent recovery; no silent loss of the selected value.
  navigate(page,'preferences');page.locator('[name=date_format]').select_option('dmy');blocked_once(page,'preferences');page.locator('[data-form=preferences] button').click();accept_recovery(page)
+ page.wait_for_function('state.preferences.date_format === "dmy"')
  expect(page.locator('[name=date_format]')).to_have_value('dmy');assert state(page)['preferences']['date_format']=='dmy'
  # Recipe recovery retains servings/selection and performs no deduction.
  navigate(page,'recipes');form=page.locator('[data-form=ai-recipes]');form.locator('[name=count]').select_option('1');form.locator('[name=servings]').fill('4')

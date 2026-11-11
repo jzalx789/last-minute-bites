@@ -254,11 +254,6 @@ const words = {
   soy_sauce: ["Soy sauce", "豉油"],
   oil: ["Cooking oil", "食油"],
   salt: ["Salt", "鹽"],
-  mark_used: ["Mark used up", "標記已用完"],
-  used_confirm: [
-    "Only mark this if none remains. This keeps the record.",
-    "只有完全用完才標記，紀錄仍會保留。",
-  ],
   delete: ["Delete record", "刪除紀錄"],
   delete_confirm: [
     "Delete this food record for everyone in this kitchen?",
@@ -979,6 +974,11 @@ async function api(path, data, options = {}) {
   return result;
 }
 const errorText = (e) => t(e.code || "internal_error");
+async function refreshAfterAccessError(error, draw = true) {
+  if (!error.recoveryHandled &&
+      ["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(error.code))
+    await refresh(draw).catch(() => {});
+}
 function storeSelection() {
   if (state?.user)
     try {
@@ -2181,8 +2181,7 @@ document.addEventListener("submit", async (event) => {
     error.textContent = errorText(err);
     if (form.dataset.form === "ai-recipes") displayRecipes();
     if (err.code === "agreement_required") notify(errorText(err));
-    if (["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(err.code) && !err.recoveryHandled)
-      await refresh().catch(() => {});
+    await refreshAfterAccessError(err);
   } finally {
     delete form.dataset.classifyingSubmit;
     submit.disabled =
@@ -2471,26 +2470,17 @@ document.addEventListener("click", async (event) => {
           t("reference") + ": " + dateText(calculation);
         break;
       }
-      case "mark-used":
+      case "mark-used": {
+        const food = state.foods.find(
+          (item) => item.id === Number(b.closest("form").dataset.id),
+        );
+        if (food) await consumeFoods([food]);
+        break;
+      }
       case "delete-food": {
-        const used = a === "mark-used";
-        if (used) {
-          const f = b.closest("form");
-          const food = state.foods.find(
-            (item) => item.id === Number(f.dataset.id),
-          );
-          if (food) await consumeFoods([food]);
-          break;
-        }
-        if (
-          !(await confirmAction(
-            t(used ? "mark_used" : "delete"),
-            t(used ? "used_confirm" : "delete_confirm"),
-          ))
-        )
-          break;
+        if (!(await confirmAction(t("delete"), t("delete_confirm")))) break;
         const f = b.closest("form");
-        await api(used ? "food/used" : "food/delete", {
+        await api("food/delete", {
           id: Number(f.dataset.id),
           version: Number(f.dataset.version),
           confirmed: true,
@@ -2557,8 +2547,7 @@ document.addEventListener("click", async (event) => {
     const error = b.closest("form")?.querySelector(".error");
     if (error) error.textContent = errorText(err);
     else notify(errorText(err));
-    if (["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(err.code) && !err.recoveryHandled)
-      await refresh().catch(() => {});
+    await refreshAfterAccessError(err);
   } finally {
     b.disabled = false;
   }
@@ -2671,33 +2660,13 @@ function updateDock() {
 async function manageFoods(foods, action) {
   if (!foods.length) return;
   if (action === "used") return consumeFoods(foods);
-  if (action === "restore") {
-    if (
-      !(await confirmAction(
-        t("restore"),
-        foods
-          .map(
-            (f) =>
-              `${f.name} · ${batchLine(f)}\n${t("restore_amount")}: ${amountText(f.restore_quantity ?? null, f.unit)}`,
-          )
-          .join("\n"),
-      ))
-    )
-      return;
-  }
-  if (
-    action !== "restore" &&
-    !(await confirmAction(
-      t(action === "used" ? "mark_used" : "delete"),
-      `${foods
-        .map((f) => f.name)
-        .slice(0, 4)
-        .join(
-          "、",
-        )}\n${t(action === "used" ? "used_confirm" : "delete_confirm")}`,
-    ))
-  )
-    return;
+  const restoring = action === "restore";
+  const message = restoring
+    ? foods.map((f) =>
+        `${f.name} · ${batchLine(f)}\n${t("restore_amount")}: ${amountText(f.restore_quantity ?? null, f.unit)}`,
+      ).join("\n")
+    : `${foods.map((f) => f.name).slice(0, 4).join("、")}\n${t("delete_confirm")}`;
+  if (!(await confirmAction(t(restoring ? "restore" : "delete"), message))) return;
   await api("food/batch", {
     action,
     items: foods.map((f) => ({ id: f.id, version: f.version })),
@@ -2901,8 +2870,7 @@ async function consumeFoods(foods, suggested = new Map()) {
       )
         ? t("consumption_conflict")
         : errorText(err);
-      if (["no_kitchen", "unauthorized", "party_ended", "agreement_required"].includes(err.code) && !err.recoveryHandled)
-        await refresh(false).catch(() => {});
+      await refreshAfterAccessError(err, false);
     } finally {
       busy = false;
       $("#used-confirm").disabled = false;

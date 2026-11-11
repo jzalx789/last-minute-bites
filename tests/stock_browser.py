@@ -5,12 +5,12 @@ import os,sys,uuid
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from browser_smoke import set_stock,click,navigate,register,confirm,read_state
+from browser_smoke import launch_browser,set_stock,click,navigate,register,confirm,read_state
 base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8790')
 assert base.startswith('http://127.0.0.1:'), 'Fixture browser tests require the local test-only service; use live_ai_browser.py for explicit real inference.'
 artifacts=Path(__file__).resolve().parents[1]/'artifacts/stock';artifacts.mkdir(parents=True,exist_ok=True)
 with sync_playwright() as p:
-    browser=p.webkit.launch(executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE',p.webkit.executable_path),headless=True) if os.getenv('LMB_WEB_ENGINE')=='webkit' else p.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox'])
+    browser=launch_browser(p)
     context=browser.new_context(viewport={'width':360,'height':640},is_mobile=True,has_touch=True)
     page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
     register(page,base,'stock-browser-'+uuid.uuid4().hex[:10]+'@example.test')

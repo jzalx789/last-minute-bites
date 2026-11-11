@@ -3,11 +3,11 @@ import os,sys,uuid
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from browser_smoke import register,navigate,request,read_state,click
+from browser_smoke import launch_browser,register,navigate,request,read_state,click
 base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8794');assert base.startswith('http://127.0.0.1:')
 artifacts=Path(__file__).resolve().parents[1]/'artifacts/recipe-modes';artifacts.mkdir(parents=True,exist_ok=True)
 with sync_playwright() as p:
- b=p.webkit.launch(executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE',p.webkit.executable_path),headless=True) if os.getenv('LMB_WEB_ENGINE')=='webkit' else p.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox'])
+ b=launch_browser(p)
  page=b.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,service_workers='block');errors=[];calls=[]
  page.on('pageerror',lambda e:errors.append(str(e)));page.on('request',lambda r:calls.append(r) if r.url.endswith('/api/recipes/generate') else None)
  register(page,base,'recipe-modes-'+uuid.uuid4().hex[:10]+'@example.test')

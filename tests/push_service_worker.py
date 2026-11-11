@@ -17,9 +17,18 @@ with sync_playwright() as p:
  registration=next(r for r in registrations if r.get('scopeURL')==base+'/' and not r.get('isDeleted'))
  payload=dict(title='Last Minute Bites',body='Synthetic background push event',tag='lmb-push-test',url='/#kitchen')
  cdp.send('ServiceWorker.deliverPushMessage',dict(origin=base,registrationId=registration['registrationId'],data=json.dumps(payload)))
- keeper.wait_for_function("async()=>{const r=await navigator.serviceWorker.ready;return (await r.getNotifications({tag:'lmb-push-test'})).length===1;}",timeout=15000)
- result=keeper.evaluate("async()=>{const r=await navigator.serviceWorker.ready;const n=(await r.getNotifications({tag:'lmb-push-test'}))[0];return {title:n.title,body:n.body,tag:n.tag,url:n.data.url};}")
+ # Poll the resolved async query: wait_for_function treats its Promise as
+ # truthy before delivery. Capture the payload in the same read that finds it.
+ result=None
+ for _ in range(150):
+  result=keeper.evaluate("""async()=>{
+   const registration=await navigator.serviceWorker.ready;
+   const [item]=await registration.getNotifications({tag:'lmb-push-test'});
+   return item && {title:item.title,body:item.body,tag:item.tag,url:item.data.url};
+  }""")
+  if result:break
+  keeper.wait_for_timeout(100)
  assert result==dict(title=payload['title'],body=payload['body'],tag=payload['tag'],url='/#kitchen'),result
  keeper.evaluate("async()=>{const r=await navigator.serviceWorker.ready;for(const n of await r.getNotifications())n.close();}")
  (artifacts/'service-worker-received.json').write_text(json.dumps(result,indent=2));b.close()
-print('PASS: real Service Worker displays and retains a notification after the app page closes; tested with a CDP-injected push event and granted test-context permission, not remote-service/phone delivery.')
+print('PASS: real Service Worker displays a notification after the app page closes; tested with a CDP-injected push event and granted test-context permission, not remote-service/phone delivery.')

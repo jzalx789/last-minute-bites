@@ -3,11 +3,11 @@ import os,sys,uuid
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from browser_smoke import register,navigate,click,set_stock,read_state
+from browser_smoke import launch_browser,register,navigate,click,set_stock,read_state
 base=os.getenv('LMB_WEB_BASE_URL','http://127.0.0.1:8790');assert base.startswith('http://127.0.0.1:')
 artifacts=Path(__file__).resolve().parents[1]/'artifacts/classification';artifacts.mkdir(parents=True,exist_ok=True)
 with sync_playwright() as p:
- browser=p.webkit.launch(executable_path=os.getenv('LMB_TEST_WEBKIT_EXECUTABLE',p.webkit.executable_path),headless=True) if os.getenv('LMB_WEB_ENGINE')=='webkit' else p.chromium.launch(executable_path=os.getenv('LMB_TEST_CHROMIUM','/usr/bin/chromium'),headless=True,args=['--no-sandbox'])
+ browser=launch_browser(p)
  page=browser.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True);errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  register(page,base,'class-ui-'+uuid.uuid4().hex[:10]+'@example.test');page.locator('[data-form=create-kitchen] [name=name]').fill('Auto food category');page.locator('[data-form=create-kitchen] button').click();expect(page.locator('h1')).to_have_text('What’s in your kitchen?')
  click(page,'add');page.locator('[name=name]').fill('雞蛋');set_stock(page,6)
