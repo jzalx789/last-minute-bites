@@ -56,6 +56,7 @@ with sync_playwright() as p:
  stock=page.evaluate('JSON.stringify(state.foods)')
  navigate(page,'recipes');form=page.locator('[data-form=ai-recipes]');form.locator('button.primary').click()
  expect(page.locator('#confirm')).to_be_visible();expect(page.locator('#confirm-message')).to_contain_text('DeepSeek')
+ expect(page.locator('#confirm-yes')).to_have_text('Yes')
  page.locator('#confirm-cancel').click();expect(page.locator('#confirm')).not_to_be_visible()
  assert not any('/api/recipes/generate' in r for r in requests)
  form.locator('button.primary').click();confirm(page);expect(page.locator('.recipe-card')).to_have_count(2)
@@ -64,7 +65,7 @@ with sync_playwright() as p:
  # A photo requires separate permission; cancelling never sends it or leaves a spinner.
  navigate(page,'food');image=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=')
  page.locator('#food-photo').set_input_files({'name':'food.png','mimeType':'image/png','buffer':image})
- expect(page.locator('#confirm')).to_be_visible();page.locator('#confirm-cancel').click()
+ expect(page.locator('#confirm')).to_be_visible();expect(page.locator('#confirm-yes')).to_have_text('Yes');page.locator('#confirm-cancel').click()
  expect(page.locator('#food-photo')).to_be_enabled();expect(page.locator('#photo-results')).to_be_empty()
  assert not any('/api/food/recognize' in r for r in requests)
  navigate(page,'privacy');page.locator('[name=ai_text]').uncheck()

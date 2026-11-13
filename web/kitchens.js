@@ -89,6 +89,13 @@ export class KitchenAccess {
       this.activate(session, kid);
       return {ok:true,kitchen_id:kid};
     }
+    if (path === '/api/kitchen/rename') {
+      const member = this.member(session, requested);
+      check(member.role === 'owner', 'owner_only', 403);
+      const name = text(data.name, 80);
+      s.sql.exec("UPDATE kitchens SET name=? WHERE id=?", name, member.kitchen_id);
+      return {ok:true,name};
+    }
     if (!path.startsWith('/api/party/')) return null;
     const member = this.member(session, requested);
     check(member.kind === 'party','not_party',400);

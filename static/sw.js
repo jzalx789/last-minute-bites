@@ -1,5 +1,5 @@
 /* Cache only the public app shell. Never store API results, accounts or kitchen data. */
-const CACHE = "lmb-shell-v14-2";
+const CACHE = "lmb-shell-v14-3";
 const SHELL = [
   "/",
   "/app.js",

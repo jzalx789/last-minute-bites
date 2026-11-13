@@ -1,5 +1,5 @@
 "use strict";
-const CLIENT_VERSION = "1.4.1";
+const CLIENT_VERSION = "1.4.2";
 const $ = (s, r = document) => r.querySelector(s),
   E = (v) =>
     String(v ?? "").replace(
@@ -151,6 +151,8 @@ const words = {
     "建立自己的冰箱，或加入親友的冰箱。可切換多個廚房，或建立臨時聚會廚房分享食材。",
   ],
   kitchen_name: ["Kitchen name", "冰箱名稱"],
+  rename_kitchen: ["Rename kitchen", "修改冰箱名稱"],
+  yes: ["Yes", "是"],
   invite_code: ["Invitation code", "邀請碼"],
   preview_invite: ["Preview invitation", "預覽邀請"],
   join_confirm: ["Confirm and join as Editor", "確認以 Editor 身分加入"],
@@ -469,6 +471,10 @@ const words = {
     "請先計算並確認參考日期。",
   ],
   confirmation_required: ["Confirmation is required.", "請先確認。"],
+  kitchen_name_mismatch: [
+    "The name does not match this kitchen. Enter the full name shown, including spaces.",
+    "輸入的名稱與目前冰箱不符。請輸入上方顯示的完整名稱，並保留空格。",
+  ],
   invalid_email: ["Enter a valid email address.", "請輸入有效電郵。"],
   password_length: [
     "Password must be 10–128 characters.",
@@ -1842,7 +1848,7 @@ async function ensureAI(kind) {
   if (!state.consent?.accepted && !(await requestAgreement())) return false;
   const key=kind === "photo" ? "ai_photo" : "ai_text";
   if (state.consent[key]) return true;
-  if (!(await confirmAction(t(kind === "photo" ? "ai_photo_prompt" : "ai_text_prompt"),t("ai_choice_notice")))) return false;
+  if (!(await confirmAction(t(kind === "photo" ? "ai_photo_prompt" : "ai_text_prompt"),t("ai_choice_notice"),false,{confirmLabel:t("yes")}))) return false;
   const result=await api("privacy",{[key]:true});state.consent=result.consent;return true;
 }
 function updateNotice() {
@@ -1923,8 +1929,12 @@ function clearLocalSelections() {
 
 const settingsLink = (path, key) =>
   `<button class="settings-link" data-action="go" data-path="${path}"><span>${E(t(key))}</span><span aria-hidden="true">›</span></button>`;
+function renameKitchenForm() {
+  if (state.kitchen.role !== "owner" || state.kitchen.closed) return "";
+  return `<details class="privacy-section"><summary>${E(t("rename_kitchen"))}</summary><form data-form="rename-kitchen">${field("name",t("kitchen_name"),state.kitchen.name,"text",'required maxlength="80"')}${formError()}<button class="primary">${E(t("save"))}</button></form></details>`;
+}
 function settings() {
-  return `<div class="narrow">${back()}<h1>${E(t("settings"))}</h1>${settingsLink("kitchens", "switch_kitchen")}${state.kitchen?.kind === "party" ? settingsLink("party","party") : ""}${state.kitchen ? `<h2>${E(t("kitchen"))}</h2><p>${E(state.kitchen.name)} · ${E(t(state.kitchen.role))}</p>${settingsLink("shared", "shared")}` : ""}<h2>${E(t("personal"))}</h2>${settingsLink("preferences", "preferences")}${settingsLink("privacy","privacy_data")}${settingsLink("account","account_security")}${settingsLink("terms","terms_title")}${settingsLink("privacy-policy","privacy_policy")}${state.kitchen ? settingsLink("reminders", "reminders") : ""}<h2>${E(t("help"))}</h2>${settingsLink("help", "help")}${state.web_app ? "" : button("install", t("install"), "settings-link")}<p class="hint" id="install-guide" hidden>${E(t("install_note"))}</p>${state.kitchen?.role === "owner" && !state.kitchen.closed && state.kitchen.kind !== "party" ? `<h2>${E(t("kitchen_data"))}</h2>${button("clear-kitchen", t("clear_kitchen"), "danger full")}` : ""}<hr><p class="hint">${E(t("signout_note"))}</p>${button("sign-out", t("sign_out"), "full")}</div>`;
+  return `<div class="narrow">${back()}<h1>${E(t("settings"))}</h1>${settingsLink("kitchens", "switch_kitchen")}${state.kitchen?.kind === "party" ? settingsLink("party","party") : ""}${state.kitchen ? `<h2>${E(t("kitchen"))}</h2><p>${E(state.kitchen.name)} · ${E(t(state.kitchen.role))}</p>${settingsLink("shared", "shared")}${renameKitchenForm()}` : ""}<h2>${E(t("personal"))}</h2>${settingsLink("preferences", "preferences")}${settingsLink("privacy","privacy_data")}${settingsLink("account","account_security")}${settingsLink("terms","terms_title")}${settingsLink("privacy-policy","privacy_policy")}${state.kitchen ? settingsLink("reminders", "reminders") : ""}<h2>${E(t("help"))}</h2>${settingsLink("help", "help")}${state.web_app ? "" : button("install", t("install"), "settings-link")}<p class="hint" id="install-guide" hidden>${E(t("install_note"))}</p>${state.kitchen?.role === "owner" && !state.kitchen.closed && state.kitchen.kind !== "party" ? `<h2>${E(t("kitchen_data"))}</h2>${button("clear-kitchen", t("clear_kitchen"), "danger full")}` : ""}<hr><p class="hint">${E(t("signout_note"))}</p>${button("sign-out", t("sign_out"), "full")}</div>`;
 }
 function shared() {
   const owner=state.kitchen.role === "owner", agreed=!!state.consent?.accepted;
@@ -1983,30 +1993,43 @@ function reminders() {
   return `<div class="narrow">${back("settings")}<h1>${E(t("reminders"))}</h1><p>${E(t("reminder_note"))}</p><form data-form="reminders"><label class="check"><input type="checkbox" name="reminders" ${p.reminders ? "checked" : ""}>${E(t("enable_reminders"))}</label><label>${E(t("remind_before"))}<select name="reminder_days">${[1, 3, 7].map((d) => option(d, `${d} ${t("days")}`, p.reminder_days)).join("")}</select></label>${formError()}<button class="primary">${E(t("save"))}</button></form><p class="hint">${E(t("push_kitchen_scope"))}</p><section id="push-panel" class="push-panel" aria-label="${E(t("push_title"))}">${pushPanelHTML()}</section></div>`;
 }
 function help() {
-  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites 1.4.1</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
+  return `<div class="narrow">${back("settings")}<h1>${E(t("help"))}</h1><p>${E(t("help_text"))}</p><h2>Last Minute Bites ${E(CLIENT_VERSION)}</h2><p>${E(t("limitations"))}</p><p>${E(t("note_hint"))}</p></div>`;
 }
-async function confirmAction(title, message, typed = false) {
+async function confirmAction(title, message, typed = false, {confirmLabel = title, expectedName} = {}) {
   const dialog = $("#confirm");
   $("#confirm-title").textContent = title;
   $("#confirm-message").textContent = message;
   $("#confirm-cancel").textContent = t("cancel");
-  $("#confirm-yes").textContent = title;
+  $("#confirm-yes").textContent = confirmLabel;
   $("#confirm-label").hidden = !typed;
-  $("#confirm-input-label").textContent = t("type_name");
+  $("#confirm-input-label").textContent = t("type_name") + (expectedName === undefined ? "" : `: “${expectedName}”`);
   $("#confirm-input").value = "";
+  const form = dialog.querySelector("form"), error = $("#confirm-error");
+  error.textContent = "";
+  const validate = (event) => {
+    if (event.submitter?.value === "yes" && expectedName !== undefined &&
+        $("#confirm-input").value !== expectedName) {
+      event.preventDefault();
+      error.textContent = t("kitchen_name_mismatch");
+      $("#confirm-input").focus();
+    }
+  };
+  form.addEventListener("submit", validate);
   dialog.returnValue = "cancel";
   dialog.showModal();
   return new Promise((resolve) =>
     dialog.addEventListener(
       "close",
-      () =>
+      () => {
+        form.removeEventListener("submit", validate);
         resolve(
           dialog.returnValue === "yes"
             ? typed
               ? $("#confirm-input").value
               : true
             : false,
-        ),
+        );
+      },
       { once: true },
     ),
   );
@@ -2038,6 +2061,9 @@ document.addEventListener("submit", async (event) => {
   const data = Object.fromEntries(new FormData(form));
   try {
     switch (form.dataset.form) {
+      case "rename-kitchen":
+        await api("kitchen/rename", {name:data.name});
+        await refresh();notify(t("saved"));break;
       case "agreement":
         await api("legal/accept",{accepted:form.elements.accepted.checked,version:state.legal.version});
         await refresh(false);go("kitchen");render();break;
@@ -2535,6 +2561,7 @@ document.addEventListener("click", async (event) => {
           t("clear_kitchen"),
           t("clear_warning"),
           true,
+          {expectedName:state.kitchen.name},
         );
         if (name === false) break;
         await api("kitchen/clear", { confirmed: true, kitchen_name: name });

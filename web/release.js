@@ -1,4 +1,4 @@
-export const APP_VERSION = "1.4.1";
+export const APP_VERSION = "1.4.2";
 
 // Old app shells have no agreement UI or translation. Give those clients the
 // update message they already understand, while keeping the server guard intact.

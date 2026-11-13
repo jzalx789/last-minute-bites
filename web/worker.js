@@ -1330,10 +1330,8 @@ export class KitchenStore extends DurableObject {
       }
       if (path === "/api/kitchen/clear") {
         this.member(true);
-        check(
-          data.confirmed === true && data.kitchen_name === member.name,
-          "confirmation_required",
-        );
+        check(data.confirmed === true, "confirmation_required");
+        check(data.kitchen_name === member.name, "kitchen_name_mismatch");
         this.sql.exec("DELETE FROM food_items WHERE kitchen_id=?", kid);
         return { ok: true };
       }

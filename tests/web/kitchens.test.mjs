@@ -82,3 +82,33 @@ test('explicit tab context is independent of session default and never falls bac
   assert.equal(access.member(session,999,{fallback:true}).kitchen_id,11);
   db.close();
 });
+
+test('renaming updates only the explicitly selected kitchen and preserves stock, membership and sharing',()=>{
+  const {db,storage,store:s}=fixture();migrateKitchens(storage);
+  const access=new KitchenAccess(s),session={user_id:1,token:'session',kitchen_id:22};
+  s.sql.exec("INSERT INTO memberships VALUES(1,22,'editor')");
+  const party=access.route(session,11,'/api/kitchen/create',{name:'Party',kind:'party',source_ids:[11]}).kitchen_id;
+  const before=s.rows('SELECT * FROM memberships');
+  assert.deepEqual(access.route(session,11,'/api/kitchen/rename',{name:'  試用冰箱 08  '}),{ok:true,name:'試用冰箱 08'});
+  assert.equal(s.one('SELECT name FROM kitchens WHERE id=11').name,'試用冰箱 08');
+  assert.equal(s.one('SELECT name FROM kitchens WHERE id=22').name,'Guest kitchen');
+  assert.equal(s.one('SELECT data FROM food_items WHERE id=31').data,'untouched');
+  assert.deepEqual(s.rows('SELECT * FROM memberships'),before);
+  assert.equal(access.sources(party)[0].name,'試用冰箱 08');
+  db.close();
+});
+
+test('rename requires active ownership, validates names and rejects a foreign tab context',()=>{
+  const {db,storage,store:s}=fixture();migrateKitchens(storage);
+  const access=new KitchenAccess(s),session={user_id:1,token:'session',kitchen_id:11};
+  s.sql.exec("INSERT INTO memberships VALUES(2,11,'editor')");
+  assert.throws(()=>access.route({user_id:2},11,'/api/kitchen/rename',{name:'Denied'}),e=>e.code==='owner_only');
+  assert.throws(()=>access.route(session,22,'/api/kitchen/rename',{name:'Denied'}),e=>e.code==='no_kitchen');
+  for (const name of ['', '   ', 'x'.repeat(81), null])
+    assert.throws(()=>access.route(session,11,'/api/kitchen/rename',{name}),e=>e.code==='invalid_input');
+  const party=access.route(session,null,'/api/kitchen/create',{name:'Party',kind:'party'}).kitchen_id;
+  s.sql.exec('UPDATE kitchens SET ended=? WHERE id=?',Date.now(),party);
+  assert.throws(()=>access.route(session,party,'/api/kitchen/rename',{name:'Denied'}),e=>e.code==='party_ended');
+  assert.equal(s.one('SELECT name FROM kitchens WHERE id=11').name,'Original kitchen');
+  db.close();
+});
