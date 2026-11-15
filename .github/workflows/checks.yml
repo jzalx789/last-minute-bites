@@ -12,6 +12,8 @@ jobs:
         with:
           node-version: '24'
       - run: python -m unittest discover -s tests -v
+      - name: Verify current course source export
+        run: python scripts/package.py --verify submission/S01G10.zip
       - run: npm ci --prefix web && npm --prefix web run check && npm --prefix web test
       - run: node --check static/app.js && node --check static/mobile.js && node --check static/sw.js && node --check static/notifications.js
       - run: pip install playwright==1.62.0 Pillow==13.0.0

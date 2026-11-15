@@ -1,6 +1,6 @@
 # Locally bundled components
 
-No camera frame is uploaded and no runtime CDN is used. These libraries are bundled under static/vendor, with upstream copyright/license notices retained.
+QR-scanner camera frames stay on the device and are not uploaded. The separate photo-recognition feature sends a reduced image to the AI service only after explicit consent. No runtime CDN is used for these QR libraries; they are bundled under static/vendor, with upstream copyright/license notices retained.
 
 | Component | Version | License | Source |
 | --- | --- | --- | --- |

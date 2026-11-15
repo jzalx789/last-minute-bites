@@ -1,73 +1,30 @@
-# 免費主機部署與正式網址
+# 目前的存取、測試與部署
 
-Prototype 0.2 已提供 WSGI 部署入口，但**已取得帳號名稱 Jzalx，目前尚無安全 API 授權，尚未部署，沒有可供教師存取的公開 App URL**。目前的 GitHub 連結是原始碼，不能當作 App 網址。
+適用 Last Minute Bites 1.4.2，更新於 2026-11-15。舊 PythonAnywhere／WSGI 步驟已移至 [歷史文件](legacy/DEPLOYMENT_0_2.md)，不適用於目前的 AI、多廚房或聚會正式版本。
 
-## Mac 最簡單的安全部署方法
+## 教師／測試者入口
 
-帳號名稱已提供為 **Jzalx**；尚未取得安全 API 授權或完成網站部署。若之前把 Token 貼到聊天，先在 PythonAnywhere 撤銷並重新產生，新的 Token 不要再貼回聊天。
+- 正式網址：<https://last-minute-bites-demo.jzalx789.workers.dev/>。
+- 提交入口：`submission/S01G10.html`，按「開啟 App」進入同一 HTTPS 網址。它不是 APK 或離線可執行後端。
+- 需要網絡及支援的手機瀏覽器。測試者可自行註冊新帳戶，毋須索取私人 AI 金鑰或已有使用者密碼。
+- 用兩個獨立帳戶／瀏覽器工作階段，透過邀請碼驗證 Owner／Editor 共享。不要共用別人的正式帳戶或修改其庫存。
+- 手動庫存不需 AI 授權。AI 及照片另行同意，實際使用受現有模型服務及配額影響。
+- 相機只在掃碼等明確動作時索權；通知須另行啟用。iOS 主畫面安裝及通知限制以介面提示為準，不能把一般瀏覽器測試當作真機收件證據。
 
-1. 從 GitHub 的 `codex/last-minute-bites-prototype` 分支下載**最新** ZIP，解壓。
-2. 雙擊 `Deploy to PythonAnywhere.command`。Python 3.12+ 是唯一的本機需求，無需另外安裝 Git／Gunicorn／框架。
-3. 終端機顯示帳號提示時，預設 Jzalx，核對後按 Return。
-4. 在該終端機的隱藏輸入欄位貼上**新** API Token，按 Return。它只留在這個程序的記憶體，不寫入檔案、不回傳聊天、不送到 App 網域。
-5. 程式只在該帳戶新增 App；遇到其他既有專案會停止。它會上傳版本、設定 HTTPS 與持久 SQLite、要求 reload，並檢查公開網址。
-6. 加上本 launcher 的 `--demo` 會透過正常 App API 建立三個合成教師帳戶與七樣食物，驗證共享、配對及 Editor 越權拒絕。正式網址與本次帳密會顯示在你的本機終端機，亦保存於該資料夾的 `.data/deployment/demo-credentials.json`（0600）。請安全提供教師，不提交 GitHub。
-7. 若失敗，只把錯誤文字回報，**不要包含 Token**。完整部署尚未在這個新帳戶驗證過；成功 reload 或檔案上傳不等於所有手機測試已完成。
+## 本機重現
 
-若 macOS 不讓你雙擊 command，使用 Terminal 於專案資料夾執行：
+使用 Node.js 24、Python 3.12，執行 README 的安裝步驟及兩個 Wrangler 程序：測試 AI／推播 fixture 在 8791，App 測試後端在 8790。使用 `web/wrangler.test.jsonc`，不連正式資料。
 
-```sh
-python3 scripts/deploy_pythonanywhere.py --username Jzalx --apply --ask-token --demo
-```
+原始碼匯出不會附送 `node_modules`、資料庫、`.wrangler`、session、推播私鑰、帳密或供應商金鑰。先依 lockfile 安裝依賴，再啟動；不能直接雙擊 `static/index.html` 取得完整後端功能。
 
-來源 ZIP 不需 Git。使用 Git checkout 時，部署前要求工作區乾淨。程式中有課程測試用帳戶建立操作，不會讀取或覆寫你已有的真實帳戶。
+## 正式發布
 
-## 建議路徑：PythonAnywhere Beginner
+來源分支是 `codex/last-minute-bites-prototype`。推送來源只跑驗收，不會部署。現有部署鏡像保存 `apps/last-minute-bites/`，由授權的 `.github/workflows/last-minute-bites.yml` 先部署既有私有 `FoodAI` 服務，再部署食物 Worker。
 
-2026-11-07 已查閱官方 [價格與註冊頁](https://www.pythonanywhere.com/pricing/)：有免費 Beginner 帳戶及 SSL。可使用自己的 `帳號.pythonanywhere.com` 網址，SQLite 放在持久的 home 目錄，適合不依賴外部 API 的本課程示範。免費方案有資源與使用限制，須在控制台按平台規則保持 Web app 有效；提交前檢查到期／續用提示。此方案不是正式營運或 SLA 承諾。
+保留 Worker `last-minute-bites-demo`、binding `KITCHENS`、class `KitchenStore`、object `shared-kitchens-v1` 及現有遷移。不要用換 namespace、重新 seed、刪除資料庫或複製金鑰來更新版本。供應商金鑰繼續留在既有私有服務；部署憑證沿用既有安全工作流程。
 
-1. 使用者自行註冊 US 站點 `www.pythonanywhere.com` 的免費 Beginner 帳戶，記下帳號名稱。
-2. 在 PythonAnywhere 的 Account → API Token 產生 token。**不要貼在聊天、GitHub 或文件內。** 在本雲端環境設定安全填入 `PA_API_TOKEN`；`PA_USERNAME` 是可公開的帳號名稱。已建立必要的設定草稿，保存後需重新確認 binding ready。
-3. 本機／雲端先檢視計畫（不連主機）：`python3 scripts/deploy_pythonanywhere.py --username YOUR_USERNAME`。
-4. 確認帳戶正確、程式碼已提交且工作區乾淨，才執行 `--apply`。新帳戶會建立 Web app，已有其他專案會拒絕修改；已由本腳本建立的同專案版本更新須明確加 `--update`。
-5. 程式經官方 HTTPS API 上傳 content-hash release，資料庫固定放在 `/home/USERNAME/.local/share/last-minute-bites/kitchen.sqlite3`，不隨 release 換版消失；設定同源、Secure cookie 與 force_https，最後要求 reload。
-6. **API reload 成功不代表 App 已驗收**。以實際公開 HTTPS 網址重試 /healthz、註冊／登入、跨 session 共享、相機許可／拒絕、重開持久化、安裝及離線。再填入提交文件的正式網址與實測記錄。
+發布後不能只看工作流程綠燈：須等 `/healthz` 的實際版本與 `web/release.js` 相符，核對前端資產，並用隔離帳戶確認相關操作及既有 session／庫存保留。後端程式切換可能稍遲於公開資產。未驗證的真實模型、手機或推播行為應如實列為未驗證。
 
-腳本採用 [官方 API 文件](https://help.pythonanywhere.com/pages/API/) 的 `/files/path`、`/webapps`、`/reload` 介面；只在你提供並授權的帳戶執行。API token 只送往 `www.pythonanywhere.com`，不複製至主機程式或保存的啟動指令。EU 帳戶需要另行設定正確站點與 token allowed destination，不能直接把 token 傳到另一個站點。
+## 目前限制與交付邊界
 
-若不使用 API：也可將原始碼 ZIP 上傳 PythonAnywhere Files，解壓到 home 中，於 Web 頁建立 Manual configuration／Python 3.12+ 應用，將以下內容放入該 Web app 的 WSGI configuration file，填上自己的路徑與正式網域：
-
-```python
-import os, sys
-sys.path.insert(0, '/home/YOUR_USERNAME/last-minute-bites')
-os.environ['LMB_DB'] = '/home/YOUR_USERNAME/.local/share/last-minute-bites/kitchen.sqlite3'
-os.environ['LMB_ORIGIN'] = 'https://YOUR_USERNAME.pythonanywhere.com'
-os.environ['LMB_SECURE_COOKIE'] = '1'
-from wsgi import application
-```
-
-主機管理設定可能變動；以實際控制台及官方文件為準。開啟 force HTTPS，Reload，然後完成上述正式網址驗證。不能把帳號密碼或 token 放入 WSGI 檔。
-
-## 其他獲批的 Python 主機
-
-- 選擇提供 HTTPS、Python WSGI 與持久磁碟的主機。
-- 執行 `pip install --require-hashes -r requirements-deploy.txt`。
-- 啟動 `gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 30 wsgi:application`。
-- 設 `LMB_DB`（持久路徑）、`LMB_ORIGIN`（實際 HTTPS origin）及 `LMB_SECURE_COOKIE=1`。
-- `deploy/render.yaml` 是**付費 Starter＋持久磁碟的可審閱範例**，本工作沒有建立付費資源，也沒有收費。不要用沒有持久磁碟的免費 ephemeral 服務提交保存帳戶的版本。
-- SQLite 只使用單個應用程序／單個共享本地磁碟；擴展至多機不是本 Prototype 的部署方式。
-
-## 教師帳戶與資料
-
-一般資料庫不會內建測試帳戶。可另外執行：
-
-```sh
-python3 scripts/seed_demo.py --db .data/demo/kitchen.sqlite3
-python3 server.py --db .data/demo/kitchen.sqlite3
-```
-
-這會建立 Owner、Editor、無關帳戶與合成食物；隨機帳密在 `.data/demo/demo-credentials.json`（0600）。Mac 使用 `Open Demo on Mac.command` 可自動完成並在終端機顯示合成示範帳密。不要改用已有私人資料的資料庫，腳本也會拒絕覆寫。
-
-如果正式網址使用教師 demo 資料，需在主機上對**全新的獨立 demo 路徑**產生資料、將 LMB_DB 指向它，再安全提供該次產生的帳密。生成新的本機 demo 並不會修改已部署服務的帳戶。不要誤交其他資料庫的密碼。
-
-備份：`python3 scripts/backup.py --db PATH --out NEW_PRIVATE_BACKUP_PATH`。備份包含帳戶／session／私人資料，禁止放入原始碼 ZIP 或公開網址。
+目前交付為手機優先 Web／PWA 與 HTML URL，未產生或驗證 APK／IPA。課程規格第 16 頁列出 HTML URL，但開發平台仍須老師批准。離線只提供公開殼，雲端庫存、登入及 AI 需要網絡。正式平台批准、真機驗收及課程提交須由組員另外確認。

@@ -1,15 +1,17 @@
-# Approved UI references
+# Historical UI references
 
 These generated mockups are design references, not screenshots of a working app. Use actual HTML/CSS/SVG components instead of making an entire mockup image clickable.
 
-Latest reference images to use:
+These are early design references, not instructor approval or the current product specification. The current app uses generated recipes and includes additional quantity, personal-date, privacy and multi-kitchen flows. See the root README.
+
+Historical images:
 
 | File | Purpose |
 | --- | --- |
 | `kitchen-and-use-first.png` | Flat illustrated fridge/category navigation and cross-category selection |
 | `category-items.png` | Item rows, unknown/past-use-by dates and empty categories |
 | `food-form.png` | Shared Add/Edit form and three date-source modes |
-| `recipes.png` | Fixed-recipe matching and details |
+| `recipes.png` | Superseded fixed-recipe matching and details |
 | `authentication.png` | Sign-in and registration proposal |
 | `settings.png` | Personal display preferences and in-app reminders |
 | `shared-kitchen.png` | First setup, invite preview, Owner and Editor controls |

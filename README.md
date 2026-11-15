@@ -2,7 +2,7 @@
 
 以減少食物浪費為目標的課程 Web／PWA prototype。使用者可管理食材批次與份量、共享廚房、生成 DeepSeek 食譜，並在聚會中整合已同意分享的食材。
 
-目前版本：**1.4.2**（交接資訊更新：2026-11-13，香港時間）。
+目前版本：**1.4.2**（交接資訊更新：2026-11-15，香港時間）。
 
 | 入口 | 連結／位置 |
 | --- | --- |
@@ -10,6 +10,8 @@
 | 最新程式碼分支 | [`codex/last-minute-bites-prototype`](https://github.com/jzalx789/last-minute-bites/tree/codex/last-minute-bites-prototype) |
 | AI coding assistant 指引 | [AGENTS.md](AGENTS.md) |
 | 原始碼驗收 CI | [Prototype acceptance](https://github.com/jzalx789/last-minute-bites/actions/workflows/checks.yml) |
+| 規格／交付對照 | [docs/SPEC_COMPLIANCE.md](docs/SPEC_COMPLIANCE.md)（平台批准及真機證據仍待確認） |
+| 目前架構與資料流 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)、[docs/APP_FLOW.md](docs/APP_FLOW.md) |
 | 歷次驗證紀錄 | [docs/VALIDATION.md](docs/VALIDATION.md)（依日期閱讀，舊版本結果不是目前規格） |
 
 **儲存庫已公開，組員可直接查看、下載或 clone 程式碼，請使用上列最新分支。** 向原儲存庫推送程式碼仍需協作者權限，也可透過 fork 提交 PR。公開的是程式碼，App 的帳戶與庫存仍受登入及廚房權限保護。
@@ -179,9 +181,12 @@ LMB_WEB_ENGINE=webkit python tests/privacy_browser.py
 
 ```sh
 python3 scripts/package.py
+python3 scripts/package.py --verify submission/S01G10.zip
 ```
 
-輸出為 `submission/S01G10.zip`；執行資料、金鑰、帳密及私人驗證產物不可加入 Git 或 ZIP。這份 README 是開發交接說明，沒有新增問卷或正式 user guide。
+輸出為 `submission/S01G10.zip`，附目前版本、來源 commit 及逐檔 SHA-256 manifest。驗證指令會拒絕過時的來源內容、遺漏檔案或版本不一致；CI 亦會檢查，修改來源後須重建 ZIP。執行資料、金鑰、帳密及私人驗證產物不可加入 Git 或 ZIP。
+
+`submission/S01G10.html` 提供正式 HTTPS App 入口，需網絡，並非 APK 或完整離線 App。使用者提供的規格第 16 頁列出 HTML URL，但開發平台仍未確認獲老師批准，亦需補真機／OS emulator 證據。完整界線見 [規格對照](docs/SPEC_COMPLIANCE.md)，AI／第三方使用見 [AI_USAGE.md](docs/AI_USAGE.md) 及 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。這份 README 是開發交接說明，沒有新增問卷或正式 user guide。
 
 ## 協作與正式部署
 
