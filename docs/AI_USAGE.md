@@ -12,6 +12,7 @@
 | 2026-11-13 | 依三項回饋修改 AI 按鈕、冰箱改名及清空名稱提示 | Yes／是、owner-only rename、名稱不符的前後端保護；版本 1.4.2 | `806bb34`；來源 CI `43384797422`；部署 CI `43385450610`；正式站改名保留食材、錯誤名稱不清空及中英文提示驗證 |
 | 2026-11-15 | 對照提供的 IS2023 規格，確保程式碼能符合要求 | 規格對照、更新過時開發文件、HTML 入口、帶版本／逐檔雜湊的匯出及過時包偵測 | `scripts/package.py`、`tests/test_package.py`、`docs/SPEC_COMPLIANCE.md`；實際結果以該次驗證紀錄為準 |
 | 2026-11-16 | 參考 Apple iPhone Duo 準備工作修改 Web App | 四邊安全區、水平可視範圍、彈窗可用空間及共用定位；版本 1.4.3 | `tests/responsive_browser.py`、`docs/RESPONSIVE.md`；瀏覽器事件模擬與真機／OS 模擬器的界線分開說明 |
+| 2026-11-16 | 提供老師已批准 Web＋Cloudflare 及 HTML URL、不要求 APK 的回覆 | 更新批准狀態，整理英文評閱說明與來源交付；不更改執行程式 | `docs/SPEC_COMPLIANCE.md`、`submission/REVIEW_NOTES.md`；批准內容來自使用者提供的老師回覆 |
 
 上述提示是摘要，不是補造的逐字 prompt。變更歷史可在 GitHub 的 `codex/last-minute-bites-prototype` 分支核對。自動化和代理操作瀏覽器屬工具驗證，不能當作組員已親自審閱、真機測試或學術誠信簽署。
 
@@ -26,4 +27,4 @@
 
 本地 QR 依賴、版本、來源及授權見 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)；原始授權與雜湊在 `static/vendor/`。Node.js 開發依賴以 `web/package-lock.json` 為準。`design/` 的生成式設計圖是早期參考，不是目前功能截圖；固定食譜設計已被動態生成取代。
 
-本文件不是完成的課程 AI reflection，也沒有聲稱教師批准本平台或給定評分。
+本文件不是完成的課程 AI reflection，也沒有聲稱老師已評核所有功能或給定分數；平台與提交格式的批准另記於規格對照。

@@ -10,7 +10,8 @@
 | 最新程式碼分支 | [`codex/last-minute-bites-prototype`](https://github.com/jzalx789/last-minute-bites/tree/codex/last-minute-bites-prototype) |
 | AI coding assistant 指引 | [AGENTS.md](AGENTS.md) |
 | 原始碼驗收 CI | [Prototype acceptance](https://github.com/jzalx789/last-minute-bites/actions/workflows/checks.yml) |
-| 規格／交付對照 | [docs/SPEC_COMPLIANCE.md](docs/SPEC_COMPLIANCE.md)（平台批准及真機證據仍待確認） |
+| 規格／交付對照 | [docs/SPEC_COMPLIANCE.md](docs/SPEC_COMPLIANCE.md)（平台及 HTML URL 已獲批准；真機／OS 模擬器證據仍需補齊） |
+| 教師評閱說明 | [submission/REVIEW_NOTES.md](submission/REVIEW_NOTES.md)（網址、帳戶存取及外部服務） |
 | 目前架構與資料流 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)、[docs/APP_FLOW.md](docs/APP_FLOW.md) |
 | 歷次驗證紀錄 | [docs/VALIDATION.md](docs/VALIDATION.md)（依日期閱讀，舊版本結果不是目前規格） |
 
@@ -190,7 +191,7 @@ python3 scripts/package.py --verify submission/S01G10.zip
 
 輸出為 `submission/S01G10.zip`，附目前版本、來源 commit 及逐檔 SHA-256 manifest。驗證指令會拒絕過時的來源內容、遺漏檔案或版本不一致；CI 亦會檢查，修改來源後須重建 ZIP。執行資料、金鑰、帳密及私人驗證產物不可加入 Git 或 ZIP。
 
-`submission/S01G10.html` 提供正式 HTTPS App 入口，需網絡，並非 APK 或完整離線 App。使用者提供的規格第 16 頁列出 HTML URL，但開發平台仍未確認獲老師批准，亦需補真機／OS emulator 證據。完整界線見 [規格對照](docs/SPEC_COMPLIANCE.md)，AI／第三方使用見 [AI_USAGE.md](docs/AI_USAGE.md) 及 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。這份 README 是開發交接說明，沒有新增問卷或正式 user guide。
+依 2026-11-16 使用者提供的授課老師回覆，目前 HTML／CSS／JavaScript＋Cloudflare 平台已獲批准；可提交正式 HTML 網址，不需 Android APK。提交正式工作網址、完整原始碼 ZIP，以及評閱需要的存取／設定／外部服務說明；詳見 [教師評閱說明](submission/REVIEW_NOTES.md)。`submission/S01G10.html` 是同一 HTTPS App 的入口，需網絡。仍須補齊 Android／iOS 真機或 OS emulator 瀏覽器證據，其他核心功能、進階功能、穩定性與文件要求維持不變。完整界線見 [規格對照](docs/SPEC_COMPLIANCE.md)，AI／第三方使用見 [AI_USAGE.md](docs/AI_USAGE.md) 及 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 協作與正式部署
 

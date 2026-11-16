@@ -1,10 +1,11 @@
 # 目前的存取、測試與部署
 
-適用 Last Minute Bites 1.4.2，更新於 2026-11-15。舊 PythonAnywhere／WSGI 步驟已移至 [歷史文件](legacy/DEPLOYMENT_0_2.md)，不適用於目前的 AI、多廚房或聚會正式版本。
+適用 Last Minute Bites 1.4.3，更新於 2026-11-16。舊 PythonAnywhere／WSGI 步驟已移至 [歷史文件](legacy/DEPLOYMENT_0_2.md)，不適用於目前的 AI、多廚房或聚會正式版本。
 
 ## 教師／測試者入口
 
 - 正式網址：<https://last-minute-bites-demo.jzalx789.workers.dev/>。
+- 英文評閱／外部服務說明：[submission/REVIEW_NOTES.md](../submission/REVIEW_NOTES.md)。
 - 提交入口：`submission/S01G10.html`，按「開啟 App」進入同一 HTTPS 網址。它不是 APK 或離線可執行後端。
 - 需要網絡及支援的手機瀏覽器。測試者可自行註冊新帳戶，毋須索取私人 AI 金鑰或已有使用者密碼。
 - 用兩個獨立帳戶／瀏覽器工作階段，透過邀請碼驗證 Owner／Editor 共享。不要共用別人的正式帳戶或修改其庫存。
@@ -27,4 +28,4 @@
 
 ## 目前限制與交付邊界
 
-目前交付為手機優先 Web／PWA 與 HTML URL，未產生或驗證 APK／IPA。課程規格第 16 頁列出 HTML URL，但開發平台仍須老師批准。離線只提供公開殼，雲端庫存、登入及 AI 需要網絡。正式平台批准、真機驗收及課程提交須由組員另外確認。
+依 2026-11-16 使用者提供的授課老師回覆，目前 Web＋Cloudflare 平台已獲批准，可交 HTML URL，不需 Android APK。交付工作網址、完整來源 ZIP 及評閱所需說明；其他功能及文件要求不變。離線只提供公開殼，雲端庫存、登入及 AI 需要網絡。Android／iOS 真機或 OS 模擬器瀏覽器驗收，以及正式課程提交，仍須由組員完成。
