@@ -2,7 +2,7 @@
 
 以減少食物浪費為目標的課程 Web／PWA prototype。使用者可管理食材批次與份量、共享廚房、生成 DeepSeek 食譜，並在聚會中整合已同意分享的食材。
 
-目前版本：**1.4.2**（交接資訊更新：2026-11-15，香港時間）。
+目前版本：**1.4.3**（交接資訊更新：2026-11-16，香港時間）。
 
 | 入口 | 連結／位置 |
 | --- | --- |
@@ -92,6 +92,8 @@ web/node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --inspector-port 9230 
 
 1.4.1 修正手機日期欄位溢出、多選 Delete 文字換行，以及舊記錄未設定數量時無法原值儲存。遇到協議版本要求時，可明確同意後續做原操作；取消保留已填內容。舊版介面會收到重新載入提示，更新不會自動替使用者同意條款。Help & about 顯示目前的應用程式版本。
 
+1.4.3 依 Apple 的可調整視窗指引補齊四邊安全區與水平視窗位移；表單、確認及消耗彈窗隨目前可用空間重新排版，尺寸切換不重建輸入欄位。新增 Chromium／WebKit 回歸測試；這是 Web App 適配，不代表已用 iPhone Duo 真機或 Xcode OS 模擬器驗收。詳見 [尺寸適配與測試界線](docs/RESPONSIVE.md)。
+
 1.4.2 將 AI 授權視窗的確認按鈕改為 Yes／是；擁有者可在「設定 → 修改冰箱名稱」改名，保留原本食材、成員及分享關係。清空紀錄須輸入顯示的完整冰箱名稱（包括空格）；輸入不符時視窗會保留並提示名稱不相符，不會送出清空請求。後端亦獨立核對名稱與擁有者權限。
 
 ## 目前的產品規則
@@ -170,6 +172,8 @@ python tests/multi_kitchen_browser.py
 LMB_WEB_ENGINE=webkit python tests/multi_kitchen_browser.py
 python tests/privacy_browser.py
 python tests/iphone_fixes_browser.py
+python tests/responsive_browser.py
+LMB_WEB_ENGINE=webkit python tests/responsive_browser.py
 LMB_WEB_ENGINE=webkit python tests/privacy_browser.py
 ```
 

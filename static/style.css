@@ -6,6 +6,12 @@
   --line: #d9e5db;
   --muted: #5a6e61;
   --amber: #8f4d07;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --usable-width: calc(var(--visible-width, 100vw) - var(--safe-left) - var(--safe-right));
+  --usable-height: calc(var(--visible-height, 100dvh) - var(--safe-top) - var(--safe-bottom));
   font-family:
     ui-rounded,
     "Avenir Next",
@@ -31,11 +37,13 @@ body {
 #app {
   position: fixed;
   top: var(--visible-top, 0px);
-  left: 0;
-  right: 0;
+  left: var(--visible-left, 0px);
+  width: var(--visible-width, 100%);
+  padding-inline: var(--safe-left) var(--safe-right);
   height: 100vh;
   height: 100dvh;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
 }
@@ -163,7 +171,7 @@ main {
   padding: 0.85rem max(1.2rem, calc((100% - 1056px) / 2));
   background: white;
   border-bottom: 1px solid var(--line);
-  padding-top: max(0.85rem, env(safe-area-inset-top));
+  padding-top: max(0.85rem, var(--safe-top));
 }
 .brand {
   display: flex;
@@ -379,7 +387,7 @@ main {
 .app-dock {
   background: white;
   border-top: 1px solid var(--line);
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: var(--safe-bottom);
   z-index: 10;
 }
 .add-food-dock {
@@ -965,24 +973,22 @@ hr {
   height: 20px;
 }
 dialog {
+  /* Dialogs live outside #app, so apply the same live viewport and safe edges. */
+  position: fixed;
+  left: calc(var(--visible-left, 0px) + var(--safe-left) + var(--usable-width) / 2);
+  top: calc(var(--visible-top, 0px) + var(--safe-top) + var(--usable-height) / 2);
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  transform: translate(-50%, -50%);
   overflow-wrap: anywhere;
-  width: min(92vw, 520px);
-  max-height: calc(100vh - 32px);
-  max-height: calc(100dvh - 32px);
+  width: min(520px, calc(var(--usable-width) - 32px));
+  max-height: calc(var(--usable-height) - 32px);
   padding: 1.5rem;
   border: 1px solid var(--line);
   border-radius: 18px;
   color: var(--ink);
   overflow: auto;
-}
-/* The layout viewport can stay tall while the on-screen keyboard is open. */
-dialog:not(#used-picker) {
-  position: fixed;
-  top: calc(var(--visible-top, 0px) + var(--visible-height, 100dvh) / 2);
-  bottom: auto;
-  margin-block: 0;
-  transform: translateY(-50%);
-  max-height: calc(var(--visible-height, 100dvh) - 32px);
 }
 dialog::backdrop {
   background: #173e2c66;
@@ -1018,11 +1024,11 @@ details p {
 #toast {
   position: fixed;
   z-index: 100;
-  top: max(0.8rem, env(safe-area-inset-top));
-  left: 50%;
+  top: calc(var(--visible-top, 0px) + max(0.8rem, var(--safe-top)));
+  left: calc(var(--visible-left, 0px) + var(--safe-left) + var(--usable-width) / 2);
   transform: translateX(-50%);
   width: max-content;
-  max-width: 90vw;
+  max-width: calc(var(--usable-width) - 32px);
   background: var(--ink);
   color: white;
   padding: 0.75rem 1rem;
@@ -1040,8 +1046,10 @@ details p {
   z-index: 200;
 }
 .skip:focus {
-  left: 1rem;
-  top: 1rem;
+  position: fixed;
+  left: calc(var(--visible-left, 0px) + var(--safe-left) + 1rem);
+  top: calc(var(--visible-top, 0px) + var(--safe-top) + 1rem);
+  max-width: calc(var(--usable-width) - 2rem);
   background: white;
   padding: 1rem;
 }
@@ -1057,7 +1065,7 @@ details p {
   }
   .topbar {
     padding: 0.55rem 1rem;
-    padding-top: max(0.55rem, env(safe-area-inset-top));
+    padding-top: max(0.55rem, var(--safe-top));
   }
   .brand {
     font-size: 1rem;
@@ -1520,20 +1528,15 @@ details p {
   grid-template-columns: minmax(0, 1fr);
 }
 #used-picker {
-  position: fixed;
-  top: calc(var(--visible-top, 0px) + var(--visible-height, 100dvh) / 2);
-  bottom: auto;
-  margin: 0 auto;
-  transform: translateY(-50%);
-  max-height: calc(var(--visible-height, 100dvh) - 24px);
-  width: min(640px, calc(100vw - 24px));
+  max-height: calc(var(--usable-height) - 24px);
+  width: min(640px, calc(var(--usable-width) - 24px));
   padding: 0;
   overflow: hidden;
 }
 #used-picker form {
   display: flex;
   flex-direction: column;
-  max-height: calc(var(--visible-height, 100dvh) - 26px);
+  max-height: calc(var(--usable-height) - 26px);
   padding: 1rem;
 }
 #used-picker h2,
@@ -1568,10 +1571,8 @@ details p {
 }
 @media (max-width: 700px) {
   #used-picker {
-    top: calc(var(--visible-top, 0px) + 12px);
-    transform: none;
-    bottom: auto;
-    margin: 0 auto;
+    top: calc(var(--visible-top, 0px) + var(--safe-top) + 12px);
+    transform: translateX(-50%);
   }
 }
 @media (max-width: 350px) {
@@ -1747,7 +1748,7 @@ details p {
 /* Leave inventory usable when landscape and large text share a short screen. */
 @media (min-width: 480px) and (max-height: 480px) {
   .topbar {
-    padding-top: max(0.3rem, env(safe-area-inset-top));
+    padding-top: max(0.3rem, var(--safe-top));
     padding-bottom: 0.3rem;
   }
   main {

@@ -1,5 +1,5 @@
 "use strict";
-const CLIENT_VERSION = "1.4.2";
+const CLIENT_VERSION = "1.4.3";
 const $ = (s, r = document) => r.querySelector(s),
   E = (v) =>
     String(v ?? "").replace(
@@ -2997,14 +2997,14 @@ function fitViewport() {
   // Signed-in screens follow Safari's visual viewport, including its pan.
   // Auth keeps native document scrolling so its keyboard cannot clip a form.
   app.style.height = state?.user && unzoomed ? height + "px" : "";
-  document.documentElement.style.setProperty(
-    "--visible-height",
-    unzoomed ? height + "px" : "100dvh",
-  );
-  document.documentElement.style.setProperty(
-    "--visible-top",
-    unzoomed ? Math.round(vv.offsetTop) + "px" : "0px",
-  );
+  // Follow the current window on both axes, including a resized/panned PWA.
+  // During pinch zoom leave sizing to the browser so users can magnify and pan.
+  for (const [name, value] of Object.entries({
+    height: unzoomed ? height + "px" : "100dvh",
+    width: unzoomed ? Math.round(vv.width) + "px" : "100%",
+    top: unzoomed ? Math.round(vv.offsetTop) + "px" : "0px",
+    left: unzoomed ? Math.round(vv.offsetLeft) + "px" : "0px",
+  })) document.documentElement.style.setProperty("--visible-" + name, value);
   const active = document.activeElement;
   const editing = active?.matches(
     "input:not([type=checkbox]):not([type=radio]),textarea,select",
@@ -3042,6 +3042,7 @@ function syncInputViewport() {
 window.visualViewport?.addEventListener("resize", syncInputViewport);
 window.visualViewport?.addEventListener("scroll", fitViewport);
 window.addEventListener("resize", syncInputViewport);
+window.addEventListener("pageshow", syncInputViewport);
 document.addEventListener("focusin", syncInputViewport);
 document.addEventListener("focusout", () =>
   requestAnimationFrame(syncInputViewport),
